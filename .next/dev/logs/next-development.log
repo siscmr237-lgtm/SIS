@@ -398,3 +398,52 @@ Import traces:
 [00:57:52.418] Server  LOG      ✓ Compiled in 39ms
 [00:58:03.665] Server  LOG      ✓ Compiled in 7ms
 [00:58:05.339] Server  LOG      ✓ Compiled in 6ms
+[12:48:17.629] Server  LOG      ✓ Compiled in 792ms
+[12:48:18.093] Browser ERROR   uncaughtError: ReferenceError: schoolSettings is not defined
+[12:48:22.497] Server  WARN     ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+[12:48:22.515] Server  LOG      ✓ Compiled in 45ms
+[12:48:23.706] Browser ERROR   uncaughtError: ReferenceError: useState is not defined
+[12:48:24.144] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[12:48:27.034] Browser ERROR   A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+%s%s https://react.dev/link/hydration-mismatch 
+
+  ...
+    <HotReload globalError={[...]} webSocket={WebSocket} staticIndicatorState={{pathname:null, ...}}>
+      <AppDevOverlayErrorBoundary globalError={[...]}>
+        <ReplaySsrOnlyErrors>
+        <DevRootHTTPAccessFallbackBoundary>
+          <HTTPAccessFallbackBoundary notFound={<NotAllowedRootHTTPFallbackError>}>
+            <HTTPAccessFallbackErrorBoundary pathname="/" notFound={<NotAllowedRootHTTPFallbackError>} ...>
+              <RedirectBoundary>
+                <RedirectErrorBoundary router={{...}}>
+                  <Head>
+                  <__next_root_layout_boundary__>
+                    <SegmentViewNode type="layout" pagePath="layout.tsx">
+                      <SegmentTrieNode>
+                      <link>
+                      <script>
+                      <RootLayout>
+                        <html
+                          lang="en"
+-                         suppresshydrationwarning="true"
+-                         data-qb-installed="true"
+                        >
+                  ...
+
+[12:48:27.035] Browser ERROR   uncaughtError: ReferenceError: useState is not defined
+[12:48:28.128] Server  LOG      ✓ Compiled in 45ms
+[12:48:28.129] Server  WARN     ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+[12:48:28.667] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[12:48:30.199] Browser ERROR   uncaughtError: ReferenceError: useEffect is not defined
+[12:48:34.342] Server  LOG      ✓ Compiled in 63ms
+[12:48:34.342] Server  WARN     ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+[12:48:34.914] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
