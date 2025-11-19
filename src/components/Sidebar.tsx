@@ -1,20 +1,19 @@
 "use client";
 
-import { NavigationPage } from '../App';
-import { useRouter } from 'next/navigation';
-import { 
-  Home, 
-  Users, 
-  UserCheck, 
-  DollarSign, 
-  Receipt, 
-  FileText, 
-  Calendar, 
+import {
+  Calendar,
   Clock,
-  GraduationCap,
-  Settings
-} from 'lucide-react';
-import { schoolSettings } from '../data/mockData';
+  DollarSign,
+  FileText,
+  Home,
+  Receipt,
+  Settings,
+  UserCheck,
+  Users,
+} from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { NavigationPage } from "../App";
 
 interface SidebarProps {
   currentPage: NavigationPage;
@@ -24,46 +23,78 @@ interface SidebarProps {
 export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
   const router = useRouter();
   const menuItems = [
-    { id: 'dashboard' as NavigationPage, label: 'Dashboard', icon: Home },
-    { id: 'students' as NavigationPage, label: 'Students', icon: Users },
-    { id: 'staff' as NavigationPage, label: 'Staff', icon: UserCheck },
-    { id: 'fees' as NavigationPage, label: 'Fees', icon: DollarSign },
-    { id: 'expenses' as NavigationPage, label: 'Expenses', icon: Receipt },
-    { id: 'report-cards' as NavigationPage, label: 'Report Cards', icon: FileText },
-    { id: 'attendance' as NavigationPage, label: 'Attendance', icon: Calendar },
-    { id: 'timetable' as NavigationPage, label: 'Timetable', icon: Clock },
-    { id: 'settings' as NavigationPage, label: 'School Settings', icon: Settings },
+    { id: "dashboard" as NavigationPage, label: "Dashboard", icon: Home },
+    { id: "students" as NavigationPage, label: "Students", icon: Users },
+    { id: "staff" as NavigationPage, label: "Staff", icon: UserCheck },
+    { id: "fees" as NavigationPage, label: "Fees", icon: DollarSign },
+    { id: "expenses" as NavigationPage, label: "Expenses", icon: Receipt },
+    {
+      id: "report-cards" as NavigationPage,
+      label: "Report Cards",
+      icon: FileText,
+    },
+    { id: "attendance" as NavigationPage, label: "Attendance", icon: Calendar },
+    { id: "timetable" as NavigationPage, label: "Timetable", icon: Clock },
+    {
+      id: "settings" as NavigationPage,
+      label: "School Settings",
+      icon: Settings,
+    },
   ];
+  const [schoolSettings, setSchoolSettings] = useState({
+    name: "School",
+    logo: "https://images.unsplash.com/photo-1599305445671-ac291c95aaa9?w=200&h=200&fit=crop",
+    academicYear: "2024/2025",
+    currentTerm: "Term 1",
+  });
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const userStr = window.localStorage.getItem("user");
+      if (userStr) {
+        try {
+          const user = JSON.parse(userStr);
+          if (user && user.School) {
+            setSchoolSettings(user.School[0]);
+          }
+        } catch (e) {
+          console.error("Failed to parse user from localStorage", e);
+        }
+      }
+    }
+  }, []);
 
   return (
     <aside className="w-64 h-full bg-blue-900 text-white flex flex-col">
       <div className="p-6 border-b border-blue-800">
         <div className="flex items-center gap-3 mb-4">
-          <img 
-            src={schoolSettings.logo} 
-            alt="School Logo" 
+          <img
+            src={schoolSettings.logo}
+            alt="School Logo"
             className="w-12 h-12 object-cover rounded-lg border-2 border-blue-700"
           />
           <div className="flex-1 min-w-0">
-            <h1 className="text-sm font-medium truncate">{schoolSettings.name}</h1>
+            <h1 className="text-sm font-medium truncate">
+              {schoolSettings.name}
+            </h1>
             <p className="text-xs text-blue-200">School Admin</p>
           </div>
         </div>
       </div>
-      
+
       <nav className="flex-1 p-4">
         {menuItems.map((item) => {
           const Icon = item.icon;
           const isActive = currentPage === item.id;
-          
+
           return (
             <button
               key={item.id}
               onClick={() => onNavigate(item.id)}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg mb-2 transition-colors ${
-                isActive 
-                  ? 'bg-blue-700 text-white' 
-                  : 'text-blue-100 hover:bg-blue-800'
+                isActive
+                  ? "bg-blue-700 text-white"
+                  : "text-blue-100 hover:bg-blue-800"
               }`}
             >
               <Icon size={20} />
@@ -72,17 +103,19 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
           );
         })}
       </nav>
-      
+
       <div className="p-4 border-t border-blue-800">
         <p className="text-sm text-blue-300">{schoolSettings.academicYear}</p>
-        <p className="text-xs text-blue-400 mt-1">{schoolSettings.currentTerm}</p>
+        <p className="text-xs text-blue-400 mt-1">
+          {schoolSettings.currentTerm}
+        </p>
         <button
           onClick={() => {
             try {
-              if (typeof window !== 'undefined') {
-                window.localStorage.removeItem('auth_token');
-                window.localStorage.removeItem('user');
-                router.replace('/login');
+              if (typeof window !== "undefined") {
+                window.localStorage.removeItem("auth_token");
+                window.localStorage.removeItem("user");
+                router.replace("/login");
               }
             } catch {}
           }}
