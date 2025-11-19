@@ -1,50 +1,90 @@
-import { Card } from './ui/card';
-import { Users, UserCheck, DollarSign, TrendingUp } from 'lucide-react';
-import { mockStudents, mockStaff, mockFees, mockExpenses, schoolSettings } from '../data/mockData';
+"use client";
+
+import { DollarSign, TrendingUp, UserCheck, Users } from "lucide-react";
+import { useEffect, useState } from "react";
+import { api } from "../../src/lib/api";
+import { Card } from "./ui/card";
 
 export function Dashboard() {
-  const totalStudents = mockStudents.length;
-  const totalStaff = mockStaff.length;
-  
-  const totalFeesCollected = mockFees.reduce((sum, fee) => sum + fee.amountPaid, 0);
-  const totalFeesOutstanding = mockFees.reduce((sum, fee) => sum + fee.balance, 0);
-  const totalExpenses = mockExpenses.reduce((sum, expense) => sum + expense.amount, 0);
-  
+  const [dashboardData, setDashboardData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [schoolSettings, setSchoolSettings] = useState({
+    name: "School",
+    logo: "https://images.unsplash.com/photo-1599305445671-ac291c95aaa9?w=200&h=200&fit=crop",
+    academicYear: "2024/2025",
+    currentTerm: "Term 1",
+  });
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const userStr = window.localStorage.getItem("user");
+      if (userStr) {
+        try {
+          const user = JSON.parse(userStr);
+          if (user && user.School) {
+            setSchoolSettings(user.School[0]);
+          }
+        } catch (e) {
+          console.error("Failed to parse user from localStorage", e);
+        }
+      }
+    }
+  }, []);
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true);
+        const data = await api.get("/dashboard");
+        setDashboardData(data);
+      } catch (error) {
+        console.error("Failed to fetch dashboard data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
+
   const stats = [
     {
-      title: 'Total Students',
-      value: totalStudents,
+      title: "Total Students",
+      value: dashboardData?.totalStudents ?? 0,
       icon: Users,
-      color: 'bg-blue-500'
+      color: "bg-blue-500",
     },
     {
-      title: 'Total Staff',
-      value: totalStaff,
+      title: "Total Staff",
+      value: dashboardData?.totalStaff ?? 0,
       icon: UserCheck,
-      color: 'bg-green-500'
+      color: "bg-green-500",
     },
     {
-      title: 'Fees Collected',
-      value: `${totalFeesCollected.toLocaleString()} FCFA`,
+      title: "Fees Collected",
+      value: `${(dashboardData?.feesCollected ?? 0).toLocaleString()} FCFA`,
       icon: DollarSign,
-      color: 'bg-purple-500'
+      color: "bg-purple-500",
     },
     {
-      title: 'Outstanding Fees',
-      value: `${totalFeesOutstanding.toLocaleString()} FCFA`,
+      title: "Outstanding Fees",
+      value: `${(dashboardData?.outstandingFees ?? 0).toLocaleString()} FCFA`,
       icon: TrendingUp,
-      color: 'bg-orange-500'
-    }
+      color: "bg-orange-500",
+    },
   ];
+
+  if (loading) {
+    return <div className="p-8">Loading dashboard...</div>;
+  }
 
   return (
     <div className="p-8">
       {/* School Header */}
       <Card className="p-6 mb-8 bg-gradient-to-r from-blue-50 to-purple-50">
         <div className="flex items-center gap-6">
-          <img 
-            src={schoolSettings.logo} 
-            alt="School Logo" 
+          <img
+            src={schoolSettings.logo}
+            alt="School Logo"
             className="w-20 h-20 object-cover rounded-lg border-2 border-white shadow-lg"
           />
           <div className="flex-1">
@@ -84,15 +124,22 @@ export function Dashboard() {
         <Card className="p-6">
           <h2 className="text-xl mb-4">Recent Expenses</h2>
           <div className="space-y-3">
-            {mockExpenses.slice(0, 3).map((expense) => (
-              <div key={expense.id} className="flex justify-between items-center py-2 border-b">
+            {dashboardData?.recentExpenses?.slice(0, 3).map((expense: any) => (
+              <div
+                key={expense.id}
+                className="flex justify-between items-center py-2 border-b"
+              >
                 <div>
                   <p>{expense.description}</p>
-                  <p className="text-sm text-gray-500">{expense.category}</p>
+                  <p className="text-sm text-gray-500 capitalize">
+                    {expense.category}
+                  </p>
                 </div>
-                <p className="text-red-600">{expense.amount.toLocaleString()} FCFA</p>
+                <p className="text-red-600">
+                  {expense.amount.toLocaleString()} FCFA
+                </p>
               </div>
-            ))}
+            )) ?? <p>No recent expenses.</p>}
           </div>
         </Card>
 
@@ -101,16 +148,29 @@ export function Dashboard() {
           <div className="space-y-4">
             <div className="flex justify-between py-2 border-b">
               <span className="text-gray-600">Total Income</span>
-              <span className="text-green-600">{totalFeesCollected.toLocaleString()} FCFA</span>
+              <span className="text-green-600">
+                {(
+                  dashboardData?.financialSummary?.totalIncome ?? 0
+                ).toLocaleString()}{" "}
+                FCFA
+              </span>
             </div>
             <div className="flex justify-between py-2 border-b">
               <span className="text-gray-600">Total Expenses</span>
-              <span className="text-red-600">{totalExpenses.toLocaleString()} FCFA</span>
+              <span className="text-red-600">
+                {(
+                  dashboardData?.financialSummary?.totalExpenses ?? 0
+                ).toLocaleString()}{" "}
+                FCFA
+              </span>
             </div>
             <div className="flex justify-between py-2">
               <span>Net Balance</span>
               <span className="text-blue-600">
-                {(totalFeesCollected - totalExpenses).toLocaleString()} FCFA
+                {(
+                  dashboardData?.financialSummary?.netBalance ?? 0
+                ).toLocaleString()}{" "}
+                FCFA
               </span>
             </div>
           </div>

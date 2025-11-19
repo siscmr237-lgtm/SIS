@@ -46,7 +46,7 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
           />
           <div className="flex-1 min-w-0">
             <h1 className="text-sm font-medium truncate">{schoolSettings.name}</h1>
-            <p className="text-xs text-blue-200">School Manager</p>
+            <p className="text-xs text-blue-200">School Admin</p>
           </div>
         </div>
       </div>
@@ -81,6 +81,7 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
             try {
               if (typeof window !== 'undefined') {
                 window.localStorage.removeItem('auth_token');
+                window.localStorage.removeItem('user');
                 router.replace('/login');
               }
             } catch {}

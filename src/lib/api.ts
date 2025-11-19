@@ -6,11 +6,15 @@ const BASE_URL = runtimeApiUrl;
 
 async function request(path: string, init?: RequestInit) {
   const token = typeof window !== 'undefined' ? window.localStorage.getItem('auth_token') : null;
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+  };
+
+  if (token && !path.startsWith('/auth/')) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
   const res = await fetch(`${BASE_URL}${path}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
+    headers,
     ...init,
   });
   if (!res.ok) {

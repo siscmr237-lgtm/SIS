@@ -1080,15 +1080,17 @@ const __TURBOPACK__import$2e$meta__ = {
         return `file://${__turbopack_context__.P("src/lib/api.ts")}`;
     }
 };
-const runtimeApiUrl = typeof process !== 'undefined' && ("TURBOPACK compile-time value", "http://localhost:4000/api") || ("TURBOPACK compile-time value", "object") !== 'undefined' && __TURBOPACK__import$2e$meta__.env?.VITE_API_URL || 'http://localhost:4000/api';
+const runtimeApiUrl = typeof process !== 'undefined' && ("TURBOPACK compile-time value", "http://localhost:4000") || ("TURBOPACK compile-time value", "object") !== 'undefined' && __TURBOPACK__import$2e$meta__.env?.VITE_API_URL || 'http://localhost:4000/api';
 const BASE_URL = runtimeApiUrl;
 async function request(path, init) {
     const token = ("TURBOPACK compile-time falsy", 0) ? "TURBOPACK unreachable" : null;
+    const headers = {
+        'Content-Type': 'application/json'
+    };
+    if (token && !path.startsWith('/auth/')) //TURBOPACK unreachable
+    ;
     const res = await fetch(`${BASE_URL}${path}`, {
-        headers: {
-            'Content-Type': 'application/json',
-            ...("TURBOPACK compile-time falsy", 0) ? "TURBOPACK unreachable" : {}
-        },
+        headers,
         ...init
     });
     if (!res.ok) {
