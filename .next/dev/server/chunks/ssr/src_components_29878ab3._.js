@@ -1916,7 +1916,7 @@ function StudentsManagement() {
                                                             enrollmentDate: '',
                                                             address: ''
                                                         });
-                                                    } catch  {}
+                                                    } catch (e) {}
                                                 },
                                                 children: "Save Student"
                                             }, void 0, false, {

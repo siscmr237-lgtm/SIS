@@ -1,8 +1,138 @@
-[00:00:01.070] Server  LOG      ✓ Ready in 714ms
-[00:00:11.993] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:00:44.882] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:00:48.535] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:00:48.650] Browser ERROR   A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+[00:00:01.711] Server  LOG      ✓ Ready in 1435ms
+[00:00:16.766] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:01:07.205] Server  LOG      ✓ Compiled in 39ms
+[00:01:13.499] Server  LOG      ✓ Compiled in 22ms
+[00:01:18.878] Server  LOG      ✓ Compiled in 4ms
+[00:01:22.145] Server  LOG      ✓ Compiled in 5ms
+[00:01:28.184] Server  LOG      ✓ Compiled in 10ms
+[00:01:30.770] Server  LOG      ✓ Compiled in 64ms
+[00:01:44.577] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:01:51.833] Server  LOG      ✓ Compiled in 27ms
+[00:02:19.115] Server  LOG      ✓ Compiled in 26ms
+[00:02:23.027] Server  LOG      ✓ Compiled in 21ms
+[00:02:25.869] Server  LOG      ✓ Compiled in 5ms
+[00:02:29.720] Server  LOG      ✓ Compiled in 13ms
+[00:02:46.110] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:03:00.571] Server  LOG      ✓ Compiled in 29ms
+[00:03:05.365] Server  LOG      ✓ Compiled in 4ms
+[00:03:10.654] Server  LOG      ✓ Compiled in 28ms
+[00:04:30.663] Server  LOG      ✓ Compiled in 78ms
+[00:04:30.773] Browser ERROR   ./app/login/page.tsx:12:1
+Parsing ecmascript source code failed
+  10 |
+  11 | export default function LoginPage() {
+> 12 | export default function SignupPage() {
+     | ^^^^^^
+  13 |   const router = useRouter();
+  14 |   const [name, setName] = useState("");
+  15 |   const [schoolName, setSchoolName] = useState("");
+
+'import', and 'export' cannot be used outside of module code
+
+Import traces:
+  Client Component Browser:
+    ./app/login/page.tsx [Client Component Browser]
+    ./app/login/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/login/page.tsx [Client Component SSR]
+    ./app/login/page.tsx [Server Component]
+[00:07:27.397] Server  LOG      ✓ Compiled in 86ms
+[00:07:27.401] Server  WARN     ⚠ Fast Refresh had to perform a full reload when ./app/login/page.tsx changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+[00:07:27.881] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:08:18.229] Server  LOG      ✓ Compiled in 30ms
+[00:08:18.335] Browser ERROR   ./app/login/page.tsx:12:1
+Parsing ecmascript source code failed
+  10 |
+  11 | export default function LoginPage() {
+> 12 | export default function SignupPage() {
+     | ^^^^^^
+  13 |   const router = useRouter();
+  14 |   const [name, setName] = useState("");
+  15 |   const [schoolName, setSchoolName] = useState("");
+
+'import', and 'export' cannot be used outside of module code
+
+Import traces:
+  Client Component Browser:
+    ./app/login/page.tsx [Client Component Browser]
+    ./app/login/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/login/page.tsx [Client Component SSR]
+    ./app/login/page.tsx [Server Component]
+[00:08:21.157] Server  WARN     ⚠ Fast Refresh had to perform a full reload when ./app/login/page.tsx changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+[00:08:21.282] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:08:43.396] Server  LOG      ✓ Compiled in 26ms
+[00:08:47.061] Server  LOG      ✓ Compiled in 43ms
+[00:09:10.116] Server  LOG      ✓ Compiled in 32ms
+[00:09:10.221] Browser ERROR   ./app/login/page.tsx:170:22
+Parsing ecmascript source code failed
+  168 |               > <a>
+  169 |                 Sign up
+> 170 |               </span>
+      |                      ^
+> 171 |             </div>
+      | ^^^^^^^^^^^^^
+  172 |           </div>
+  173 |         </form>
+  174 |       </div>
+
+Expected '</', got 'jsx text (
+            )'
+
+Import traces:
+  Client Component Browser:
+    ./app/login/page.tsx [Client Component Browser]
+    ./app/login/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/login/page.tsx [Client Component SSR]
+    ./app/login/page.tsx [Server Component]
+[00:09:17.840] Server  LOG      ✓ Compiled in 10ms
+[00:09:20.775] Server  LOG      ✓ Compiled in 9ms
+[00:09:22.159] Server  LOG      ✓ Compiled in 4ms
+[00:09:34.003] Server  LOG      ✓ Compiled in 19ms
+[00:09:39.268] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:09:58.372] Server  LOG      ✓ Compiled in 38ms
+[00:09:59.499] Server  LOG      ✓ Compiled in 6ms
+[00:10:00.789] Server  LOG      ✓ Compiled in 25ms
+[00:10:00.893] Browser ERROR   ./app/signup/page.tsx:194:22
+Parsing ecmascript source code failed
+  192 |               </span>
+  193 |                 Sign in
+> 194 |               </span>
+      |                      ^
+> 195 |             </div>
+      | ^^^^^^^^^^^^^
+  196 |           </div>
+  197 |         </form>
+  198 |       </div>
+
+Expected '</', got 'jsx text (
+            )'
+
+Import traces:
+  Client Component Browser:
+    ./app/signup/page.tsx [Client Component Browser]
+    ./app/signup/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/signup/page.tsx [Client Component SSR]
+    ./app/signup/page.tsx [Server Component]
+[00:10:11.982] Server  LOG      ✓ Compiled in 7ms
+[00:10:16.329] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:10:17.833] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:11:05.508] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:12:29.706] Browser ERROR   uncaughtError: TypeError: Cannot read properties of undefined (reading 'map')
+[00:12:39.927] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:18:29.304] Server  LOG      ✓ Compiled in 138ms
+[00:18:33.164] Server  LOG      ✓ Compiled in 399ms
+[00:19:03.903] Browser LOG     {}
+[00:19:44.120] Browser LOG     {}
+[00:21:23.009] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:21:31.592] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:21:32.057] Browser ERROR   A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
 
 - A server/client branch `if (typeof window !== 'undefined')`.
 - Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
@@ -20,7 +150,7 @@ It can also happen if the client has a browser extension installed which messes 
         <ReplaySsrOnlyErrors>
         <DevRootHTTPAccessFallbackBoundary>
           <HTTPAccessFallbackBoundary notFound={<NotAllowedRootHTTPFallbackError>}>
-            <HTTPAccessFallbackErrorBoundary pathname="/" notFound={<NotAllowedRootHTTPFallbackError>} ...>
+            <HTTPAccessFallbackErrorBoundary pathname="/signup" notFound={<NotAllowedRootHTTPFallbackError>} ...>
               <RedirectBoundary>
                 <RedirectErrorBoundary router={{...}}>
                   <Head>
@@ -33,8 +163,238 @@ It can also happen if the client has a browser extension installed which messes 
                         <html lang="en">
                           <body
                             className="h-full"
--                           data-new-gr-c-s-check-loaded="8.934.0"
+-                           data-new-gr-c-s-check-loaded="14.1263.0"
 -                           data-gr-ext-installed=""
                           >
                   ...
 
+[00:24:08.745] Server  LOG      ✓ Compiled in 52ms
+[00:24:22.911] Server  LOG      ✓ Compiled in 29ms
+[00:24:26.123] Server  LOG      ✓ Compiled in 20ms
+[00:27:39.586] Browser ERROR   An empty string ("") was passed to the %s attribute. This may cause the browser to download the whole page again over the network. To fix this, either do not render the element at all or pass null to %s instead of an empty string. src src
+[00:27:53.282] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:28:05.341] Server  LOG      ✓ Compiled in 23ms
+[00:28:07.253] Server  LOG      ✓ Compiled in 7ms
+[00:29:01.890] Server  LOG      ✓ Compiled in 30ms
+[00:29:41.725] Server  LOG      ✓ Compiled in 84ms
+[00:30:13.954] Server  LOG      ✓ Compiled in 111ms
+[00:30:42.225] Server  LOG      ✓ Compiled in 57ms
+[00:31:37.671] Server  LOG      ✓ Compiled in 53ms
+[00:33:26.548] Browser ERROR   ./src/components/Dashboard.tsx:7:45
+Ecmascript file had an error
+   5 | import { Users, UserCheck, DollarSign, TrendingUp } from 'lucide-react';
+   6 | import { mockStudents, mockStaff, mockFees, mockExpenses, schoolSettings } from '../data/mockData';
+>  7 | import { mockStudents, mockStaff, mockFees, mockExpenses } from '../data/mockData';
+     |                                             ^^^^^^^^^^^^
+   8 |
+   9 | export function Dashboard() {
+  10 |   const [schoolSettings, setSchoolSettings] = useState({
+
+the name `mockExpenses` is defined multiple times
+
+Import traces:
+  Client Component Browser:
+    ./src/components/Dashboard.tsx [Client Component Browser]
+    ./src/App.tsx [Client Component Browser]
+    ./app/page.tsx [Client Component Browser]
+    ./app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/Dashboard.tsx [Client Component SSR]
+    ./src/App.tsx [Client Component SSR]
+    ./app/page.tsx [Client Component SSR]
+    ./app/page.tsx [Server Component]
+[00:33:26.548] Browser ERROR   ./src/components/Dashboard.tsx:7:35
+Ecmascript file had an error
+   5 | import { Users, UserCheck, DollarSign, TrendingUp } from 'lucide-react';
+   6 | import { mockStudents, mockStaff, mockFees, mockExpenses, schoolSettings } from '../data/mockData';
+>  7 | import { mockStudents, mockStaff, mockFees, mockExpenses } from '../data/mockData';
+     |                                   ^^^^^^^^
+   8 |
+   9 | export function Dashboard() {
+  10 |   const [schoolSettings, setSchoolSettings] = useState({
+
+the name `mockFees` is defined multiple times
+
+Import traces:
+  Client Component Browser:
+    ./src/components/Dashboard.tsx [Client Component Browser]
+    ./src/App.tsx [Client Component Browser]
+    ./app/page.tsx [Client Component Browser]
+    ./app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/Dashboard.tsx [Client Component SSR]
+    ./src/App.tsx [Client Component SSR]
+    ./app/page.tsx [Client Component SSR]
+    ./app/page.tsx [Server Component]
+[00:33:26.548] Browser ERROR   ./src/components/Dashboard.tsx:7:24
+Ecmascript file had an error
+   5 | import { Users, UserCheck, DollarSign, TrendingUp } from 'lucide-react';
+   6 | import { mockStudents, mockStaff, mockFees, mockExpenses, schoolSettings } from '../data/mockData';
+>  7 | import { mockStudents, mockStaff, mockFees, mockExpenses } from '../data/mockData';
+     |                        ^^^^^^^^^
+   8 |
+   9 | export function Dashboard() {
+  10 |   const [schoolSettings, setSchoolSettings] = useState({
+
+the name `mockStaff` is defined multiple times
+
+Import traces:
+  Client Component Browser:
+    ./src/components/Dashboard.tsx [Client Component Browser]
+    ./src/App.tsx [Client Component Browser]
+    ./app/page.tsx [Client Component Browser]
+    ./app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/Dashboard.tsx [Client Component SSR]
+    ./src/App.tsx [Client Component SSR]
+    ./app/page.tsx [Client Component SSR]
+    ./app/page.tsx [Server Component]
+[00:33:26.548] Browser ERROR   ./src/components/Dashboard.tsx:7:10
+Ecmascript file had an error
+   5 | import { Users, UserCheck, DollarSign, TrendingUp } from 'lucide-react';
+   6 | import { mockStudents, mockStaff, mockFees, mockExpenses, schoolSettings } from '../data/mockData';
+>  7 | import { mockStudents, mockStaff, mockFees, mockExpenses } from '../data/mockData';
+     |          ^^^^^^^^^^^^
+   8 |
+   9 | export function Dashboard() {
+  10 |   const [schoolSettings, setSchoolSettings] = useState({
+
+the name `mockStudents` is defined multiple times
+
+Import traces:
+  Client Component Browser:
+    ./src/components/Dashboard.tsx [Client Component Browser]
+    ./src/App.tsx [Client Component Browser]
+    ./app/page.tsx [Client Component Browser]
+    ./app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/Dashboard.tsx [Client Component SSR]
+    ./src/App.tsx [Client Component SSR]
+    ./app/page.tsx [Client Component SSR]
+    ./app/page.tsx [Server Component]
+[00:34:30.635] Server  LOG      ✓ Compiled in 204ms
+[00:34:30.753] Browser ERROR   Failed to parse user from localStorage {}
+[00:34:59.373] Server  LOG      ✓ Compiled in 70ms
+[00:35:11.914] Server  LOG      ✓ Compiled in 7ms
+[00:35:15.020] Server  LOG      ✓ Compiled in 15ms
+[00:35:40.636] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:35:41.654] Browser ERROR   Failed to parse user from localStorage {}
+[00:35:41.654] Browser ERROR   Failed to parse user from localStorage {}
+[00:36:27.269] Browser ERROR   ./app/login/page.tsx:28:53
+Parsing ecmascript source code failed
+  26 |         if (typeof window !== "undefined") {
+  27 |           window.localStorage.setItem("auth_token", (res as any).token);
+> 28 |           window.localStorage.setItem("user", JSON. (res as any).user);
+     |                                                     ^
+  29 |         }
+  30 |         router.replace("/");
+  31 |       } else {
+
+Expected ident
+
+Import traces:
+  Client Component Browser:
+    ./app/login/page.tsx [Client Component Browser]
+    ./app/login/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/login/page.tsx [Client Component SSR]
+    ./app/login/page.tsx [Server Component]
+[00:36:28.346] Server  LOG      ✓ Compiled in 11ms
+[00:36:30.796] Browser ERROR   ./app/login/page.tsx:28:80
+Parsing ecmascript source code failed
+  26 |         if (typeof window !== "undefined") {
+  27 |           window.localStorage.setItem("auth_token", (res as any).token);
+> 28 |           window.localStorage.setItem("user", JSON.stringify((res as any).user);
+     |                                                                                ^
+  29 |         }
+  30 |         router.replace("/");
+  31 |       } else {
+
+Expected ',', got ';'
+
+Import traces:
+  Client Component Browser:
+    ./app/login/page.tsx [Client Component Browser]
+    ./app/login/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/login/page.tsx [Client Component SSR]
+    ./app/login/page.tsx [Server Component]
+[00:36:33.213] Server  LOG      ✓ Compiled in 6ms
+[00:36:42.049] Browser ERROR   ./app/signup/page.tsx:35:80
+Parsing ecmascript source code failed
+  33 |         if (typeof window !== "undefined") {
+  34 |           window.localStorage.setItem("auth_token", (res as any).token);
+> 35 |           window.localStorage.setItem("user", JSON.stringify((res as any).user);
+     |                                                                                ^
+  36 |         }
+  37 |         router.replace("/");
+  38 |       } else {
+
+Expected ',', got ';'
+
+Import traces:
+  Client Component Browser:
+    ./app/signup/page.tsx [Client Component Browser]
+    ./app/signup/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/signup/page.tsx [Client Component SSR]
+    ./app/signup/page.tsx [Server Component]
+[00:36:44.575] Server  LOG      ✓ Compiled in 6ms
+[00:37:38.301] Browser ERROR   An empty string ("") was passed to the %s attribute. This may cause the browser to download the whole page again over the network. To fix this, either do not render the element at all or pass null to %s instead of an empty string. src src
+[00:37:50.079] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:37:51.015] Browser ERROR   An empty string ("") was passed to the %s attribute. This may cause the browser to download the whole page again over the network. To fix this, either do not render the element at all or pass null to %s instead of an empty string. src src
+[00:40:24.711] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:41:41.223] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:46:59.804] Server  LOG      ✓ Compiled in 137ms
+[00:46:59.915] Browser ERROR   ./src/components/Dashboard.tsx:55:5
+Parsing ecmascript source code failed
+  53 |         }
+  54 |       }
+> 55 |     }
+     |     ^
+  56 |   }, []);
+  57 |   useEffect(() => {
+  58 |     const fetchDashboardData = async () => {
+
+Expected a semicolon
+
+Import traces:
+  Client Component Browser:
+    ./src/components/Dashboard.tsx [Client Component Browser]
+    ./src/App.tsx [Client Component Browser]
+    ./app/page.tsx [Client Component Browser]
+    ./app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/Dashboard.tsx [Client Component SSR]
+    ./src/App.tsx [Client Component SSR]
+    ./app/page.tsx [Client Component SSR]
+    ./app/page.tsx [Server Component]
+[00:48:23.409] Server  LOG      ✓ Compiled in 362ms
+[00:48:35.126] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:50:39.833] Browser WARN    Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+[00:50:39.834] Browser WARN    Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+[00:52:11.325] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:52:14.370] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:52:34.308] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:53:36.448] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:54:15.413] Server  LOG      ✓ Compiled in 33ms
+[00:54:19.001] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:54:20.027] Browser LOG     {"feesCollected":0,"financialSummary":{"netBalance":0,"totalExpenses":0,"totalIncome":0},"outstandingFees":0,"recentExpenses":[],"totalStaff":0,"totalStudents":1}
+[00:54:20.027] Browser LOG     {"feesCollected":0,"financialSummary":{"netBalance":0,"totalExpenses":0,"totalIncome":0},"outstandingFees":0,"recentExpenses":[],"totalStaff":0,"totalStudents":1}
+[00:54:27.042] Server  LOG      ✓ Compiled in 58ms
+[00:54:32.888] Server  LOG      ✓ Compiled in 15ms
+[00:54:37.044] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:54:43.640] Server  LOG      ✓ Compiled in 30ms
+[00:54:46.622] Server  LOG      ✓ Compiled in 11ms
+[00:54:49.230] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:57:52.418] Server  LOG      ✓ Compiled in 39ms
+[00:58:03.665] Server  LOG      ✓ Compiled in 7ms
+[00:58:05.339] Server  LOG      ✓ Compiled in 6ms

@@ -243,8 +243,8 @@ export const mockTimetable: TimetableEntry[] = [
 
 export let schoolSettings: SchoolSettings = {
   name: 'Excellence Nursery & Primary School',
-  logo: 'https://images.unsplash.com/photo-1599305445671-ac291c95aaa9?w=200&h=200&fit=crop',
-  academicYear: '2024/2025',
+  logo: 'https://img.freepik.com/premium-vector/school-building-illustration_638438-385.jpg',
+  academicYear: '2025/2026',
   currentTerm: 'Term 1',
   subjectsPerClass: [
     {

@@ -19,19 +19,19 @@ export default function Page() {
             ? window.localStorage.getItem("auth_token")
             : null;
         if (!token) throw new Error("no token");
-        await api.get("/auth/me");
+        // await api.get("/auth/me");
         if (alive) setReady(true);
       } catch {
         if (alive) router.replace("/login");
       }
     };
-    // check();
+    check();
     return () => {
       alive = false;
     };
   }, [router]);
 
-  // if (!ready)
-  //   return <div className="p-6 text-sm text-gray-600">Loading...</div>;
+  if (!ready)
+    return <div className="p-6 text-sm text-gray-600">Loading...</div>;
   return <App />;
 }
