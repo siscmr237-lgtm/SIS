@@ -8,6 +8,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Textarea } from './ui/textarea';
 import { Plus, FileText, Search } from 'lucide-react';
+import { Badge } from './ui/badge';
+import { Checkbox } from './ui/checkbox';
 import { generateWorkRecord } from '../utils/pdfGenerator';
 import { api } from '@/lib/api';
 
@@ -24,6 +26,7 @@ export function StaffManagement() {
     email: '',
     hireDate: '',
     salary: '' as any,
+    isTeacher: false,
   });
   const [openWork, setOpenWork] = useState(false);
   const [workForm, setWorkForm] = useState({
@@ -112,6 +115,14 @@ export function StaffManagement() {
                 <Label>Salary (FCFA)</Label>
                 <Input type="number" placeholder="150000" value={newStaff.salary} onChange={e=>setNewStaff(s=>({...s, salary:e.target.value}))} />
               </div>
+              <div className="col-span-2 flex items-center gap-3 pt-2">
+                <Checkbox
+                  id="isTeacher"
+                  checked={newStaff.isTeacher}
+                  onCheckedChange={(checked) => setNewStaff(s => ({ ...s, isTeacher: !!checked }))}
+                />
+                <Label htmlFor="isTeacher">This staff member is a teacher</Label>
+              </div>
             </div>
             <div className="flex justify-end gap-2">
               <DialogClose asChild>
@@ -128,11 +139,12 @@ export function StaffManagement() {
                       email: newStaff.email,
                       hireDate: newStaff.hireDate,
                       salary: Number(newStaff.salary)||0,
+                      isTeacher: newStaff.isTeacher,
                     });
                     const list = await api.get('/staff');
                     setStaff(list||[]);
                     setOpenAddStaff(false);
-                    setNewStaff({ firstName:'', lastName:'', role:'', phone:'', email:'', hireDate:'', salary:'' });
+                    setNewStaff({ firstName:'', lastName:'', role:'', phone:'', email:'', hireDate:'', salary:'', isTeacher: false });
                   } catch {}
                 }}
               >Save Staff</Button>
@@ -177,7 +189,12 @@ export function StaffManagement() {
                 {filteredStaff.map((member) => (
                   <TableRow key={member.id}>
                     <TableCell>{member.id}</TableCell>
-                    <TableCell>{member.firstName} {member.lastName}</TableCell>
+                    <TableCell>
+                      <span className="flex items-center gap-2">
+                        {member.firstName} {member.lastName}
+                        {member.isTeacher && <Badge className="bg-blue-500 text-white text-xs">Teacher</Badge>}
+                      </span>
+                    </TableCell>
                     <TableCell>{member.role}</TableCell>
                     <TableCell>{member.phone}</TableCell>
                     <TableCell>{member.email}</TableCell>

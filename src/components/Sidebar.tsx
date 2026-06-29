@@ -1,11 +1,13 @@
 "use client";
 
 import {
+  BookOpen,
   Calendar,
   Clock,
   DollarSign,
   FileText,
   Home,
+  LayoutGrid,
   Receipt,
   Settings,
   UserCheck,
@@ -26,6 +28,8 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
     { id: "dashboard" as NavigationPage, label: "Dashboard", icon: Home },
     { id: "students" as NavigationPage, label: "Students", icon: Users },
     { id: "staff" as NavigationPage, label: "Staff", icon: UserCheck },
+    { id: "classes" as NavigationPage, label: "Classes", icon: LayoutGrid },
+    { id: "subjects" as NavigationPage, label: "Subjects", icon: BookOpen },
     { id: "fees" as NavigationPage, label: "Fees", icon: DollarSign },
     { id: "expenses" as NavigationPage, label: "Expenses", icon: Receipt },
     {

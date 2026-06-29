@@ -9,6 +9,8 @@ import { ReportCards } from './components/ReportCards';
 import { Attendance } from './components/Attendance';
 import { Timetable } from './components/Timetable';
 import { SchoolSettings } from './components/SchoolSettings';
+import { ClassesManagement } from './components/ClassesManagement';
+import { SubjectsManagement } from './components/SubjectsManagement';
 
 export type NavigationPage = 
   | 'dashboard'
@@ -19,6 +21,8 @@ export type NavigationPage =
   | 'report-cards'
   | 'attendance'
   | 'timetable'
+  | 'classes'
+  | 'subjects'
   | 'settings';
 
 export default function App() {
@@ -42,6 +46,10 @@ export default function App() {
         return <Attendance />;
       case 'timetable':
         return <Timetable />;
+      case 'classes':
+        return <ClassesManagement />;
+      case 'subjects':
+        return <SubjectsManagement />;
       case 'settings':
         return <SchoolSettings />;
       default:

@@ -1,16 +1,28 @@
-[00:00:01.277] Server  LOG      ✓ Ready in 883ms
-[00:00:04.497] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:01:49.956] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:01:52.486] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:01:55.296] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[07:52:00.038] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[08:16:41.088] Server  LOG      ✓ Compiled in 536ms
-[08:16:44.849] Server  LOG      ✓ Compiled in 279ms
-[08:16:48.802] Server  LOG      ✓ Compiled in 56ms
-[08:16:52.267] Server  LOG      ✓ Compiled in 27ms
-[08:16:56.200] Server  LOG      ✓ Compiled in 60ms
-[08:17:00.867] Server  LOG      ✓ Compiled in 29ms
-[08:17:04.462] Server  LOG      ✓ Compiled in 27ms
-[08:17:08.622] Server  LOG      ✓ Compiled in 79ms
-[08:17:23.166] Server  LOG      ✓ Compiled in 12ms
-[08:18:23.773] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:00:02.439] Server  LOG      ✓ Ready in 1663ms
+[00:00:05.546] Server  LOG      ○ Compiling / ...
+[00:00:08.941] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:36:15.651] Server  LOG      ✓ Compiled in 115ms
+[00:36:17.693] Server  LOG      ✓ Compiled in 38ms
+[00:36:22.393] Server  LOG      ✓ Compiled in 13ms
+[00:36:24.288] Server  LOG      ✓ Compiled in 217ms
+[00:36:29.720] Server  LOG      ✓ Compiled in 200ms
+[00:56:25.799] Server  LOG      ✓ Compiled in 37ms
+[00:56:31.236] Server  LOG      ✓ Compiled in 25ms
+[00:56:41.458] Server  LOG      ✓ Compiled in 39ms
+[00:56:46.102] Server  LOG      ✓ Compiled in 28ms
+[00:56:51.865] Server  LOG      ✓ Compiled in 47ms
+[00:57:03.315] Server  LOG      ✓ Compiled in 52ms
+[00:57:19.860] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:57:25.092] Browser ERROR   Failed to fetch dashboard data: {}
+[00:57:30.101] Browser ERROR   Failed to fetch dashboard data: {}
+[00:57:54.486] Browser ERROR   uncaughtError: TypeError: Cannot read properties of undefined (reading 'name')
+[00:58:02.500] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:58:43.159] Browser ERROR   uncaughtError: TypeError: Cannot read properties of undefined (reading 'name')
+[00:59:42.619] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[01:05:26.606] Server  LOG      ✓ Compiled in 29ms
+[01:05:34.523] Server  LOG      ✓ Compiled in 28ms
+[01:08:37.431] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[01:13:39.711] Server  LOG      ✓ Compiled in 33ms
+[01:13:54.682] Server  LOG      ✓ Compiled in 36ms
+[01:14:01.212] Server  LOG      ✓ Compiled in 38ms
+[01:15:37.876] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
