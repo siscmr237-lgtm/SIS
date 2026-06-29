@@ -1,4 +1,5 @@
 import { api } from "@/lib/api";
+import { SCHOOL_CLASSES } from "@/lib/classes";
 import { FileText, Plus, Search } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Student } from "../types";
@@ -49,15 +50,7 @@ export function StudentsManagement() {
     address: "",
   });
 
-  const classes = [
-    "Nursery",
-    "Primary 1",
-    "Primary 2",
-    "Primary 3",
-    "Primary 4",
-    "Primary 5",
-    "Primary 6",
-  ];
+  const classes = SCHOOL_CLASSES;
 
   const filteredStudents = students.filter((student) => {
     const matchesSearch =

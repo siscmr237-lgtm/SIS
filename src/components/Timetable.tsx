@@ -28,13 +28,14 @@ import {
 } from "./ui/table";
 import { Plus, FileText, Trash2 } from "lucide-react";
 import { api } from '@/lib/api';
+import { SCHOOL_CLASSES } from "@/lib/classes";
 import { generateTimetable } from "../utils/pdfGenerator";
 
 export function Timetable() {
   const [timetable, setTimetable] = useState<any[]>([]);
   const [staff, setStaff] = useState<any[]>([]);
   const [selectedClass, setSelectedClass] =
-    useState<string>("Primary 3");
+    useState<string>("Class 3");
   const [openAdd, setOpenAdd] = useState(false);
   const [form, setForm] = useState({
     cls: '',
@@ -44,15 +45,7 @@ export function Timetable() {
     teacher: '',
   });
 
-  const classes = [
-    "Nursery",
-    "Primary 1",
-    "Primary 2",
-    "Primary 3",
-    "Primary 4",
-    "Primary 5",
-    "Primary 6",
-  ];
+  const classes = SCHOOL_CLASSES;
   const days = [
     "Monday",
     "Tuesday",

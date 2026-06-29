@@ -10,17 +10,18 @@ import { Badge } from './ui/badge';
 import { Calendar, FileText, Save } from 'lucide-react';
 import { generateAttendanceSheet } from '../utils/pdfGenerator';
 import { api } from '@/lib/api';
+import { SCHOOL_CLASSES } from "@/lib/classes";
 
 export function Attendance() {
   const [attendance, setAttendance] = useState<any[]>([]);
   const [students, setStudents] = useState<any[]>([]);
   const [staff, setStaff] = useState<any[]>([]);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const [selectedClass, setSelectedClass] = useState<string>('Primary 3');
+  const [selectedClass, setSelectedClass] = useState<string>('Class 3');
   const [studentStatus, setStudentStatus] = useState<Record<string, string>>({});
   const [staffStatus, setStaffStatus] = useState<Record<string, string>>({});
 
-  const classes = ['Nursery', 'Primary 1', 'Primary 2', 'Primary 3', 'Primary 4', 'Primary 5', 'Primary 6'];
+  const classes = SCHOOL_CLASSES;
 
   const studentAttendance = attendance.filter(record => record.type === 'student' && record.date?.startsWith(selectedDate));
   const staffAttendance = attendance.filter(record => record.type === 'staff' && record.date?.startsWith(selectedDate));

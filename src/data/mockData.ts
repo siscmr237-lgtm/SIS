@@ -249,42 +249,52 @@ export let schoolSettings: SchoolSettings = {
   subjectsPerClass: [
     {
       id: 'SC001',
-      className: 'Nursery 1',
+      className: 'Day Care',
       subjects: ['English', 'Mathematics', 'Creative Arts', 'Physical Education']
     },
     {
       id: 'SC002',
-      className: 'Nursery 2',
+      className: 'Pre-Nursery',
       subjects: ['English', 'Mathematics', 'Creative Arts', 'Physical Education', 'Environmental Studies']
     },
     {
       id: 'SC003',
-      className: 'Primary 1',
-      subjects: ['English', 'Mathematics', 'Science', 'Social Studies', 'French', 'Physical Education', 'Creative Arts']
+      className: 'Nursery 1',
+      subjects: ['English', 'Mathematics', 'Creative Arts', 'Physical Education', 'Environmental Studies']
     },
     {
       id: 'SC004',
-      className: 'Primary 2',
-      subjects: ['English', 'Mathematics', 'Science', 'Social Studies', 'French', 'Physical Education', 'Creative Arts', 'ICT']
+      className: 'Nursery 2',
+      subjects: ['English', 'Mathematics', 'Creative Arts', 'Physical Education', 'Environmental Studies']
     },
     {
       id: 'SC005',
-      className: 'Primary 3',
-      subjects: ['English', 'Mathematics', 'Science', 'Social Studies', 'French', 'Physical Education', 'Creative Arts', 'ICT']
+      className: 'Class 1',
+      subjects: ['English', 'Mathematics', 'Science', 'Social Studies', 'French', 'Physical Education', 'Creative Arts']
     },
     {
       id: 'SC006',
-      className: 'Primary 4',
-      subjects: ['English', 'Mathematics', 'Science', 'Social Studies', 'French', 'Physical Education', 'Creative Arts', 'ICT', 'Religious Education']
+      className: 'Class 2',
+      subjects: ['English', 'Mathematics', 'Science', 'Social Studies', 'French', 'Physical Education', 'Creative Arts', 'ICT']
     },
     {
       id: 'SC007',
-      className: 'Primary 5',
-      subjects: ['English', 'Mathematics', 'Science', 'Social Studies', 'French', 'Physical Education', 'Creative Arts', 'ICT', 'Religious Education']
+      className: 'Class 3',
+      subjects: ['English', 'Mathematics', 'Science', 'Social Studies', 'French', 'Physical Education', 'Creative Arts', 'ICT']
     },
     {
       id: 'SC008',
-      className: 'Primary 6',
+      className: 'Class 4',
+      subjects: ['English', 'Mathematics', 'Science', 'Social Studies', 'French', 'Physical Education', 'Creative Arts', 'ICT', 'Religious Education']
+    },
+    {
+      id: 'SC009',
+      className: 'Class 5',
+      subjects: ['English', 'Mathematics', 'Science', 'Social Studies', 'French', 'Physical Education', 'Creative Arts', 'ICT', 'Religious Education']
+    },
+    {
+      id: 'SC010',
+      className: 'Class 6',
       subjects: ['English', 'Mathematics', 'Science', 'Social Studies', 'French', 'Physical Education', 'Creative Arts', 'ICT', 'Religious Education']
     }
   ]
