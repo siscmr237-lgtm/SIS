@@ -62,7 +62,7 @@ export function StaffManagement() {
     return (
       member.firstName.toLowerCase().includes(searchLower) ||
       member.lastName.toLowerCase().includes(searchLower) ||
-      member.id.toLowerCase().includes(searchLower) ||
+      member.code.toLowerCase().includes(searchLower) ||
       member.role.toLowerCase().includes(searchLower)
     );
   });
@@ -188,7 +188,7 @@ export function StaffManagement() {
               <TableBody>
                 {filteredStaff.map((member) => (
                   <TableRow key={member.id}>
-                    <TableCell>{member.id}</TableCell>
+                    <TableCell>{member.code}</TableCell>
                     <TableCell>
                       <span className="flex items-center gap-2">
                         {member.firstName} {member.lastName}
@@ -277,7 +277,7 @@ export function StaffManagement() {
                   </DialogClose>
                   <Button onClick={async ()=>{
                     try {
-                      const teacher = staff.find((s:any)=>s.id===workForm.staffId);
+                      const teacher = staff.find((s:any)=>String(s.id)===workForm.staffId);
                       await api.post('/work-records', {
                         staffId: workForm.staffId,
                         staffName: teacher ? `${teacher.firstName} ${teacher.lastName}` : '',

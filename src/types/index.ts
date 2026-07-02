@@ -12,7 +12,8 @@ export interface Student {
 }
 
 export interface Staff {
-  id: string;
+  id: number;
+  code: string;
   firstName: string;
   lastName: string;
   role: string;
@@ -20,6 +21,7 @@ export interface Staff {
   email: string;
   hireDate: string;
   salary: number;
+  isTeacher: boolean;
 }
 
 export interface Fee {

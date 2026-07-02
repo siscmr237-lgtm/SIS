@@ -18,6 +18,8 @@ export function ClassesManagement() {
   const [classes, setClasses] = useState<any[]>([]);
   const [teachers, setTeachers] = useState<any[]>([]);
   const [allSubjects, setAllSubjects] = useState<any[]>([]);
+  const [subjectTeachers, setSubjectTeachers] = useState<any[]>([]);
+  const [addTeacherSelections, setAddTeacherSelections] = useState<Record<number, string>>({});
   const [managingClass, setManagingClass] = useState<any>(null);
   const [classSubjects, setClassSubjects] = useState<any[]>([]);
   const [openManage, setOpenManage] = useState(false);
@@ -67,11 +69,18 @@ export function ClassesManagement() {
     setManagingClass(cls);
     setAddSubjectId('');
     setClassSubjects([]);
+    setSubjectTeachers([]);
+    setAddTeacherSelections({});
     setLoadingSubjects(true);
     setOpenManage(true);
+    if (teachers.length) console.log('[debug] teacher object fields:', teachers[0]);
     try {
-      const data = await api.get(`/classes/${cls.id}/subjects`);
-      setClassSubjects(data || []);
+      const [subjects, stAssignments] = await Promise.all([
+        api.get(`/classes/${cls.id}/subjects`),
+        api.get(`/classes/${cls.id}/subject-teachers`),
+      ]);
+      setClassSubjects(subjects || []);
+      setSubjectTeachers(stAssignments || []);
     } catch {}
     setLoadingSubjects(false);
   };
@@ -90,12 +99,47 @@ export function ClassesManagement() {
     if (!confirm(`Remove "${assignment.name ?? 'this subject'}" from this class?`)) return;
     try {
       await api.delete(`/classes/${managingClass.id}/subjects/${assignment.id}`);
-      const data = await api.get(`/classes/${managingClass.id}/subjects`);
-      setClassSubjects(data || []);
+      const [subjects, stAssignments] = await Promise.all([
+        api.get(`/classes/${managingClass.id}/subjects`),
+        api.get(`/classes/${managingClass.id}/subject-teachers`),
+      ]);
+      setClassSubjects(subjects || []);
+      setSubjectTeachers(stAssignments || []);
     } catch {}
   };
 
-  const assignedSubjectIds = new Set(classSubjects.map((a: any) => a.id));
+  const handleAddSubjectTeacher = async (subject: any) => {
+    const staffId = addTeacherSelections[subject.id];
+    if (!staffId || !managingClass) return;
+    // subjectId may be on a junction record; fall back to id if not present
+    const subjectId = subject.subjectId ?? subject.id;
+    try {
+      // await api.post(`/classes/${managingClass.id}/subject-teachers`, {
+      //   staffId: Number(staffId),
+      //   subjectId: Number(subjectId),
+      // });
+      await api.post(`/classes/${managingClass.id}/subject-teachers`, {
+        staffId: staffId,
+        subjectId: Number(subjectId),
+      });
+      const data = await api.get(`/classes/${managingClass.id}/subject-teachers`);
+      setSubjectTeachers(data || []);
+      setAddTeacherSelections(prev => ({ ...prev, [subject.id]: '' }));
+    } catch (e: any) {
+      console.error('subject-teacher assign failed:', e?.message || e);
+    }
+  };
+
+  const handleRemoveSubjectTeacher = async (assignmentId: number) => {
+    if (!managingClass) return;
+    try {
+      await api.delete(`/classes/${managingClass.id}/subject-teachers/${assignmentId}`);
+      const data = await api.get(`/classes/${managingClass.id}/subject-teachers`);
+      setSubjectTeachers(data || []);
+    } catch {}
+  };
+
+  const assignedSubjectIds = new Set(classSubjects.map((a: any) => a.subjectId ?? a.id));
   const availableSubjects = allSubjects.filter(s => !assignedSubjectIds.has(s.id));
 
   const handleCreateStandard = async () => {
@@ -198,7 +242,7 @@ export function ClassesManagement() {
                   <TableCell>
                     <select
                       className="border rounded h-9 px-2 text-sm w-full min-w-[180px]"
-                      value={cls.classTeacher?.code || ''}
+                      value={cls.classTeacher?.id ?? ''}
                       onChange={e => handleAssignTeacher(cls, e.target.value)}
                     >
                       <option value="">— None —</option>
@@ -237,11 +281,14 @@ export function ClassesManagement() {
           </Table>
         </Card>
       )}
-      <Dialog open={openManage} onOpenChange={open => { setOpenManage(open); if (!open) setManagingClass(null); }}>
-        <DialogContent className="max-w-lg">
+      <Dialog open={openManage} onOpenChange={open => {
+        setOpenManage(open);
+        if (!open) { setManagingClass(null); setSubjectTeachers([]); setAddTeacherSelections({}); }
+      }}>
+        <DialogContent className="max-w-xl">
           <DialogHeader>
             <DialogTitle>Subjects — {managingClass?.name}</DialogTitle>
-            <DialogDescription>Add or remove subjects assigned to this class</DialogDescription>
+            <DialogDescription>Manage subjects and their assigned teachers</DialogDescription>
           </DialogHeader>
           <div className="py-2 space-y-3">
             {loadingSubjects ? (
@@ -252,19 +299,67 @@ export function ClassesManagement() {
                   <p className="text-sm text-gray-400 py-2">No subjects assigned yet.</p>
                 ) : (
                   <div className="divide-y">
-                    {classSubjects.filter((a: any) => a?.id && a?.name).map((subject: any) => (
-                      <div key={subject.id} className="flex items-center justify-between py-2">
-                        <span className="text-sm">{subject.name}</span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleRemoveSubject(subject)}
-                          className="text-red-500 hover:text-red-700 h-7 px-2"
-                        >
-                          <Trash2 size={14} />
-                        </Button>
-                      </div>
-                    ))}
+                    {classSubjects.filter((a: any) => a?.id && a?.name).map((subject: any) => {
+                      const assigned = subjectTeachers.filter(st => st.subject?.id === (subject.subjectId ?? subject.id));
+                      const assignedIds = new Set(assigned.map(st => st.staff?.id));
+                      const available = teachers.filter(t => !assignedIds.has(t.id));
+                      return (
+                        <div key={subject.id} className="py-2 space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium">{subject.name}</span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleRemoveSubject(subject)}
+                              className="text-red-500 hover:text-red-700 h-7 px-2"
+                            >
+                              <Trash2 size={14} />
+                            </Button>
+                          </div>
+                          <div className="pl-2 space-y-1.5">
+                            {assigned.length === 0 ? (
+                              <p className="text-xs text-gray-400">No teachers assigned</p>
+                            ) : (
+                              <div className="flex flex-wrap gap-1">
+                                {assigned.map(st => (
+                                  <span key={st.id} className="inline-flex items-center gap-1 text-xs bg-gray-100 rounded px-2 py-0.5">
+                                    {st.staff?.firstName} {st.staff?.lastName}
+                                    <button
+                                      onClick={() => handleRemoveSubjectTeacher(st.id)}
+                                      className="text-gray-400 hover:text-red-500 leading-none ml-0.5"
+                                    >
+                                      ×
+                                    </button>
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                            {available.length > 0 && (
+                              <div className="flex gap-1">
+                                <select
+                                  className="border rounded h-7 px-1.5 text-xs flex-1"
+                                  value={addTeacherSelections[subject.id] ?? ''}
+                                  onChange={e => setAddTeacherSelections(prev => ({ ...prev, [subject.id]: e.target.value }))}
+                                >
+                                  <option value="">Add teacher…</option>
+                                  {available.map(t => (
+                                    <option key={t.id} value={t.id}>{t.firstName} {t.lastName}</option>
+                                  ))}
+                                </select>
+                                <Button
+                                  size="sm"
+                                  className="h-7 text-xs px-2"
+                                  onClick={() => handleAddSubjectTeacher(subject)}
+                                  disabled={!addTeacherSelections[subject.id]}
+                                >
+                                  Add
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
                 {availableSubjects.length > 0 && (

@@ -99,7 +99,7 @@ export function Attendance() {
 
   const saveStaffAttendance = async () => {
     for (const t of staff) {
-      const existing = attendance.find(a=>a.type==='staff' && a.personId===t.id && a.date?.startsWith(selectedDate));
+      const existing = attendance.find(a=>a.type==='staff' && a.personId===String(t.id) && a.date?.startsWith(selectedDate));
       const status = staffStatus[t.id] || 'present';
       try {
         if (existing) {
@@ -108,7 +108,7 @@ export function Attendance() {
           await api.post('/attendance', {
             date: selectedDate,
             type: 'staff',
-            personId: t.id,
+            personId: String(t.id),
             personName: `${t.firstName} ${t.lastName}`,
             status,
           });
@@ -226,7 +226,7 @@ export function Attendance() {
           <Card className="mb-4 p-4">
             <div className="flex gap-4 items-center">
               <p className="text-sm text-gray-600">Mark staff attendance for {selectedDate}</p>
-              <Button size="sm" variant="outline" className="ml-auto flex items-center gap-2">
+              <Button size="sm" variant="outline" className="ml-auto flex items-center gap-2" onClick={saveStaffAttendance}>
                 <Save size={16} />
                 Save Attendance
               </Button>
@@ -247,12 +247,12 @@ export function Attendance() {
               </TableHeader>
               <TableBody>
                 {staff.map((staff: any) => {
-                  const record = staffAttendance.find(a => a.personId === staff.id);
+                  const record = staffAttendance.find(a => a.personId === String(staff.id));
                   const status = record?.status || 'present';
                   
                   return (
                     <TableRow key={staff.id}>
-                      <TableCell>{staff.id}</TableCell>
+                      <TableCell>{staff.code}</TableCell>
                       <TableCell>{staff.firstName} {staff.lastName}</TableCell>
                       <TableCell>{staff.role}</TableCell>
                       <TableCell>{getStatusBadge(status)}</TableCell>
