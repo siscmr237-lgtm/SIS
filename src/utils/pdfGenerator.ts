@@ -1,6 +1,7 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Fee, Expense, Student, ReportCard, WorkRecord, TimetableEntry, AttendanceRecord } from '../types';
+import { BASE_URL } from '../lib/api';
 
 const SCHOOL_INFO = {
   name: 'École Primaire et Maternelle',
@@ -232,19 +233,72 @@ export function generateAttendanceSheet(date: string, className: string, student
   doc.save(`Attendance_${className}_${date}.pdf`);
 }
 
-export function generateFinancialSheet(student: Student, fees: Fee[]) {
+// Fallback for legacy public URLs — browser-side fetch
+async function loadImageAsDataUrl(url: string): Promise<string | null> {
+  try {
+    const blob = await (await fetch(url)).blob();
+    return await new Promise(resolve => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string | null);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
+// Routes storage-path logos through the backend (avoids browser CORS on private bucket).
+// Falls back to browser fetch for legacy plain URLs.
+async function getLogoDataUrl(logo: string): Promise<string | null> {
+  if (logo.startsWith('schools/')) {
+    try {
+      const token = typeof window !== 'undefined'
+        ? window.localStorage.getItem('auth_token')
+        : null;
+      const res = await fetch(
+        `${BASE_URL}/upload/image-data?path=${encodeURIComponent(logo)}`,
+        { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+      );
+      if (!res.ok) return null;
+      const { dataUrl } = await res.json();
+      return dataUrl || null;
+    } catch {
+      return null;
+    }
+  }
+  return loadImageAsDataUrl(logo);
+}
+
+export async function generateFinancialSheet(
+  student: Student,
+  fees: Fee[],
+  schoolInfo?: { name: string; logo?: string }
+) {
   const doc = new jsPDF();
-  
-  // Header
+
+  // Header background
   doc.setFillColor(37, 99, 235);
   doc.rect(0, 0, 210, 40, 'F');
-  
+
+  // School logo — top-left, gracefully skipped if unavailable
+  if (schoolInfo?.logo) {
+    const dataUrl = await getLogoDataUrl(schoolInfo.logo);
+    if (dataUrl) {
+      try {
+        const fmt = dataUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG';
+        doc.addImage(dataUrl, fmt, 8, 4, 32, 32);
+      } catch {}
+    }
+  }
+
+  // Header text
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(20);
-  doc.text(SCHOOL_INFO.name, 105, 15, { align: 'center' });
+  doc.text(schoolInfo?.name ?? SCHOOL_INFO.name, 105, 15, { align: 'center' });
   doc.setFontSize(14);
   doc.text('Student Financial Statement', 105, 28, { align: 'center' });
-  
+
   // Student info
   doc.setTextColor(0, 0, 0);
   doc.setFontSize(12);
@@ -253,39 +307,44 @@ export function generateFinancialSheet(student: Student, fees: Fee[]) {
   doc.text(`Name: ${student.firstName} ${student.lastName}`, 20, 58);
   doc.text(`Student ID: ${student.id}`, 20, 65);
   doc.text(`Class: ${student.class}`, 20, 72);
-  
-  // Financial records
-  const tableData = fees.map(fee => [
-    fee.term,
-    fee.academicYear,
-    fee.totalAmount.toLocaleString(),
-    fee.amountPaid.toLocaleString(),
-    fee.balance.toLocaleString(),
-    fee.paymentDate || 'Pending'
-  ]);
-  
-  const totalAmount = fees.reduce((sum, fee) => sum + fee.totalAmount, 0);
-  const totalPaid = fees.reduce((sum, fee) => sum + fee.amountPaid, 0);
-  const totalBalance = fees.reduce((sum, fee) => sum + fee.balance, 0);
-  
-  tableData.push([
-    'TOTAL',
-    '',
-    totalAmount.toLocaleString(),
-    totalPaid.toLocaleString(),
-    totalBalance.toLocaleString(),
-    ''
-  ]);
-  
-  autoTable(doc, {
-    startY: 85,
-    head: [['Term', 'Academic Year', 'Total (FCFA)', 'Paid (FCFA)', 'Balance (FCFA)', 'Payment Date']],
-    body: tableData,
-    theme: 'striped',
-    headStyles: { fillColor: [37, 99, 235] },
-    styles: { fontSize: 9 }
-  });
-  
+
+  if (fees.length === 0) {
+    doc.setFontSize(11);
+    doc.setTextColor(150, 150, 150);
+    doc.text('No fee records found for this student.', 105, 95, { align: 'center' });
+  } else {
+    const tableData = fees.map(fee => [
+      fee.term,
+      fee.academicYear,
+      fee.totalAmount.toLocaleString(),
+      fee.amountPaid.toLocaleString(),
+      fee.balance.toLocaleString(),
+      fee.paymentDate || 'Pending'
+    ]);
+
+    const totalAmount = fees.reduce((sum, fee) => sum + fee.totalAmount, 0);
+    const totalPaid = fees.reduce((sum, fee) => sum + fee.amountPaid, 0);
+    const totalBalance = fees.reduce((sum, fee) => sum + fee.balance, 0);
+
+    tableData.push([
+      'TOTAL',
+      '',
+      totalAmount.toLocaleString(),
+      totalPaid.toLocaleString(),
+      totalBalance.toLocaleString(),
+      ''
+    ]);
+
+    autoTable(doc, {
+      startY: 85,
+      head: [['Term', 'Academic Year', 'Total (FCFA)', 'Paid (FCFA)', 'Balance (FCFA)', 'Payment Date']],
+      body: tableData,
+      theme: 'striped',
+      headStyles: { fillColor: [37, 99, 235] },
+      styles: { fontSize: 9 }
+    });
+  }
+
   doc.save(`Financial_Statement_${student.firstName}_${student.lastName}.pdf`);
 }
 

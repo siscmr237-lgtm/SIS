@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
-import { Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
+import { NavigationPage } from '../App';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import {
@@ -13,7 +14,11 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from './ui/table';
 
-export function SubjectsManagement() {
+interface SubjectsManagementProps {
+  onNavigate?: (page: NavigationPage) => void;
+}
+
+export function SubjectsManagement({ onNavigate }: SubjectsManagementProps) {
   const [subjects, setSubjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [seeding, setSeeding] = useState(false);
@@ -77,6 +82,13 @@ export function SubjectsManagement() {
     <div className="p-8">
       <div className="flex justify-between items-center mb-8">
         <div>
+          <button
+            onClick={() => onNavigate?.('classes')}
+            className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800 transition-colors mb-3"
+          >
+            <ArrowLeft size={16} />
+            Back to Classes
+          </button>
           <h1 className="text-3xl mb-2">Subjects</h1>
           <p className="text-gray-600">Manage school subjects</p>
         </div>

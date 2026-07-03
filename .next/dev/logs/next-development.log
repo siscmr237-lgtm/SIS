@@ -1,10 +1,47 @@
-[00:00:02.475] Server  LOG      ✓ Ready in 1635ms
-[00:00:05.580] Server  LOG      ○ Compiling / ...
-[00:00:10.584] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:00:39.074] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:00:44.854] Browser ERROR   Failed to fetch dashboard data: {}
-[00:00:50.448] Browser ERROR   Failed to fetch dashboard data: {}
-[00:01:18.909] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:02:38.111] Browser LOG     [debug] teacher object fields: {"code":"STFPWZDW","email":"test@gmail.com","firstName":"Max","hireDate":"2026-06-30T00:00:00.000Z","id":7,"isTeacher":true,"lastName":"teacher 1","phone":"+237677777777","role":"Maths","salary":20000,"schoolId":8}
-[00:02:56.454] Browser LOG     [debug] teacher object fields: {"code":"STFPWZDW","email":"test@gmail.com","firstName":"Max","hireDate":"2026-06-30T00:00:00.000Z","id":7,"isTeacher":true,"lastName":"teacher 1","phone":"+237677777777","role":"Maths","salary":20000,"schoolId":8}
-[44:57:01.166] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:00:02.311] Server  LOG      ✓ Ready in 1565ms
+[00:00:05.381] Server  LOG      ○ Compiling / ...
+[00:00:08.088] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:00:11.455] Browser ERROR   Failed to fetch dashboard data: {}
+[00:00:11.456] Browser ERROR   Failed to fetch dashboard data: {}
+[00:00:22.456] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:05:15.204] Server  LOG      ✓ Compiled in 44ms
+[00:10:51.019] Server  LOG      ✓ Compiled in 172ms
+[00:10:51.453] Browser ERROR   uncaughtError: ReferenceError: BookOpen is not defined
+[00:10:55.839] Server  WARN     ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+[00:10:55.872] Server  LOG      ✓ Compiled in 24ms
+[00:10:56.521] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:11:00.069] Server  LOG      ✓ Compiled in 16ms
+[00:11:04.700] Server  LOG      ✓ Compiled in 56ms
+[00:11:09.337] Server  LOG      ✓ Compiled in 26ms
+[00:11:19.616] Server  LOG      ✓ Compiled in 46ms
+[00:14:33.064] Server  LOG      ✓ Compiled in 30ms
+[00:14:38.095] Server  LOG      ✓ Compiled in 19ms
+[00:14:43.514] Server  LOG      ✓ Compiled in 146ms
+[00:14:48.208] Server  LOG      ✓ Compiled in 3ms
+[00:19:47.785] Server  LOG      ✓ Compiled in 44ms
+[00:19:52.417] Server  LOG      ✓ Compiled in 34ms
+[00:34:23.887] Server  LOG      ✓ Compiled in 25ms
+[00:34:31.316] Server  LOG      ✓ Compiled in 32ms
+[00:34:52.318] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[01:01:41.104] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[01:02:01.983] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[01:05:33.737] Server  LOG      ✓ Compiled in 282ms
+[01:05:59.957] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[01:06:15.872] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[01:09:12.765] Server  LOG      ✓ Compiled in 38ms
+[01:10:24.929] Browser LOG     [PDF logo] fetching: https://img.freepik.com/premium-vector/school-building-illustration_638438-385.jpg
+[01:10:24.929] Browser LOG     [PDF logo] fetch failed: {}
+[01:13:12.887] Browser ERROR   uncaughtError: TypeError: Cannot read properties of undefined (reading 'map')
+[01:13:18.312] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[09:37:51.843] Server  LOG      ✓ Compiled in 441ms
+[09:38:13.215] Server  LOG      ✓ Compiled in 407ms
+[09:38:38.292] Server  LOG      ✓ Compiled in 513ms
+[09:39:26.136] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[09:45:45.588] Server  LOG      ✓ Compiled in 70ms
+[09:46:03.767] Server  LOG      ✓ Compiled in 235ms
+[09:46:12.871] Server  LOG      ✓ Compiled in 31ms
+[09:47:01.442] Server  LOG      ✓ Compiled in 112ms
+[09:47:13.842] Server  LOG      ✓ Compiled in 63ms
+[09:47:51.796] Server  LOG      ✓ Compiled in 106ms
+[09:48:03.503] Server  LOG      ✓ Compiled in 19ms
+[09:48:37.390] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold

@@ -47,9 +47,9 @@ export default function App() {
       case 'timetable':
         return <Timetable />;
       case 'classes':
-        return <ClassesManagement />;
+        return <ClassesManagement onNavigate={setCurrentPage} />;
       case 'subjects':
-        return <SubjectsManagement />;
+        return <SubjectsManagement onNavigate={setCurrentPage} />;
       case 'settings':
         return <SchoolSettings />;
       default:
@@ -58,9 +58,9 @@ export default function App() {
   };
 
   return (
-    <div className="flex h-full bg-gray-50">
+    <div className="flex h-screen overflow-hidden bg-gray-50">
       <Sidebar currentPage={currentPage} onNavigate={setCurrentPage} />
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1 overflow-y-auto">
         {renderPage()}
       </main>
     </div>

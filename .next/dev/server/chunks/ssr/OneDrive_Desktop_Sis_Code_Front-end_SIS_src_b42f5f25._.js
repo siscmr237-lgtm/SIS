@@ -91,6 +91,8 @@ __turbopack_context__.s([
 ]);
 var __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$jspdf$2f$dist$2f$jspdf$2e$es$2e$min$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/node_modules/jspdf/dist/jspdf.es.min.js [app-ssr] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$jspdf$2d$autotable$2f$dist$2f$jspdf$2e$plugin$2e$autotable$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/node_modules/jspdf-autotable/dist/jspdf.plugin.autotable.mjs [app-ssr] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$src$2f$lib$2f$api$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/lib/api.ts [app-ssr] (ecmascript)");
+;
 ;
 ;
 const SCHOOL_INFO = {
@@ -421,14 +423,57 @@ function generateAttendanceSheet(date, className, students) {
     });
     doc.save(`Attendance_${className}_${date}.pdf`);
 }
-function generateFinancialSheet(student, fees) {
+// Fallback for legacy public URLs — browser-side fetch
+async function loadImageAsDataUrl(url) {
+    try {
+        const blob = await (await fetch(url)).blob();
+        return await new Promise((resolve)=>{
+            const reader = new FileReader();
+            reader.onloadend = ()=>resolve(reader.result);
+            reader.onerror = ()=>resolve(null);
+            reader.readAsDataURL(blob);
+        });
+    } catch  {
+        return null;
+    }
+}
+// Routes storage-path logos through the backend (avoids browser CORS on private bucket).
+// Falls back to browser fetch for legacy plain URLs.
+async function getLogoDataUrl(logo) {
+    if (logo.startsWith('schools/')) {
+        try {
+            const token = ("TURBOPACK compile-time falsy", 0) ? "TURBOPACK unreachable" : null;
+            const res = await fetch(`${__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$src$2f$lib$2f$api$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["BASE_URL"]}/upload/image-data?path=${encodeURIComponent(logo)}`, {
+                headers: ("TURBOPACK compile-time falsy", 0) ? "TURBOPACK unreachable" : {}
+            });
+            if (!res.ok) return null;
+            const { dataUrl } = await res.json();
+            return dataUrl || null;
+        } catch  {
+            return null;
+        }
+    }
+    return loadImageAsDataUrl(logo);
+}
+async function generateFinancialSheet(student, fees, schoolInfo) {
     const doc = new __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$jspdf$2f$dist$2f$jspdf$2e$es$2e$min$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsPDF"]();
-    // Header
+    // Header background
     doc.setFillColor(37, 99, 235);
     doc.rect(0, 0, 210, 40, 'F');
+    // School logo — top-left, gracefully skipped if unavailable
+    if (schoolInfo?.logo) {
+        const dataUrl = await getLogoDataUrl(schoolInfo.logo);
+        if (dataUrl) {
+            try {
+                const fmt = dataUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG';
+                doc.addImage(dataUrl, fmt, 8, 4, 32, 32);
+            } catch  {}
+        }
+    }
+    // Header text
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(20);
-    doc.text(SCHOOL_INFO.name, 105, 15, {
+    doc.text(schoolInfo?.name ?? SCHOOL_INFO.name, 105, 15, {
         align: 'center'
     });
     doc.setFontSize(14);
@@ -443,51 +488,58 @@ function generateFinancialSheet(student, fees) {
     doc.text(`Name: ${student.firstName} ${student.lastName}`, 20, 58);
     doc.text(`Student ID: ${student.id}`, 20, 65);
     doc.text(`Class: ${student.class}`, 20, 72);
-    // Financial records
-    const tableData = fees.map((fee)=>[
-            fee.term,
-            fee.academicYear,
-            fee.totalAmount.toLocaleString(),
-            fee.amountPaid.toLocaleString(),
-            fee.balance.toLocaleString(),
-            fee.paymentDate || 'Pending'
+    if (fees.length === 0) {
+        doc.setFontSize(11);
+        doc.setTextColor(150, 150, 150);
+        doc.text('No fee records found for this student.', 105, 95, {
+            align: 'center'
+        });
+    } else {
+        const tableData = fees.map((fee)=>[
+                fee.term,
+                fee.academicYear,
+                fee.totalAmount.toLocaleString(),
+                fee.amountPaid.toLocaleString(),
+                fee.balance.toLocaleString(),
+                fee.paymentDate || 'Pending'
+            ]);
+        const totalAmount = fees.reduce((sum, fee)=>sum + fee.totalAmount, 0);
+        const totalPaid = fees.reduce((sum, fee)=>sum + fee.amountPaid, 0);
+        const totalBalance = fees.reduce((sum, fee)=>sum + fee.balance, 0);
+        tableData.push([
+            'TOTAL',
+            '',
+            totalAmount.toLocaleString(),
+            totalPaid.toLocaleString(),
+            totalBalance.toLocaleString(),
+            ''
         ]);
-    const totalAmount = fees.reduce((sum, fee)=>sum + fee.totalAmount, 0);
-    const totalPaid = fees.reduce((sum, fee)=>sum + fee.amountPaid, 0);
-    const totalBalance = fees.reduce((sum, fee)=>sum + fee.balance, 0);
-    tableData.push([
-        'TOTAL',
-        '',
-        totalAmount.toLocaleString(),
-        totalPaid.toLocaleString(),
-        totalBalance.toLocaleString(),
-        ''
-    ]);
-    (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$jspdf$2d$autotable$2f$dist$2f$jspdf$2e$plugin$2e$autotable$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"])(doc, {
-        startY: 85,
-        head: [
-            [
-                'Term',
-                'Academic Year',
-                'Total (FCFA)',
-                'Paid (FCFA)',
-                'Balance (FCFA)',
-                'Payment Date'
-            ]
-        ],
-        body: tableData,
-        theme: 'striped',
-        headStyles: {
-            fillColor: [
-                37,
-                99,
-                235
-            ]
-        },
-        styles: {
-            fontSize: 9
-        }
-    });
+        (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$jspdf$2d$autotable$2f$dist$2f$jspdf$2e$plugin$2e$autotable$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"])(doc, {
+            startY: 85,
+            head: [
+                [
+                    'Term',
+                    'Academic Year',
+                    'Total (FCFA)',
+                    'Paid (FCFA)',
+                    'Balance (FCFA)',
+                    'Payment Date'
+                ]
+            ],
+            body: tableData,
+            theme: 'striped',
+            headStyles: {
+                fillColor: [
+                    37,
+                    99,
+                    235
+                ]
+            },
+            styles: {
+                fontSize: 9
+            }
+        });
+    }
     doc.save(`Financial_Statement_${student.firstName}_${student.lastName}.pdf`);
 }
 function generateWorkRecord(record) {
@@ -1247,13 +1299,17 @@ function App() {
                     columnNumber: 16
                 }, this);
             case 'classes':
-                return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$src$2f$components$2f$ClassesManagement$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["ClassesManagement"], {}, void 0, false, {
+                return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$src$2f$components$2f$ClassesManagement$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["ClassesManagement"], {
+                    onNavigate: setCurrentPage
+                }, void 0, false, {
                     fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/App.tsx",
                     lineNumber: 50,
                     columnNumber: 16
                 }, this);
             case 'subjects':
-                return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$src$2f$components$2f$SubjectsManagement$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["SubjectsManagement"], {}, void 0, false, {
+                return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$src$2f$components$2f$SubjectsManagement$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["SubjectsManagement"], {
+                    onNavigate: setCurrentPage
+                }, void 0, false, {
                     fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/App.tsx",
                     lineNumber: 52,
                     columnNumber: 16
@@ -1273,7 +1329,7 @@ function App() {
         }
     };
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-        className: "flex h-full bg-gray-50",
+        className: "flex h-screen overflow-hidden bg-gray-50",
         children: [
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$src$2f$components$2f$Sidebar$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Sidebar"], {
                 currentPage: currentPage,
@@ -1284,7 +1340,7 @@ function App() {
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("main", {
-                className: "flex-1 overflow-auto",
+                className: "flex-1 overflow-y-auto",
                 children: renderPage()
             }, void 0, false, {
                 fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/App.tsx",

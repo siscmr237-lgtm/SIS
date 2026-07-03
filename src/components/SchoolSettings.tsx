@@ -1,22 +1,26 @@
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { Settings, Plus, Trash2, Edit, Save, X } from 'lucide-react';
+import { Settings, Plus, Trash2, Edit, Save, X, Upload } from 'lucide-react';
 import { schoolSettings } from '../data/mockData';
 import { SubjectConfig } from '../types';
 import { toast } from 'sonner';
-import { api } from '@/lib/api';
+import { api, BASE_URL } from '@/lib/api';
 
 export function SchoolSettings() {
+  const router = useRouter();
   const [settings, setSettings] = useState(schoolSettings);
   const [isEditingBasic, setIsEditingBasic] = useState(false);
   const [isEditingSubjects, setIsEditingSubjects] = useState(false);
   const [selectedClass, setSelectedClass] = useState<SubjectConfig | null>(null);
   const [newSubject, setNewSubject] = useState('');
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [logoError, setLogoError] = useState<string | null>(null);
 
   // Basic Settings Form State
   const [formData, setFormData] = useState({
@@ -73,7 +77,25 @@ export function SchoolSettings() {
     setSettings(next);
     setIsEditingBasic(false);
     try {
-      await api.put('/settings', next);
+      await api.put('/settings', {
+        name: formData.name,
+        logo: formData.logo,
+        academicYear: formData.academicYear,
+        currentTerm: formData.currentTerm,
+      });
+      try {
+        const userStr = window.localStorage.getItem('user');
+        if (userStr) {
+          const user = JSON.parse(userStr);
+          if (user?.School?.[0]) {
+            user.School[0].name = formData.name;
+            user.School[0].logo = formData.logo;
+            user.School[0].academicYear = formData.academicYear;
+            user.School[0].currentTerm = formData.currentTerm;
+            window.localStorage.setItem('user', JSON.stringify(user));
+          }
+        }
+      } catch {}
       toast.success('School information updated successfully');
     } catch {
       toast.error('Failed to save school information');
@@ -143,6 +165,63 @@ export function SchoolSettings() {
       toast.success('Class added successfully');
     } catch {
       toast.error('Failed to add class');
+    }
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setLogoUploading(true);
+    setLogoError(null);
+
+    try {
+      const token = typeof window !== 'undefined' ? window.localStorage.getItem('auth_token') : null;
+      const body = new FormData();
+      body.append('file', file);
+      body.append('type', 'logo');
+
+      const res = await fetch(`${BASE_URL}/upload`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body,
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || `Upload failed: ${res.status}`);
+      }
+
+      const { path } = await res.json();
+
+      // Persist the path to the database
+      await api.put('/settings', { logo: path });
+
+      // Sync localStorage so Sidebar/Dashboard/PDF pick up the new path
+      try {
+        const userStr = window.localStorage.getItem('user');
+        if (userStr) {
+          const user = JSON.parse(userStr);
+          if (user?.School?.[0]) {
+            user.School[0].logo = path;
+            window.localStorage.setItem('user', JSON.stringify(user));
+          }
+        }
+      } catch {}
+
+      // Update local state so the stored path reflects immediately
+      setSettings(prev => ({ ...prev, logo: path }));
+      setFormData(prev => ({ ...prev, logo: path }));
+
+      toast.success('Logo uploaded successfully');
+    } catch (err: any) {
+      const msg = err?.message || 'Upload failed';
+      setLogoError(msg);
+      toast.error('Logo upload failed');
+    } finally {
+      setLogoUploading(false);
+      // Reset so the same file can be re-selected if needed
+      e.target.value = '';
     }
   };
 
@@ -235,23 +314,31 @@ export function SchoolSettings() {
           </div>
 
           <div>
-            <Label>School Logo URL</Label>
-            {isEditingBasic ? (
-              <Input
-                value={formData.logo}
-                onChange={(e) => setFormData(prev => ({ ...prev, logo: e.target.value }))}
-                placeholder="Enter logo URL"
-              />
-            ) : (
-              <div className="mt-2 flex items-center gap-4">
-                <img 
-                  src={settings.logo} 
-                  alt="School Logo" 
-                  className="w-16 h-16 object-cover rounded-lg border"
-                />
-                <p className="text-sm text-gray-600 break-all">{settings.logo}</p>
+            <Label>School Logo</Label>
+            <div className="mt-2 space-y-2">
+              <div className="flex items-center gap-3">
+                <label
+                  className={`cursor-pointer inline-flex items-center gap-2 px-3 py-2 text-sm rounded-md border border-gray-300 hover:bg-gray-50 transition-colors${logoUploading ? ' opacity-50 pointer-events-none' : ''}`}
+                >
+                  <Upload size={14} />
+                  {logoUploading ? 'Uploading…' : 'Choose image'}
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="sr-only"
+                    onChange={handleLogoUpload}
+                    disabled={logoUploading}
+                  />
+                </label>
+                <span className="text-xs text-gray-400">JPG, PNG or WebP · max 5 MB</span>
               </div>
-            )}
+              {logoError && (
+                <p className="text-sm text-red-600">{logoError}</p>
+              )}
+              {settings.logo && (
+                <p className="text-xs text-gray-500 break-all">{settings.logo}</p>
+              )}
+            </div>
           </div>
         </div>
       </Card>
@@ -437,6 +524,24 @@ export function SchoolSettings() {
           ))}
         </div>
       </Card>
+
+      {/* Logout */}
+      <div className="mt-8 pt-6 border-t border-gray-200">
+        <Button
+          variant="destructive"
+          onClick={() => {
+            try {
+              if (typeof window !== "undefined") {
+                window.localStorage.removeItem("auth_token");
+                window.localStorage.removeItem("user");
+                router.replace("/login");
+              }
+            } catch {}
+          }}
+        >
+          Logout
+        </Button>
+      </div>
 
       {/* Edit Subjects Dialog */}
       <Dialog open={isEditingSubjects} onOpenChange={setIsEditingSubjects}>

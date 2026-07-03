@@ -2,7 +2,7 @@
 
 import { DollarSign, TrendingUp, UserCheck, Users } from "lucide-react";
 import { useEffect, useState } from "react";
-import { api } from "../../src/lib/api";
+import { api, BASE_URL } from "../../src/lib/api";
 import { Card } from "./ui/card";
 
 export function Dashboard() {
@@ -14,6 +14,7 @@ export function Dashboard() {
     academicYear: "2024/2025",
     currentTerm: "Term 1",
   });
+  const [logoSrc, setLogoSrc] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -22,7 +23,20 @@ export function Dashboard() {
         try {
           const user = JSON.parse(userStr);
           if (user && user.School) {
-            setSchoolSettings(user.School[0]);
+            const school = user.School[0];
+            setSchoolSettings(school);
+            const logo = school?.logo;
+            if (logo?.startsWith('schools/')) {
+              const token = window.localStorage.getItem('auth_token');
+              fetch(`${BASE_URL}/upload/signed-url?path=${encodeURIComponent(logo)}`, {
+                headers: token ? { Authorization: `Bearer ${token}` } : {},
+              })
+                .then(r => r.ok ? r.json() : null)
+                .then(data => { if (data?.url) setLogoSrc(data.url); })
+                .catch(() => {});
+            } else if (logo) {
+              setLogoSrc(logo);
+            }
           }
         } catch (e) {
           console.error("Failed to parse user from localStorage", e);
@@ -82,11 +96,13 @@ export function Dashboard() {
       {/* School Header */}
       <Card className="p-6 mb-8 bg-gradient-to-r from-blue-50 to-purple-50">
         <div className="flex items-center gap-6">
-          <img
-            src={schoolSettings.logo}
-            alt="School Logo"
-            className="w-20 h-20 object-cover rounded-lg border-2 border-white shadow-lg"
-          />
+          {logoSrc && (
+            <img
+              src={logoSrc}
+              alt="School Logo"
+              className="w-20 h-20 object-cover rounded-lg border-2 border-white shadow-lg"
+            />
+          )}
           <div className="flex-1">
             <h1 className="text-3xl mb-1">{schoolSettings.name}</h1>
             <div className="flex gap-4 text-gray-600">

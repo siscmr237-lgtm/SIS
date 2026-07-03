@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { NavigationPage } from '../App';
 import { api } from '@/lib/api';
 import { SCHOOL_CLASSES } from '@/lib/classes';
 import { BookOpen, Plus, Trash2 } from 'lucide-react';
@@ -14,7 +15,11 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from './ui/table';
 
-export function ClassesManagement() {
+interface ClassesManagementProps {
+  onNavigate?: (page: NavigationPage) => void;
+}
+
+export function ClassesManagement({ onNavigate }: ClassesManagementProps) {
   const [classes, setClasses] = useState<any[]>([]);
   const [teachers, setTeachers] = useState<any[]>([]);
   const [allSubjects, setAllSubjects] = useState<any[]>([]);
@@ -179,35 +184,45 @@ export function ClassesManagement() {
           <h1 className="text-3xl mb-2">Classes</h1>
           <p className="text-gray-600">Manage school classes</p>
         </div>
-        <Dialog open={openAdd} onOpenChange={setOpenAdd}>
-          <DialogTrigger asChild>
-            <Button className="flex items-center gap-2">
-              <Plus size={20} />
-              Add Class
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add New Class</DialogTitle>
-              <DialogDescription>Enter the class name below</DialogDescription>
-            </DialogHeader>
-            <div className="py-4">
-              <Label>Class Name</Label>
-              <Input
-                placeholder="e.g., Class 7"
-                value={newClassName}
-                onChange={e => setNewClassName(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') handleAdd(); }}
-              />
-            </div>
-            <div className="flex justify-end gap-2">
-              <DialogClose asChild>
-                <Button variant="outline">Cancel</Button>
-              </DialogClose>
-              <Button onClick={handleAdd}>Save Class</Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            className="flex items-center gap-2"
+            onClick={() => onNavigate?.('subjects')}
+          >
+            <BookOpen size={20} />
+            Manage Subjects
+          </Button>
+          <Dialog open={openAdd} onOpenChange={setOpenAdd}>
+            <DialogTrigger asChild>
+              <Button className="flex items-center gap-2">
+                <Plus size={20} />
+                Add Class
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add New Class</DialogTitle>
+                <DialogDescription>Enter the class name below</DialogDescription>
+              </DialogHeader>
+              <div className="py-4">
+                <Label>Class Name</Label>
+                <Input
+                  placeholder="e.g., Class 7"
+                  value={newClassName}
+                  onChange={e => setNewClassName(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') handleAdd(); }}
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <DialogClose asChild>
+                  <Button variant="outline">Cancel</Button>
+                </DialogClose>
+                <Button onClick={handleAdd}>Save Class</Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {loading ? (
@@ -227,7 +242,6 @@ export function ClassesManagement() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Code</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Class Teacher</TableHead>
                 <TableHead>Subjects</TableHead>
@@ -237,7 +251,6 @@ export function ClassesManagement() {
             <TableBody>
               {classes.map(cls => (
                 <TableRow key={cls.id}>
-                  <TableCell>{cls.code}</TableCell>
                   <TableCell>{cls.name}</TableCell>
                   <TableCell>
                     <select

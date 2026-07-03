@@ -87,13 +87,22 @@ export function StudentsManagement() {
   }, [searchTerm, selectedClass]);
 
   const handleGenerateFinancialSheet = async (student: Student) => {
+    let schoolInfo: { name: string; logo?: string } | undefined;
+    try {
+      const userStr = window.localStorage.getItem('user');
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        if (user?.School?.[0]) schoolInfo = user.School[0];
+      }
+    } catch {}
+
     try {
       const data = await api.get(
         `/fees?studentId=${encodeURIComponent(student.id)}`
       );
-      generateFinancialSheet(student, data || []);
+      await generateFinancialSheet(student, data || [], schoolInfo);
     } catch (e) {
-      generateFinancialSheet(student, []);
+      await generateFinancialSheet(student, [], schoolInfo);
     }
   };
 
