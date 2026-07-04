@@ -5,6 +5,7 @@ import { StudentsManagement } from './components/StudentsManagement';
 import { StudentProfile } from './components/StudentProfile';
 import { Student } from './types';
 import { StaffManagement } from './components/StaffManagement';
+import { FinanceOverview } from './components/FinanceOverview';
 import { FeesManagement } from './components/FeesManagement';
 import { ExpensesManagement } from './components/ExpensesManagement';
 import { ReportCards } from './components/ReportCards';
@@ -19,7 +20,7 @@ export type NavigationPage =
   | 'students'
   | 'student-profile'
   | 'staff'
-  | 'fees'
+  | 'finance'
   | 'expenses'
   | 'report-cards'
   | 'attendance'
@@ -54,8 +55,13 @@ export default function App() {
         );
       case 'staff':
         return <StaffManagement />;
-      case 'fees':
-        return <FeesManagement />;
+      case 'finance':
+        return (
+          <FinanceOverview
+            onNavigate={setCurrentPage}
+            onViewStudent={(s) => { setSelectedStudent(s); setCurrentPage('student-profile'); }}
+          />
+        );
       case 'expenses':
         return <ExpensesManagement />;
       case 'report-cards':

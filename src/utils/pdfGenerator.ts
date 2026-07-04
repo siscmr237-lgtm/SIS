@@ -270,9 +270,17 @@ async function getLogoDataUrl(logo: string): Promise<string | null> {
   return loadImageAsDataUrl(logo);
 }
 
+interface LedgerPdfEntry {
+  type: 'CHARGE' | 'PAYMENT';
+  description: string;
+  amount: number;
+  entryDate: string;
+  category?: { name: string } | null;
+}
+
 export async function generateFinancialSheet(
   student: Student,
-  fees: Fee[],
+  ledgerData: { entries: LedgerPdfEntry[]; totalCharged: number; totalPaid: number; balance: number },
   schoolInfo?: { name: string; logo?: string }
 ) {
   const doc = new jsPDF();
@@ -308,40 +316,50 @@ export async function generateFinancialSheet(
   doc.text(`Student ID: ${student.id}`, 20, 65);
   doc.text(`Class: ${student.class}`, 20, 72);
 
-  if (fees.length === 0) {
+  const { entries, totalCharged, totalPaid, balance } = ledgerData;
+
+  if (entries.length === 0) {
     doc.setFontSize(11);
     doc.setTextColor(150, 150, 150);
-    doc.text('No fee records found for this student.', 105, 95, { align: 'center' });
+    doc.text('No financial records found for this student.', 105, 95, { align: 'center' });
   } else {
-    const tableData = fees.map(fee => [
-      fee.term,
-      fee.academicYear,
-      fee.totalAmount.toLocaleString(),
-      fee.amountPaid.toLocaleString(),
-      fee.balance.toLocaleString(),
-      fee.paymentDate || 'Pending'
-    ]);
-
-    const totalAmount = fees.reduce((sum, fee) => sum + fee.totalAmount, 0);
-    const totalPaid = fees.reduce((sum, fee) => sum + fee.amountPaid, 0);
-    const totalBalance = fees.reduce((sum, fee) => sum + fee.balance, 0);
-
-    tableData.push([
-      'TOTAL',
-      '',
-      totalAmount.toLocaleString(),
-      totalPaid.toLocaleString(),
-      totalBalance.toLocaleString(),
-      ''
+    const tableData = entries.map(entry => [
+      new Date(entry.entryDate).toLocaleDateString('en-GB'),
+      entry.type === 'CHARGE' ? 'Charge' : 'Payment',
+      entry.category?.name ?? '—',
+      entry.description,
+      `${entry.amount.toLocaleString()} FCFA`,
     ]);
 
     autoTable(doc, {
       startY: 85,
-      head: [['Term', 'Academic Year', 'Total (FCFA)', 'Paid (FCFA)', 'Balance (FCFA)', 'Payment Date']],
+      head: [['Date', 'Type', 'Category', 'Description', 'Amount (FCFA)']],
       body: tableData,
       theme: 'striped',
       headStyles: { fillColor: [37, 99, 235] },
-      styles: { fontSize: 9 }
+      styles: { fontSize: 9 },
+      columnStyles: {
+        0: { cellWidth: 28 },
+        1: { cellWidth: 22 },
+        2: { cellWidth: 32 },
+        4: { cellWidth: 30, halign: 'right' },
+      },
+    });
+
+    autoTable(doc, {
+      startY: (doc as any).lastAutoTable.finalY + 8,
+      body: [
+        ['Total Charged', `${totalCharged.toLocaleString()} FCFA`],
+        ['Total Paid',    `${totalPaid.toLocaleString()} FCFA`],
+        ['Balance Owed',  `${balance.toLocaleString()} FCFA`],
+      ],
+      theme: 'plain',
+      styles: { fontSize: 10 },
+      columnStyles: {
+        0: { cellWidth: 60, fontStyle: 'bold' },
+        1: { cellWidth: 60, halign: 'right' },
+      },
+      margin: { left: 110 },
     });
   }
 

@@ -102,13 +102,12 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
       }
     } catch {}
 
+    const empty = { entries: [], totalCharged: 0, totalPaid: 0, balance: 0 };
     try {
-      const data = await api.get(
-        `/fees?studentId=${encodeURIComponent(student.id)}`
-      );
-      await generateFinancialSheet(student, data || [], schoolInfo);
-    } catch (e) {
-      await generateFinancialSheet(student, [], schoolInfo);
+      const data = await api.get(`/ledger/student/${encodeURIComponent(student.id)}`);
+      await generateFinancialSheet(student, data || empty, schoolInfo);
+    } catch {
+      await generateFinancialSheet(student, empty, schoolInfo);
     }
   };
 

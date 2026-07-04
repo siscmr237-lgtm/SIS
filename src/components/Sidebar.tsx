@@ -27,7 +27,7 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
     { id: "students" as NavigationPage, label: "Students", icon: Users },
     { id: "staff" as NavigationPage, label: "Staff", icon: UserCheck },
     { id: "classes" as NavigationPage, label: "Classes", icon: LayoutGrid },
-    { id: "fees" as NavigationPage, label: "Fees", icon: DollarSign },
+    { id: "finance" as NavigationPage, label: "Finance", icon: DollarSign },
     { id: "expenses" as NavigationPage, label: "Expenses", icon: Receipt },
     {
       id: "report-cards" as NavigationPage,

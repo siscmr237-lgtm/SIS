@@ -1,4 +1,5 @@
-import { ArrowLeft, Plus } from 'lucide-react';
+import { ArrowLeft, FileText, Plus } from 'lucide-react';
+import { generateFinancialSheet } from '../utils/pdfGenerator';
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
 import { NavigationPage } from '../App';
@@ -166,6 +167,19 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
     }
   };
 
+  const handleDownloadStatement = async () => {
+    if (!ledgerData) return;
+    let schoolInfo: { name: string; logo?: string } | undefined;
+    try {
+      const userStr = window.localStorage.getItem('user');
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        if (user?.School?.[0]) schoolInfo = user.School[0];
+      }
+    } catch {}
+    await generateFinancialSheet(student, ledgerData, schoolInfo);
+  };
+
   return (
     <div className="p-8">
       <button
@@ -219,6 +233,10 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
         <div className="space-y-6">
           {/* Action buttons */}
           <div className="flex gap-2 justify-end">
+            <Button variant="outline" onClick={handleDownloadStatement} disabled={!ledgerData}>
+              <FileText size={16} className="mr-1" />
+              Download Statement
+            </Button>
             <Button variant="outline" onClick={() => { setSubmitError(null); setShowCharge(true); }}>
               <Plus size={16} className="mr-1" />
               Record Charge

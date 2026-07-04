@@ -2855,3 +2855,95 @@ https://nextjs.org/docs/messages/module-not-found
 [34:53:49.265] Server  LOG      ✓ Compiled in 77ms
 [34:54:10.247] Server  LOG      ✓ Compiled in 73ms
 [35:01:33.998] Server  LOG      ✓ Compiled in 172ms
+[35:13:12.202] Server  LOG      ✓ Compiled in 6ms
+[35:13:23.411] Server  LOG      ✓ Compiled in 283ms
+[35:13:29.700] Server  LOG      ✓ Compiled in 45ms
+[35:19:58.679] Server  LOG      ✓ Compiled in 49ms
+[35:20:05.941] Server  LOG      ✓ Compiled in 74ms
+[35:20:20.806] Server  LOG      ✓ Compiled in 42ms
+[35:20:31.775] Server  LOG      ✓ Compiled in 74ms
+[35:21:08.912] Server  LOG      ✓ Compiled in 50ms
+[35:33:27.255] Server  LOG      ✓ Compiled in 65ms
+[35:33:44.334] Server  LOG      ✓ Compiled in 70ms
+[35:34:04.386] Server  LOG      ✓ Compiled in 60ms
+[35:43:49.357] Server  LOG      ✓ Compiled in 42ms
+[35:43:58.421] Server  LOG      ✓ Compiled in 37ms
+[35:44:03.091] Server  LOG      ✓ Compiled in 32ms
+[35:44:19.929] Server  LOG      ✓ Compiled in 94ms
+[35:44:26.383] Server  LOG      ✓ Compiled in 62ms
+[35:51:41.120] Server  LOG      ✓ Compiled in 56ms
+[35:51:45.998] Server  LOG      ✓ Compiled in 20ms
+[35:51:53.730] Server  LOG      ✓ Compiled in 34ms
+[35:52:03.784] Server  LOG      ✓ Compiled in 49ms
+[35:52:10.597] Server  LOG      ✓ Compiled in 54ms
+[35:52:11.454] Browser ERROR   ./OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/ExpensesManagement.tsx:293:1
+Parsing ecmascript source code failed
+  291 |     </div>
+  292 |   );
+> 293 | }
+      | ^
+  294 |
+
+Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+
+Import traces:
+  Client Component Browser:
+    ./OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/ExpensesManagement.tsx [Client Component Browser]
+    ./OneDrive/Desktop/Sis/Code/Front-end/SIS/src/App.tsx [Client Component Browser]
+    ./OneDrive/Desktop/Sis/Code/Front-end/SIS/app/page.tsx [Client Component Browser]
+    ./OneDrive/Desktop/Sis/Code/Front-end/SIS/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/ExpensesManagement.tsx [Client Component SSR]
+    ./OneDrive/Desktop/Sis/Code/Front-end/SIS/src/App.tsx [Client Component SSR]
+    ./OneDrive/Desktop/Sis/Code/Front-end/SIS/app/page.tsx [Client Component SSR]
+    ./OneDrive/Desktop/Sis/Code/Front-end/SIS/app/page.tsx [Server Component]
+[35:52:16.456] Browser ERROR   ./OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/ExpensesManagement.tsx:293:1
+Parsing ecmascript source code failed
+  291 |     </div>
+  292 |   );
+> 293 | }
+      | ^
+  294 |
+
+Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+
+Import traces:
+  Client Component Browser:
+    ./OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/ExpensesManagement.tsx [Client Component Browser]
+    ./OneDrive/Desktop/Sis/Code/Front-end/SIS/src/App.tsx [Client Component Browser]
+    ./OneDrive/Desktop/Sis/Code/Front-end/SIS/app/page.tsx [Client Component Browser]
+    ./OneDrive/Desktop/Sis/Code/Front-end/SIS/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/ExpensesManagement.tsx [Client Component SSR]
+    ./OneDrive/Desktop/Sis/Code/Front-end/SIS/src/App.tsx [Client Component SSR]
+    ./OneDrive/Desktop/Sis/Code/Front-end/SIS/app/page.tsx [Client Component SSR]
+    ./OneDrive/Desktop/Sis/Code/Front-end/SIS/app/page.tsx [Server Component]
+[35:52:31.088] Server  LOG      ✓ Compiled in 270ms
+[35:52:31.457] Browser ERROR   ./OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/ExpensesManagement.tsx:293:1
+Parsing ecmascript source code failed
+  291 |     </div>
+  292 |   );
+> 293 | }
+      | ^
+  294 |
+
+Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+
+Import traces:
+  Client Component Browser:
+    ./OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/ExpensesManagement.tsx [Client Component Browser]
+    ./OneDrive/Desktop/Sis/Code/Front-end/SIS/src/App.tsx [Client Component Browser]
+    ./OneDrive/Desktop/Sis/Code/Front-end/SIS/app/page.tsx [Client Component Browser]
+    ./OneDrive/Desktop/Sis/Code/Front-end/SIS/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/ExpensesManagement.tsx [Client Component SSR]
+    ./OneDrive/Desktop/Sis/Code/Front-end/SIS/src/App.tsx [Client Component SSR]
+    ./OneDrive/Desktop/Sis/Code/Front-end/SIS/app/page.tsx [Client Component SSR]
+    ./OneDrive/Desktop/Sis/Code/Front-end/SIS/app/page.tsx [Server Component]
+[35:54:02.474] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[36:04:49.604] Server  LOG      ✓ Compiled in 56ms
+[36:04:54.488] Server  LOG      ✓ Compiled in 41ms
+[36:05:00.976] Server  LOG      ✓ Compiled in 47ms
