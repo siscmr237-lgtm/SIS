@@ -2715,6 +2715,601 @@ if (typeof globalThis.$RefreshHelpers$ === 'object' && globalThis.$RefreshHelper
     __turbopack_context__.k.registerExports(__turbopack_context__.m, globalThis.$RefreshHelpers$);
 }
 }),
+"[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/StudentProfile.tsx [app-client] (ecmascript)", ((__turbopack_context__) => {
+"use strict";
+
+__turbopack_context__.s([
+    "StudentProfile",
+    ()=>StudentProfile
+]);
+var __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/node_modules/next/dist/compiled/react/jsx-dev-runtime.js [app-client] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$arrow$2d$left$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ArrowLeft$3e$__ = __turbopack_context__.i("[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/node_modules/lucide-react/dist/esm/icons/arrow-left.js [app-client] (ecmascript) <export default as ArrowLeft>");
+var __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/node_modules/next/dist/compiled/react/index.js [app-client] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$src$2f$lib$2f$api$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/lib/api.ts [app-client] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$src$2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/ui/card.tsx [app-client] (ecmascript)");
+;
+var _s = __turbopack_context__.k.signature();
+;
+;
+;
+;
+function StudentProfile({ student, onNavigate }) {
+    _s();
+    const [activeTab, setActiveTab] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])('general');
+    const [ledgerData, setLedgerData] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(null);
+    const [ledgerLoading, setLedgerLoading] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(false);
+    const [ledgerError, setLedgerError] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(null);
+    const tabs = [
+        {
+            id: 'general',
+            label: 'General Info'
+        },
+        {
+            id: 'finance',
+            label: 'Finance'
+        },
+        {
+            id: 'attendance',
+            label: 'Attendance'
+        }
+    ];
+    const formatDate = (value)=>{
+        if (!value) return '—';
+        try {
+            return new Date(value).toLocaleDateString('en-GB', {
+                day: '2-digit',
+                month: 'long',
+                year: 'numeric'
+            });
+        } catch  {
+            return value;
+        }
+    };
+    (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useEffect"])({
+        "StudentProfile.useEffect": ()=>{
+            if (activeTab !== 'finance') return;
+            let cancelled = false;
+            const load = {
+                "StudentProfile.useEffect.load": async ()=>{
+                    setLedgerLoading(true);
+                    setLedgerError(null);
+                    try {
+                        const data = await __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$src$2f$lib$2f$api$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["api"].get(`/ledger/student/${encodeURIComponent(student.id)}`);
+                        if (!cancelled) setLedgerData(data);
+                    } catch (e) {
+                        if (!cancelled) setLedgerError(e.message || 'Failed to load finance data');
+                    } finally{
+                        if (!cancelled) setLedgerLoading(false);
+                    }
+                }
+            }["StudentProfile.useEffect.load"];
+            load();
+            return ({
+                "StudentProfile.useEffect": ()=>{
+                    cancelled = true;
+                }
+            })["StudentProfile.useEffect"];
+        }
+    }["StudentProfile.useEffect"], [
+        activeTab,
+        student.id
+    ]);
+    return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+        className: "p-8",
+        children: [
+            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
+                onClick: ()=>onNavigate('students'),
+                className: "flex items-center gap-2 text-gray-500 hover:text-gray-900 mb-6",
+                children: [
+                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$arrow$2d$left$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ArrowLeft$3e$__["ArrowLeft"], {
+                        size: 18
+                    }, void 0, false, {
+                        fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/StudentProfile.tsx",
+                        lineNumber: 82,
+                        columnNumber: 9
+                    }, this),
+                    "Back to Students"
+                ]
+            }, void 0, true, {
+                fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/StudentProfile.tsx",
+                lineNumber: 78,
+                columnNumber: 7
+            }, this),
+            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                className: "mb-6",
+                children: [
+                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("h1", {
+                        className: "text-3xl",
+                        children: [
+                            student.firstName,
+                            " ",
+                            student.lastName
+                        ]
+                    }, void 0, true, {
+                        fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/StudentProfile.tsx",
+                        lineNumber: 87,
+                        columnNumber: 9
+                    }, this),
+                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                        className: "text-gray-500 mt-1",
+                        children: [
+                            student.id,
+                            " · ",
+                            student.class
+                        ]
+                    }, void 0, true, {
+                        fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/StudentProfile.tsx",
+                        lineNumber: 88,
+                        columnNumber: 9
+                    }, this)
+                ]
+            }, void 0, true, {
+                fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/StudentProfile.tsx",
+                lineNumber: 86,
+                columnNumber: 7
+            }, this),
+            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                className: "flex gap-1 border-b mb-6",
+                children: tabs.map((tab)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
+                        onClick: ()=>setActiveTab(tab.id),
+                        className: `px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${activeTab === tab.id ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`,
+                        children: tab.label
+                    }, tab.id, false, {
+                        fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/StudentProfile.tsx",
+                        lineNumber: 93,
+                        columnNumber: 11
+                    }, this))
+            }, void 0, false, {
+                fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/StudentProfile.tsx",
+                lineNumber: 91,
+                columnNumber: 7
+            }, this),
+            activeTab === 'general' && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$src$2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Card"], {
+                className: "p-6",
+                children: [
+                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("h2", {
+                        className: "text-base font-medium mb-5",
+                        children: "Student Information"
+                    }, void 0, false, {
+                        fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/StudentProfile.tsx",
+                        lineNumber: 109,
+                        columnNumber: 11
+                    }, this),
+                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("dl", {
+                        className: "grid grid-cols-2 gap-x-12 gap-y-5",
+                        children: [
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(Field, {
+                                label: "Student ID",
+                                value: student.id
+                            }, void 0, false, {
+                                fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/StudentProfile.tsx",
+                                lineNumber: 111,
+                                columnNumber: 13
+                            }, this),
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(Field, {
+                                label: "Class",
+                                value: student.class
+                            }, void 0, false, {
+                                fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/StudentProfile.tsx",
+                                lineNumber: 112,
+                                columnNumber: 13
+                            }, this),
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(Field, {
+                                label: "First Name",
+                                value: student.firstName
+                            }, void 0, false, {
+                                fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/StudentProfile.tsx",
+                                lineNumber: 113,
+                                columnNumber: 13
+                            }, this),
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(Field, {
+                                label: "Last Name",
+                                value: student.lastName
+                            }, void 0, false, {
+                                fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/StudentProfile.tsx",
+                                lineNumber: 114,
+                                columnNumber: 13
+                            }, this),
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(Field, {
+                                label: "Gender",
+                                value: student.gender,
+                                capitalize: true
+                            }, void 0, false, {
+                                fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/StudentProfile.tsx",
+                                lineNumber: 115,
+                                columnNumber: 13
+                            }, this),
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(Field, {
+                                label: "Date of Birth",
+                                value: formatDate(student.dateOfBirth)
+                            }, void 0, false, {
+                                fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/StudentProfile.tsx",
+                                lineNumber: 116,
+                                columnNumber: 13
+                            }, this),
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(Field, {
+                                label: "Enrollment Date",
+                                value: formatDate(student.enrollmentDate)
+                            }, void 0, false, {
+                                fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/StudentProfile.tsx",
+                                lineNumber: 117,
+                                columnNumber: 13
+                            }, this),
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(Field, {
+                                label: "Address",
+                                value: student.address
+                            }, void 0, false, {
+                                fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/StudentProfile.tsx",
+                                lineNumber: 118,
+                                columnNumber: 13
+                            }, this),
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(Field, {
+                                label: "Parent / Guardian",
+                                value: student.parentName
+                            }, void 0, false, {
+                                fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/StudentProfile.tsx",
+                                lineNumber: 119,
+                                columnNumber: 13
+                            }, this),
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(Field, {
+                                label: "Parent Phone",
+                                value: student.parentPhone
+                            }, void 0, false, {
+                                fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/StudentProfile.tsx",
+                                lineNumber: 120,
+                                columnNumber: 13
+                            }, this)
+                        ]
+                    }, void 0, true, {
+                        fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/StudentProfile.tsx",
+                        lineNumber: 110,
+                        columnNumber: 11
+                    }, this)
+                ]
+            }, void 0, true, {
+                fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/StudentProfile.tsx",
+                lineNumber: 108,
+                columnNumber: 9
+            }, this),
+            activeTab === 'finance' && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                className: "space-y-6",
+                children: [
+                    ledgerLoading && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$src$2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Card"], {
+                        className: "p-6 text-gray-500",
+                        children: "Loading..."
+                    }, void 0, false, {
+                        fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/StudentProfile.tsx",
+                        lineNumber: 128,
+                        columnNumber: 13
+                    }, this),
+                    ledgerError && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$src$2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Card"], {
+                        className: "p-6 text-red-600",
+                        children: ledgerError
+                    }, void 0, false, {
+                        fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/StudentProfile.tsx",
+                        lineNumber: 132,
+                        columnNumber: 13
+                    }, this),
+                    !ledgerLoading && !ledgerError && ledgerData && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Fragment"], {
+                        children: [
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                className: "grid grid-cols-3 gap-4",
+                                children: [
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$src$2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Card"], {
+                                        className: "p-4",
+                                        children: [
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                                className: "text-xs text-gray-400 uppercase tracking-wide mb-1",
+                                                children: "Total Charged"
+                                            }, void 0, false, {
+                                                fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/StudentProfile.tsx",
+                                                lineNumber: 140,
+                                                columnNumber: 19
+                                            }, this),
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                                className: "text-xl font-medium text-gray-900",
+                                                children: [
+                                                    ledgerData.totalCharged.toLocaleString(),
+                                                    " FCFA"
+                                                ]
+                                            }, void 0, true, {
+                                                fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/StudentProfile.tsx",
+                                                lineNumber: 141,
+                                                columnNumber: 19
+                                            }, this)
+                                        ]
+                                    }, void 0, true, {
+                                        fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/StudentProfile.tsx",
+                                        lineNumber: 139,
+                                        columnNumber: 17
+                                    }, this),
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$src$2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Card"], {
+                                        className: "p-4",
+                                        children: [
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                                className: "text-xs text-gray-400 uppercase tracking-wide mb-1",
+                                                children: "Total Paid"
+                                            }, void 0, false, {
+                                                fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/StudentProfile.tsx",
+                                                lineNumber: 146,
+                                                columnNumber: 19
+                                            }, this),
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                                className: "text-xl font-medium text-green-600",
+                                                children: [
+                                                    ledgerData.totalPaid.toLocaleString(),
+                                                    " FCFA"
+                                                ]
+                                            }, void 0, true, {
+                                                fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/StudentProfile.tsx",
+                                                lineNumber: 147,
+                                                columnNumber: 19
+                                            }, this)
+                                        ]
+                                    }, void 0, true, {
+                                        fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/StudentProfile.tsx",
+                                        lineNumber: 145,
+                                        columnNumber: 17
+                                    }, this),
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$src$2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Card"], {
+                                        className: `p-4 ${ledgerData.balance > 0 ? 'bg-red-50 border-red-200' : ''}`,
+                                        children: [
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                                className: "text-xs text-gray-400 uppercase tracking-wide mb-1",
+                                                children: "Balance Owed"
+                                            }, void 0, false, {
+                                                fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/StudentProfile.tsx",
+                                                lineNumber: 152,
+                                                columnNumber: 19
+                                            }, this),
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                                className: `text-xl font-medium ${ledgerData.balance > 0 ? 'text-red-600' : 'text-gray-900'}`,
+                                                children: [
+                                                    ledgerData.balance.toLocaleString(),
+                                                    " FCFA"
+                                                ]
+                                            }, void 0, true, {
+                                                fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/StudentProfile.tsx",
+                                                lineNumber: 153,
+                                                columnNumber: 19
+                                            }, this)
+                                        ]
+                                    }, void 0, true, {
+                                        fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/StudentProfile.tsx",
+                                        lineNumber: 151,
+                                        columnNumber: 17
+                                    }, this)
+                                ]
+                            }, void 0, true, {
+                                fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/StudentProfile.tsx",
+                                lineNumber: 138,
+                                columnNumber: 15
+                            }, this),
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$src$2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Card"], {
+                                children: ledgerData.entries.length === 0 ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                    className: "p-6 text-gray-500",
+                                    children: "No financial records yet."
+                                }, void 0, false, {
+                                    fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/StudentProfile.tsx",
+                                    lineNumber: 162,
+                                    columnNumber: 19
+                                }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                    className: "overflow-x-auto",
+                                    children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("table", {
+                                        className: "w-full text-sm",
+                                        children: [
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("thead", {
+                                                children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("tr", {
+                                                    className: "border-b text-left text-xs text-gray-500 uppercase tracking-wide",
+                                                    children: [
+                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("th", {
+                                                            className: "px-4 py-3 font-medium",
+                                                            children: "Date"
+                                                        }, void 0, false, {
+                                                            fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/StudentProfile.tsx",
+                                                            lineNumber: 168,
+                                                            columnNumber: 27
+                                                        }, this),
+                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("th", {
+                                                            className: "px-4 py-3 font-medium",
+                                                            children: "Type"
+                                                        }, void 0, false, {
+                                                            fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/StudentProfile.tsx",
+                                                            lineNumber: 169,
+                                                            columnNumber: 27
+                                                        }, this),
+                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("th", {
+                                                            className: "px-4 py-3 font-medium",
+                                                            children: "Category"
+                                                        }, void 0, false, {
+                                                            fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/StudentProfile.tsx",
+                                                            lineNumber: 170,
+                                                            columnNumber: 27
+                                                        }, this),
+                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("th", {
+                                                            className: "px-4 py-3 font-medium",
+                                                            children: "Description"
+                                                        }, void 0, false, {
+                                                            fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/StudentProfile.tsx",
+                                                            lineNumber: 171,
+                                                            columnNumber: 27
+                                                        }, this),
+                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("th", {
+                                                            className: "px-4 py-3 font-medium text-right",
+                                                            children: "Amount"
+                                                        }, void 0, false, {
+                                                            fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/StudentProfile.tsx",
+                                                            lineNumber: 172,
+                                                            columnNumber: 27
+                                                        }, this),
+                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("th", {
+                                                            className: "px-4 py-3 font-medium",
+                                                            children: "Payment Method"
+                                                        }, void 0, false, {
+                                                            fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/StudentProfile.tsx",
+                                                            lineNumber: 173,
+                                                            columnNumber: 27
+                                                        }, this)
+                                                    ]
+                                                }, void 0, true, {
+                                                    fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/StudentProfile.tsx",
+                                                    lineNumber: 167,
+                                                    columnNumber: 25
+                                                }, this)
+                                            }, void 0, false, {
+                                                fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/StudentProfile.tsx",
+                                                lineNumber: 166,
+                                                columnNumber: 23
+                                            }, this),
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("tbody", {
+                                                children: ledgerData.entries.map((entry)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("tr", {
+                                                        className: "border-b last:border-0 hover:bg-gray-50",
+                                                        children: [
+                                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("td", {
+                                                                className: "px-4 py-3 text-gray-600 whitespace-nowrap",
+                                                                children: formatDate(entry.entryDate)
+                                                            }, void 0, false, {
+                                                                fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/StudentProfile.tsx",
+                                                                lineNumber: 179,
+                                                                columnNumber: 29
+                                                            }, this),
+                                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("td", {
+                                                                className: "px-4 py-3",
+                                                                children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                                                    className: `inline-block px-2 py-0.5 rounded text-xs font-medium ${entry.type === 'CHARGE' ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'}`,
+                                                                    children: entry.type === 'CHARGE' ? 'Charge' : 'Payment'
+                                                                }, void 0, false, {
+                                                                    fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/StudentProfile.tsx",
+                                                                    lineNumber: 183,
+                                                                    columnNumber: 31
+                                                                }, this)
+                                                            }, void 0, false, {
+                                                                fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/StudentProfile.tsx",
+                                                                lineNumber: 182,
+                                                                columnNumber: 29
+                                                            }, this),
+                                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("td", {
+                                                                className: "px-4 py-3 text-gray-600",
+                                                                children: entry.category?.name ?? '—'
+                                                            }, void 0, false, {
+                                                                fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/StudentProfile.tsx",
+                                                                lineNumber: 191,
+                                                                columnNumber: 29
+                                                            }, this),
+                                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("td", {
+                                                                className: "px-4 py-3 text-gray-900",
+                                                                children: entry.description
+                                                            }, void 0, false, {
+                                                                fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/StudentProfile.tsx",
+                                                                lineNumber: 194,
+                                                                columnNumber: 29
+                                                            }, this),
+                                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("td", {
+                                                                className: `px-4 py-3 text-right font-medium whitespace-nowrap ${entry.type === 'CHARGE' ? 'text-orange-700' : 'text-green-600'}`,
+                                                                children: [
+                                                                    entry.type === 'PAYMENT' ? '+' : '',
+                                                                    entry.amount.toLocaleString(),
+                                                                    " FCFA"
+                                                                ]
+                                                            }, void 0, true, {
+                                                                fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/StudentProfile.tsx",
+                                                                lineNumber: 195,
+                                                                columnNumber: 29
+                                                            }, this),
+                                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("td", {
+                                                                className: "px-4 py-3 text-gray-500",
+                                                                children: entry.paymentMethod ?? '—'
+                                                            }, void 0, false, {
+                                                                fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/StudentProfile.tsx",
+                                                                lineNumber: 200,
+                                                                columnNumber: 29
+                                                            }, this)
+                                                        ]
+                                                    }, entry.id, true, {
+                                                        fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/StudentProfile.tsx",
+                                                        lineNumber: 178,
+                                                        columnNumber: 27
+                                                    }, this))
+                                            }, void 0, false, {
+                                                fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/StudentProfile.tsx",
+                                                lineNumber: 176,
+                                                columnNumber: 23
+                                            }, this)
+                                        ]
+                                    }, void 0, true, {
+                                        fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/StudentProfile.tsx",
+                                        lineNumber: 165,
+                                        columnNumber: 21
+                                    }, this)
+                                }, void 0, false, {
+                                    fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/StudentProfile.tsx",
+                                    lineNumber: 164,
+                                    columnNumber: 19
+                                }, this)
+                            }, void 0, false, {
+                                fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/StudentProfile.tsx",
+                                lineNumber: 160,
+                                columnNumber: 15
+                            }, this)
+                        ]
+                    }, void 0, true)
+                ]
+            }, void 0, true, {
+                fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/StudentProfile.tsx",
+                lineNumber: 126,
+                columnNumber: 9
+            }, this),
+            activeTab === 'attendance' && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$src$2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Card"], {
+                className: "p-6 text-gray-500",
+                children: "Coming soon"
+            }, void 0, false, {
+                fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/StudentProfile.tsx",
+                lineNumber: 216,
+                columnNumber: 9
+            }, this)
+        ]
+    }, void 0, true, {
+        fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/StudentProfile.tsx",
+        lineNumber: 77,
+        columnNumber: 5
+    }, this);
+}
+_s(StudentProfile, "vH6QJjMdjrmqIVizfxGbzb8daro=");
+_c = StudentProfile;
+function Field({ label, value, capitalize }) {
+    return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+        children: [
+            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("dt", {
+                className: "text-xs text-gray-400 uppercase tracking-wide mb-1",
+                children: label
+            }, void 0, false, {
+                fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/StudentProfile.tsx",
+                lineNumber: 233,
+                columnNumber: 7
+            }, this),
+            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("dd", {
+                className: `text-sm text-gray-900 ${capitalize ? 'capitalize' : ''}`,
+                children: value || '—'
+            }, void 0, false, {
+                fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/StudentProfile.tsx",
+                lineNumber: 234,
+                columnNumber: 7
+            }, this)
+        ]
+    }, void 0, true, {
+        fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/StudentProfile.tsx",
+        lineNumber: 232,
+        columnNumber: 5
+    }, this);
+}
+_c1 = Field;
+var _c, _c1;
+__turbopack_context__.k.register(_c, "StudentProfile");
+__turbopack_context__.k.register(_c1, "Field");
+if (typeof globalThis.$RefreshHelpers$ === 'object' && globalThis.$RefreshHelpers !== null) {
+    __turbopack_context__.k.registerExports(__turbopack_context__.m, globalThis.$RefreshHelpers$);
+}
+}),
 "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/ExpensesManagement.tsx [app-client] (ecmascript)", ((__turbopack_context__) => {
 "use strict";
 
@@ -7604,4 +8199,4 @@ if (typeof globalThis.$RefreshHelpers$ === 'object' && globalThis.$RefreshHelper
 }),
 ]);
 
-//# sourceMappingURL=OneDrive_Desktop_Sis_Code_Front-end_SIS_src_components_614a4837._.js.map
+//# sourceMappingURL=OneDrive_Desktop_Sis_Code_Front-end_SIS_src_components_041b5628._.js.map

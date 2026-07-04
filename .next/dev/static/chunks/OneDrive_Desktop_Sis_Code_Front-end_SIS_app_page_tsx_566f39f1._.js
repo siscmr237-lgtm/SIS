@@ -1,7 +1,8 @@
 (globalThis.TURBOPACK_CHUNK_LISTS || (globalThis.TURBOPACK_CHUNK_LISTS = [])).push({
     script: typeof document === "object" ? document.currentScript : undefined,
     chunks: [
-  "static/chunks/66a1d_b97a3b2e._.js",
+  "static/chunks/66a1d_d22454c5._.js",
+  "static/chunks/13466_Desktop_Sis_Code_Front-end_SIS_src_components_StudentProfile_tsx_8fa63a20._.js",
   "static/chunks/13466_Desktop_Sis_Code_Front-end_SIS_src_components_StaffManagement_tsx_9c23dd82._.js",
   "static/chunks/13466_Desktop_Sis_Code_Front-end_SIS_src_components_FeesManagement_tsx_51053854._.js",
   "static/chunks/13466_Desktop_Sis_Code_Front-end_SIS_src_components_SchoolSettings_tsx_789be256._.js",
@@ -11,7 +12,7 @@
   "static/chunks/66a1d_tailwind-merge_dist_bundle-mjs_mjs_525c0bcc._.js",
   "static/chunks/66a1d_pako_dist_pako_esm_mjs_a35abc6a._.js",
   "static/chunks/66a1d_jspdf_dist_jspdf_es_min_8ff0f53e.js",
-  "static/chunks/66a1d_ebc1222b._.js"
+  "static/chunks/66a1d_b1e7d2d5._.js"
 ],
     source: "dynamic"
 });

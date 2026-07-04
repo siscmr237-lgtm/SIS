@@ -1,4 +1,10 @@
 import { api } from "@/lib/api";
+import { NavigationPage } from '../App';
+
+interface StudentsManagementProps {
+  onNavigate?: (page: NavigationPage) => void;
+  onViewStudent?: (student: Student) => void;
+}
 import { SCHOOL_CLASSES } from "@/lib/classes";
 import { FileText, Plus, Search } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -33,7 +39,7 @@ import {
   TableRow,
 } from "./ui/table";
 
-export function StudentsManagement() {
+export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManagementProps) {
   const [students, setStudents] = useState<Student[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedClass, setSelectedClass] = useState<string>("all");
@@ -338,7 +344,12 @@ export function StudentsManagement() {
               <TableRow key={student.id}>
                 <TableCell>{student.id}</TableCell>
                 <TableCell>
-                  {student.firstName} {student.lastName}
+                  <button
+                    onClick={() => onViewStudent?.(student)}
+                    className="text-blue-600 hover:underline text-left font-medium"
+                  >
+                    {student.firstName} {student.lastName}
+                  </button>
                 </TableCell>
                 <TableCell>{student.class}</TableCell>
                 <TableCell className="capitalize">{student.gender}</TableCell>

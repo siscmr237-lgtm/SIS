@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { Dashboard } from './components/Dashboard';
 import { StudentsManagement } from './components/StudentsManagement';
+import { StudentProfile } from './components/StudentProfile';
+import { Student } from './types';
 import { StaffManagement } from './components/StaffManagement';
 import { FeesManagement } from './components/FeesManagement';
 import { ExpensesManagement } from './components/ExpensesManagement';
@@ -15,6 +17,7 @@ import { SubjectsManagement } from './components/SubjectsManagement';
 export type NavigationPage = 
   | 'dashboard'
   | 'students'
+  | 'student-profile'
   | 'staff'
   | 'fees'
   | 'expenses'
@@ -27,13 +30,28 @@ export type NavigationPage =
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState<NavigationPage>('dashboard');
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
 
   const renderPage = () => {
     switch (currentPage) {
       case 'dashboard':
         return <Dashboard />;
       case 'students':
-        return <StudentsManagement />;
+        return (
+          <StudentsManagement
+            onNavigate={setCurrentPage}
+            onViewStudent={(s) => { setSelectedStudent(s); setCurrentPage('student-profile'); }}
+          />
+        );
+      case 'student-profile':
+        return selectedStudent ? (
+          <StudentProfile student={selectedStudent} onNavigate={setCurrentPage} />
+        ) : (
+          <StudentsManagement
+            onNavigate={setCurrentPage}
+            onViewStudent={(s) => { setSelectedStudent(s); setCurrentPage('student-profile'); }}
+          />
+        );
       case 'staff':
         return <StaffManagement />;
       case 'fees':
