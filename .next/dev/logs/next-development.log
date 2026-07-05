@@ -2947,3 +2947,8 @@ Import traces:
 [36:04:49.604] Server  LOG      ✓ Compiled in 56ms
 [36:04:54.488] Server  LOG      ✓ Compiled in 41ms
 [36:05:00.976] Server  LOG      ✓ Compiled in 47ms
+[64:36:09.456] Server  LOG      ✓ Compiled in 1063ms
+[64:36:46.169] Server  LOG      ✓ Compiled in 392ms
+[64:37:21.198] Server  LOG      ✓ Compiled in 27ms
+[64:40:15.024] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[64:40:38.581] Server  LOG      ○ Compiling /login ...

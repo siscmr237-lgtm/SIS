@@ -24,25 +24,6 @@ export interface Staff {
   isTeacher: boolean;
 }
 
-export interface Fee {
-  id: string;
-  studentId: string;
-  studentName: string;
-  class: string;
-  term: string;
-  academicYear: string;
-  tuitionFee: number;
-  registrationFee: number;
-  uniformFee: number;
-  booksFee: number;
-  otherFees: number;
-  totalAmount: number;
-  amountPaid: number;
-  balance: number;
-  paymentDate?: string;
-  paymentMethod?: string;
-}
-
 export interface Expense {
   id: string;
   date: string;

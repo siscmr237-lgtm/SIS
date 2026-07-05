@@ -1,6 +1,6 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { Fee, Expense, Student, ReportCard, WorkRecord, TimetableEntry, AttendanceRecord } from '../types';
+import { Expense, Student, ReportCard, WorkRecord, TimetableEntry, AttendanceRecord } from '../types';
 import { BASE_URL } from '../lib/api';
 
 const SCHOOL_INFO = {
@@ -9,102 +9,6 @@ const SCHOOL_INFO = {
   phone: '+237 670 000 000',
   email: 'info@school.cm'
 };
-
-export function generateFeeInvoice(fee: Fee) {
-  const doc = new jsPDF();
-  
-  // Header
-  doc.setFillColor(37, 99, 235);
-  doc.rect(0, 0, 210, 40, 'F');
-  
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(20);
-  doc.text(SCHOOL_INFO.name, 105, 15, { align: 'center' });
-  doc.setFontSize(10);
-  doc.text(SCHOOL_INFO.address, 105, 22, { align: 'center' });
-  doc.text(`Tel: ${SCHOOL_INFO.phone} | Email: ${SCHOOL_INFO.email}`, 105, 28, { align: 'center' });
-  
-  // Title
-  doc.setTextColor(0, 0, 0);
-  doc.setFontSize(16);
-  doc.text('SCHOOL FEES INVOICE', 105, 50, { align: 'center' });
-  
-  // Invoice details
-  doc.setFontSize(10);
-  doc.text(`Invoice No: ${fee.id}`, 20, 65);
-  doc.text(`Date: ${new Date().toLocaleDateString()}`, 20, 72);
-  
-  // Student details
-  doc.setFontSize(12);
-  doc.text('Student Information', 20, 85);
-  doc.setFontSize(10);
-  doc.text(`Name: ${fee.studentName}`, 20, 93);
-  doc.text(`Class: ${fee.class}`, 20, 100);
-  doc.text(`Academic Year: ${fee.academicYear}`, 20, 107);
-  doc.text(`Term: ${fee.term}`, 20, 114);
-  
-  // Fees table (support object, array, or legacy flat keys)
-  const raw: any = (fee as any).breakdown ?? (fee as any).feesBreakdown ?? (fee as any).details ?? (fee as any).payments ?? (fee as any).breakdownLines ?? (fee as any).items ?? null;
-  let breakdownObj: Record<string, number> = {};
-
-  if (raw && Array.isArray(raw)) {
-    // Accept items like { name/label/key, amount/value }
-    raw.forEach((it:any)=>{
-      const label = it.category || it.description || it.label || it.name || it.key || 'Item';
-      const amount = Number(it.amountPaid ?? it.amount ?? it.value ?? 0) || 0;
-      breakdownObj[label] = (breakdownObj[label] || 0) + amount;
-    });
-  } else if (raw && typeof raw === 'object') {
-    breakdownObj = Object.fromEntries(Object.entries(raw).map(([k,v]) => [k, Number(v) || 0]));
-  } else {
-    breakdownObj = {
-      'Tuition Fee': Number((fee as any).tuitionFee ?? (fee as any).tuition_fee ?? 0),
-      'Registration Fee': Number((fee as any).registrationFee ?? (fee as any).registration_fee ?? 0),
-      'Uniform Fee': Number((fee as any).uniformFee ?? (fee as any).uniform_fee ?? 0),
-      'Books Fee': Number((fee as any).booksFee ?? (fee as any).books_fee ?? 0),
-      'Other Fees': Number((fee as any).otherFees ?? (fee as any).other_fees ?? 0),
-    };
-  }
-
-  // Include all categories; if values are zero they will display 0
-  const rows: string[][] = [];
-  Object.entries(breakdownObj).forEach(([label, value]) => {
-    rows.push([label, Number(value || 0).toLocaleString()]);
-  });
-  rows.push(['', '']);
-  const totalAmount = (fee as any).totalAmount != null
-    ? Number((fee as any).totalAmount)
-    : Object.values(breakdownObj).reduce((s: number, v: any) => s + (Number(v) || 0), 0);
-  const amountPaid = (fee as any).amountPaid != null ? Number((fee as any).amountPaid) : totalAmount;
-  const balance = (fee as any).balance != null ? Number((fee as any).balance) : Math.max(totalAmount - amountPaid, 0);
-
-  rows.push(['Total Amount', totalAmount.toLocaleString()]);
-  rows.push(['Amount Paid', amountPaid.toLocaleString()]);
-  rows.push(['Balance Due', balance.toLocaleString()]);
-
-  autoTable(doc, {
-    startY: 125,
-    head: [['Description', 'Amount (FCFA)']],
-    body: rows,
-    theme: 'striped',
-    headStyles: { fillColor: [37, 99, 235] },
-    footStyles: { fillColor: [243, 244, 246] }
-  });
-  
-  // Footer: Signature section for school authority
-  const finalY = (doc as any).lastAutoTable.finalY + 20;
-  doc.setFontSize(10);
-  doc.text('Authorized By:', 20, finalY);
-  doc.line(50, finalY + 5, 120, finalY + 5);
-  doc.text('Signature', 50, finalY + 10);
-  doc.line(140, finalY + 5, 190, finalY + 5);
-  doc.text('Date', 140, finalY + 10);
-  doc.setFontSize(9);
-  doc.text('Thank you for your payment!', 105, finalY + 20, { align: 'center' });
-  doc.text('For any queries, please contact the school office.', 105, finalY + 25, { align: 'center' });
-  
-  doc.save(`Invoice_${fee.studentName}_${fee.term}.pdf`);
-}
 
 export function generateExpenseInvoice(expense: Expense) {
   const doc = new jsPDF();

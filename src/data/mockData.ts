@@ -1,4 +1,4 @@
-import { Student, Staff, Fee, Expense, ReportCard, AttendanceRecord, WorkRecord, TimetableEntry, SchoolSettings } from '../types';
+import { Student, Staff, Expense, ReportCard, AttendanceRecord, WorkRecord, TimetableEntry, SchoolSettings } from '../types';
 
 export const mockStudents: Student[] = [
   {
@@ -91,45 +91,6 @@ export const mockStaff: Staff[] = [
     email: 's.nkeng@school.cm',
     hireDate: '2019-09-01',
     salary: 140000
-  }
-];
-
-export const mockFees: Fee[] = [
-  {
-    id: 'FEE001',
-    studentId: 'STU001',
-    studentName: 'Amina Ngono',
-    class: 'Primary 3',
-    term: 'Term 1',
-    academicYear: '2024/2025',
-    tuitionFee: 75000,
-    registrationFee: 15000,
-    uniformFee: 10000,
-    booksFee: 20000,
-    otherFees: 5000,
-    totalAmount: 125000,
-    amountPaid: 125000,
-    balance: 0,
-    paymentDate: '2024-09-15',
-    paymentMethod: 'Bank Transfer'
-  },
-  {
-    id: 'FEE002',
-    studentId: 'STU002',
-    studentName: 'Kouam Tchinda',
-    class: 'Primary 2',
-    term: 'Term 1',
-    academicYear: '2024/2025',
-    tuitionFee: 70000,
-    registrationFee: 15000,
-    uniformFee: 10000,
-    booksFee: 18000,
-    otherFees: 5000,
-    totalAmount: 118000,
-    amountPaid: 60000,
-    balance: 58000,
-    paymentDate: '2024-09-10',
-    paymentMethod: 'Cash'
   }
 ];
 

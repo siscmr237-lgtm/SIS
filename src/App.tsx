@@ -6,7 +6,6 @@ import { StudentProfile } from './components/StudentProfile';
 import { Student } from './types';
 import { StaffManagement } from './components/StaffManagement';
 import { FinanceOverview } from './components/FinanceOverview';
-import { FeesManagement } from './components/FeesManagement';
 import { ExpensesManagement } from './components/ExpensesManagement';
 import { ReportCards } from './components/ReportCards';
 import { Attendance } from './components/Attendance';
