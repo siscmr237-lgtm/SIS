@@ -53,45 +53,53 @@ export const mockStudents: Student[] = [
 
 export const mockStaff: Staff[] = [
   {
-    id: 'STF001',
+    id: 1,
+    code: 'STF001',
     firstName: 'Pauline',
     lastName: 'Fotso',
     role: 'Head Teacher',
     phone: '+237 670 111 222',
     email: 'p.fotso@school.cm',
     hireDate: '2015-01-15',
-    salary: 250000
+    salary: 250000,
+    isTeacher: false,
   },
   {
-    id: 'STF002',
+    id: 2,
+    code: 'STF002',
     firstName: 'Martin',
     lastName: 'Ekani',
     role: 'Mathematics Teacher',
     phone: '+237 677 222 333',
     email: 'm.ekani@school.cm',
     hireDate: '2017-09-01',
-    salary: 150000
+    salary: 150000,
+    isTeacher: true,
   },
   {
-    id: 'STF003',
+    id: 3,
+    code: 'STF003',
     firstName: 'Grace',
     lastName: 'Ayuk',
     role: 'English Teacher',
     phone: '+237 680 333 444',
     email: 'g.ayuk@school.cm',
     hireDate: '2018-01-10',
-    salary: 150000
+    salary: 150000,
+    isTeacher: true,
   },
   {
-    id: 'STF004',
+    id: 4,
+    code: 'STF004',
     firstName: 'Samuel',
     lastName: 'Nkeng',
     role: 'Science Teacher',
     phone: '+237 690 444 555',
     email: 's.nkeng@school.cm',
     hireDate: '2019-09-01',
-    salary: 140000
-  }
+    salary: 140000,
+    isTeacher: true,
+  },
 ];
 
 export const mockExpenses: Expense[] = [
