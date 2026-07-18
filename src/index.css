@@ -2188,6 +2188,10 @@
     display: none;
   }
 
+  .md\:flex {
+    display: flex;
+  }
+
   .md\:static {
     position: static;
   }
