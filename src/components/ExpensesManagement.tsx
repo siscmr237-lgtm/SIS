@@ -113,8 +113,8 @@ export function ExpensesManagement() {
   };
 
   return (
-    <div className="p-8">
-      <div className="flex justify-between items-center mb-8">
+    <div className="p-4 md:p-8">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-8">
         <div>
           <h1 className="text-3xl mb-2">Expenses Management</h1>
           <p className="text-gray-600">Track and manage school expenses</p>
@@ -323,7 +323,7 @@ export function ExpensesManagement() {
       </Card>
 
       <Card className="p-6 mb-6">
-        <div className="flex gap-4">
+        <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
             <Input
@@ -334,7 +334,7 @@ export function ExpensesManagement() {
             />
           </div>
           <Select value={filterCategory} onValueChange={setFilterCategory}>
-            <SelectTrigger className="w-48">
+            <SelectTrigger className="w-full sm:w-48">
               <SelectValue placeholder="Filter by category" />
             </SelectTrigger>
             <SelectContent>
@@ -348,6 +348,7 @@ export function ExpensesManagement() {
       </Card>
 
       <Card>
+        <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -386,6 +387,7 @@ export function ExpensesManagement() {
             ))}
           </TableBody>
         </Table>
+        </div>
       </Card>
     </div>
   );

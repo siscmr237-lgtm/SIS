@@ -79,8 +79,8 @@ export function SubjectsManagement({ onNavigate }: SubjectsManagementProps) {
   };
 
   return (
-    <div className="p-8">
-      <div className="flex justify-between items-center mb-8">
+    <div className="p-4 md:p-8">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-8">
         <div>
           <button
             onClick={() => onNavigate?.('classes')}
@@ -141,6 +141,7 @@ export function SubjectsManagement({ onNavigate }: SubjectsManagementProps) {
             </div>
           )}
           <Card>
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -167,6 +168,7 @@ export function SubjectsManagement({ onNavigate }: SubjectsManagementProps) {
                 ))}
               </TableBody>
             </Table>
+            </div>
           </Card>
         </>
       )}

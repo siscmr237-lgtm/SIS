@@ -102,7 +102,7 @@ export function Dashboard() {
   }
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
       {/* School Header */}
       <Card className="p-6 mb-8 bg-gradient-to-r from-blue-50 to-purple-50">
         <div className="flex items-center gap-6">
@@ -114,7 +114,7 @@ export function Dashboard() {
             />
           )}
           <div className="flex-1">
-            <h1 className="text-3xl mb-1">{schoolSettings.name}</h1>
+            <h1 className="text-3xl mb-1 truncate">{schoolSettings.name}</h1>
             <div className="flex gap-4 text-gray-600">
               <span>Academic Year: {schoolSettings.academicYear}</span>
               <span>•</span>

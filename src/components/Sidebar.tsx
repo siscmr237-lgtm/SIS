@@ -20,9 +20,11 @@ import { NavigationPage } from "../App";
 interface SidebarProps {
   currentPage: NavigationPage;
   onNavigate: (page: NavigationPage) => void;
+  open?: boolean;
+  onClose?: () => void;
 }
 
-export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
+export function Sidebar({ currentPage, onNavigate, open = false, onClose }: SidebarProps) {
   const cache = useSisCache();
   const menuItems = [
     { id: "dashboard" as NavigationPage, label: "Dashboard", icon: Home },
@@ -77,15 +79,29 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
     } catch {}
   }, []);
 
+  const handleNavigate = (page: NavigationPage) => {
+    onNavigate(page);
+    onClose?.();
+  };
+
   return (
-    <aside className="w-64 h-full bg-blue-900 text-white flex flex-col">
+    <aside
+      className={[
+        'w-64 bg-blue-900 text-white flex flex-col flex-shrink-0',
+        // Mobile: fixed overlay drawer; desktop: static in flex flow
+        'fixed inset-y-0 left-0 z-50',
+        'md:static md:inset-auto md:z-auto',
+        'transition-transform duration-300 ease-in-out',
+        open ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
+      ].join(' ')}
+    >
       <div className="p-6 border-b border-blue-800">
         <div className="flex items-center gap-3 mb-4">
           {logoSrc && (
             <img
               src={logoSrc}
               alt="School Logo"
-              className="w-12 h-12 object-cover rounded-lg border-2 border-blue-700"
+              className="w-12 h-12 object-cover rounded-lg border-2 border-blue-700 flex-shrink-0"
             />
           )}
           <div className="flex-1 min-w-0">
@@ -97,7 +113,7 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
         </div>
       </div>
 
-      <nav className="flex-1 p-4">
+      <nav className="flex-1 p-4 overflow-y-auto">
         {menuItems.map((item) => {
           const Icon = item.icon;
           const isActive = currentPage === item.id;
@@ -105,7 +121,7 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
           return (
             <button
               key={item.id}
-              onClick={() => onNavigate(item.id)}
+              onClick={() => handleNavigate(item.id)}
               className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg mb-1 transition-colors ${
                 isActive
                   ? "bg-blue-700 text-white"
@@ -121,7 +137,7 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
 
       <div className="px-4 py-2 border-t border-blue-800">
         <button
-          onClick={() => onNavigate("settings")}
+          onClick={() => handleNavigate("settings")}
           className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${
             currentPage === "settings"
               ? "bg-blue-700 text-white"

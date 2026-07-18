@@ -114,14 +114,14 @@ export function Attendance() {
   };
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
       <div className="mb-8">
         <h1 className="text-3xl mb-2">Attendance Management</h1>
         <p className="text-gray-600">Track daily attendance for students and staff</p>
       </div>
 
       <Card className="p-6 mb-6">
-        <div className="flex gap-4 items-end">
+        <div className="flex flex-col sm:flex-row sm:items-end gap-3">
           <div className="flex-1">
             <Label>Select Date</Label>
             <div className="relative">
@@ -162,7 +162,7 @@ export function Attendance() {
 
         <TabsContent value="students">
           <Card className="mb-4 p-4">
-            <div className="flex gap-4 items-center">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
               <p className="text-sm text-gray-600">Mark attendance for {selectedClass} on {selectedDate}</p>
               <Button size="sm" variant="outline" className="ml-auto flex items-center gap-2" onClick={saveStudentAttendance}>
                 <Save size={16} />
@@ -172,6 +172,7 @@ export function Attendance() {
           </Card>
 
           <Card>
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -213,12 +214,13 @@ export function Attendance() {
                 })}
               </TableBody>
             </Table>
+            </div>
           </Card>
         </TabsContent>
 
         <TabsContent value="staff">
           <Card className="mb-4 p-4">
-            <div className="flex gap-4 items-center">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
               <p className="text-sm text-gray-600">Mark staff attendance for {selectedDate}</p>
               <Button size="sm" variant="outline" className="ml-auto flex items-center gap-2" onClick={saveStaffAttendance}>
                 <Save size={16} />
@@ -228,6 +230,7 @@ export function Attendance() {
           </Card>
 
           <Card>
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -269,6 +272,7 @@ export function Attendance() {
                 })}
               </TableBody>
             </Table>
+            </div>
           </Card>
         </TabsContent>
       </Tabs>
