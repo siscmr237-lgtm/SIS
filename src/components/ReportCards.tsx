@@ -58,9 +58,9 @@ export function ReportCards() {
   const subjects = ['Mathematics', 'English', 'French', 'Science', 'Social Studies', 'ICT', 'Physical Education', 'Art'];
 
   return (
-    <div className="p-8">
-      <div className="flex justify-between items-center mb-8">
-        <div>
+    <div className="p-4 md:p-8">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-8">
+        <div className="flex-1">
           <h1 className="text-3xl mb-2">Report Cards</h1>
           <p className="text-gray-600">Manage and generate student report cards</p>
         </div>
@@ -208,6 +208,7 @@ export function ReportCards() {
       </Card>
 
       <Card>
+        <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -253,6 +254,7 @@ export function ReportCards() {
             ))}
           </TableBody>
         </Table>
+        </div>
       </Card>
     </div>
   );

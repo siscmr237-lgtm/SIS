@@ -185,7 +185,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
   };
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
       <button
         onClick={() => onNavigate('students')}
         className="flex items-center gap-2 text-gray-500 hover:text-gray-900 mb-6"
@@ -218,7 +218,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
       {activeTab === 'general' && (
         <Card className="p-6">
           <h2 className="text-base font-medium mb-5">Student Information</h2>
-          <dl className="grid grid-cols-2 gap-x-12 gap-y-5">
+          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-5">
             <Field label="Student ID" value={student.id} />
             <Field label="Class" value={student.class} />
             <Field label="First Name" value={student.firstName} />
@@ -257,7 +257,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
           {!ledgerLoading && !ledgerError && ledgerData && (
             <>
               {/* Summary */}
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <Card className="p-4">
                   <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Total Charged</p>
                   <p className="text-xl font-medium text-gray-900">

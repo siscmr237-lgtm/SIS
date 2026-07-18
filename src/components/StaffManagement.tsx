@@ -86,9 +86,9 @@ export function StaffManagement() {
   });
 
   return (
-    <div className="p-8">
-      <div className="flex justify-between items-center mb-8">
-        <div>
+    <div className="p-4 md:p-8">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-8">
+        <div className="flex-1">
           <h1 className="text-3xl mb-2">Staff Management</h1>
           <p className="text-gray-600">Manage staff records and work documentation</p>
         </div>
@@ -193,6 +193,7 @@ export function StaffManagement() {
           </Card>
 
           <Card>
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -224,6 +225,7 @@ export function StaffManagement() {
                 ))}
               </TableBody>
             </Table>
+            </div>
           </Card>
         </TabsContent>
 
@@ -323,6 +325,7 @@ export function StaffManagement() {
           </div>
 
           <Card>
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -362,6 +365,7 @@ export function StaffManagement() {
                 ))}
               </TableBody>
             </Table>
+            </div>
           </Card>
         </TabsContent>
       </Tabs>

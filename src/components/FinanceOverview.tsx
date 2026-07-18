@@ -96,13 +96,13 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
   const totalOutstanding = summary?.outstandingFees ?? 0;
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
       <div className="mb-8">
         <h1 className="text-3xl mb-2">Finance</h1>
         <p className="text-gray-600">School-wide financial overview</p>
       </div>
 
-      <div className="grid grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
         <Card className="p-4">
           <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Total Charged</p>
           <p className="text-2xl font-medium text-gray-900">{totalCharged.toLocaleString()} FCFA</p>

@@ -98,8 +98,8 @@ export function Timetable() {
   };
 
   return (
-    <div className="p-8">
-      <div className="flex justify-between items-center mb-8">
+    <div className="p-4 md:p-8">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-8">
         <div>
           <h1 className="text-3xl mb-2">School Timetable</h1>
           <p className="text-gray-600">
@@ -288,6 +288,7 @@ export function Timetable() {
       </div>
 
       <Card className="mt-6">
+        <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -318,6 +319,7 @@ export function Timetable() {
             ))}
           </TableBody>
         </Table>
+        </div>
       </Card>
     </div>
   );

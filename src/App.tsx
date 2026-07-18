@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Menu } from 'lucide-react';
 import { SisCacheProvider } from './lib/SisCache';
 import { Sidebar } from './components/Sidebar';
 import { Dashboard } from './components/Dashboard';
@@ -32,36 +33,34 @@ export type NavigationPage =
 export default function App() {
   const [currentPage, setCurrentPage] = useState<NavigationPage>('dashboard');
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const navigate = (page: NavigationPage) => {
+    setCurrentPage(page);
+    setSidebarOpen(false);
+  };
+
+  const viewStudent = (s: Student) => {
+    setSelectedStudent(s);
+    navigate('student-profile');
+  };
 
   const renderPage = () => {
     switch (currentPage) {
       case 'dashboard':
         return <Dashboard />;
       case 'students':
-        return (
-          <StudentsManagement
-            onNavigate={setCurrentPage}
-            onViewStudent={(s) => { setSelectedStudent(s); setCurrentPage('student-profile'); }}
-          />
-        );
+        return <StudentsManagement onNavigate={navigate} onViewStudent={viewStudent} />;
       case 'student-profile':
         return selectedStudent ? (
-          <StudentProfile student={selectedStudent} onNavigate={setCurrentPage} />
+          <StudentProfile student={selectedStudent} onNavigate={navigate} />
         ) : (
-          <StudentsManagement
-            onNavigate={setCurrentPage}
-            onViewStudent={(s) => { setSelectedStudent(s); setCurrentPage('student-profile'); }}
-          />
+          <StudentsManagement onNavigate={navigate} onViewStudent={viewStudent} />
         );
       case 'staff':
         return <StaffManagement />;
       case 'finance':
-        return (
-          <FinanceOverview
-            onNavigate={setCurrentPage}
-            onViewStudent={(s) => { setSelectedStudent(s); setCurrentPage('student-profile'); }}
-          />
-        );
+        return <FinanceOverview onNavigate={navigate} onViewStudent={viewStudent} />;
       case 'expenses':
         return <ExpensesManagement />;
       case 'report-cards':
@@ -71,9 +70,9 @@ export default function App() {
       case 'timetable':
         return <Timetable />;
       case 'classes':
-        return <ClassesManagement onNavigate={setCurrentPage} />;
+        return <ClassesManagement onNavigate={navigate} />;
       case 'subjects':
-        return <SubjectsManagement onNavigate={setCurrentPage} />;
+        return <SubjectsManagement onNavigate={navigate} />;
       case 'settings':
         return <SchoolSettings />;
       default:
@@ -84,8 +83,17 @@ export default function App() {
   return (
     <SisCacheProvider>
       <div className="flex h-screen overflow-hidden bg-gray-50">
-        <Sidebar currentPage={currentPage} onNavigate={setCurrentPage} />
-        <main className="flex-1 overflow-y-auto">
+        <div className="md:hidden fixed top-0 left-0 right-0 z-30 h-14 bg-blue-900 text-white flex items-center px-4 gap-3 shadow-md">
+          <button onClick={() => setSidebarOpen(true)} className="p-1 rounded hover:bg-blue-800">
+            <Menu size={22} />
+          </button>
+          <span className="font-medium text-sm truncate">School Admin</span>
+        </div>
+        {sidebarOpen && (
+          <div className="fixed inset-0 bg-black/50 z-40 md:hidden" onClick={() => setSidebarOpen(false)} />
+        )}
+        <Sidebar currentPage={currentPage} onNavigate={navigate} open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <main className="flex-1 overflow-y-auto pt-14 md:pt-0">
           {renderPage()}
         </main>
       </div>

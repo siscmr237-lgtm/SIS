@@ -127,9 +127,9 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
   };
 
   return (
-    <div className="p-8">
-      <div className="flex justify-between items-center mb-8">
-        <div>
+    <div className="p-4 md:p-8">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-8">
+        <div className="flex-1">
           <h1 className="text-3xl mb-2">Students Management</h1>
           <p className="text-gray-600">
             Manage student records and information
@@ -342,6 +342,7 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
       </Card>
 
       <Card>
+        <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -385,6 +386,7 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
             ))}
           </TableBody>
         </Table>
+        </div>
       </Card>
     </div>
   );
