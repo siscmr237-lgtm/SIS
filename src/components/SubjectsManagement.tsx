@@ -80,7 +80,7 @@ export function SubjectsManagement({ onNavigate }: SubjectsManagementProps) {
 
   return (
     <div className="p-4 md:p-8">
-      <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-start gap-4 mb-8">
         <div>
           <button
             onClick={() => onNavigate?.('classes')}

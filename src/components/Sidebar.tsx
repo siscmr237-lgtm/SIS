@@ -49,6 +49,11 @@ export function Sidebar({ currentPage, onNavigate, open = false, onClose }: Side
   });
   const [logoSrc, setLogoSrc] = useState<string | null>(null);
 
+  const handleNavigate = (page: NavigationPage) => {
+    onNavigate(page);
+    onClose?.();
+  };
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     const userStr = window.localStorage.getItem("user");
@@ -79,29 +84,15 @@ export function Sidebar({ currentPage, onNavigate, open = false, onClose }: Side
     } catch {}
   }, []);
 
-  const handleNavigate = (page: NavigationPage) => {
-    onNavigate(page);
-    onClose?.();
-  };
-
   return (
-    <aside
-      className={[
-        'w-64 bg-blue-900 text-white flex flex-col flex-shrink-0',
-        // Mobile: fixed overlay drawer; desktop: static in flex flow
-        'fixed inset-y-0 left-0 z-50',
-        'md:static md:inset-auto md:z-auto',
-        'transition-transform duration-300 ease-in-out',
-        open ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
-      ].join(' ')}
-    >
+    <aside className={`w-64 bg-blue-900 text-white flex flex-col fixed inset-y-0 left-0 z-50 md:static md:inset-auto md:z-auto transition-transform duration-300 ease-in-out ${open ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
       <div className="p-6 border-b border-blue-800">
         <div className="flex items-center gap-3 mb-4">
           {logoSrc && (
             <img
               src={logoSrc}
               alt="School Logo"
-              className="w-12 h-12 object-cover rounded-lg border-2 border-blue-700 flex-shrink-0"
+              className="w-12 h-12 object-cover rounded-lg border-2 border-blue-700"
             />
           )}
           <div className="flex-1 min-w-0">

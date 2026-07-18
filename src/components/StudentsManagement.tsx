@@ -129,7 +129,7 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
   return (
     <div className="p-4 md:p-8">
       <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-8">
-        <div>
+        <div className="flex-1">
           <h1 className="text-3xl mb-2">Students Management</h1>
           <p className="text-gray-600">
             Manage student records and information

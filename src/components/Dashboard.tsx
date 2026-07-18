@@ -98,7 +98,7 @@ export function Dashboard() {
   ];
 
   if (loading) {
-    return <div className="p-8">Loading dashboard...</div>;
+    return <div className="p-4 md:p-8">Loading dashboard...</div>;
   }
 
   return (

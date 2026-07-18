@@ -115,7 +115,7 @@ export function ExpensesManagement() {
   return (
     <div className="p-4 md:p-8">
       <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-8">
-        <div>
+        <div className="flex-1">
           <h1 className="text-3xl mb-2">Expenses Management</h1>
           <p className="text-gray-600">Track and manage school expenses</p>
         </div>
