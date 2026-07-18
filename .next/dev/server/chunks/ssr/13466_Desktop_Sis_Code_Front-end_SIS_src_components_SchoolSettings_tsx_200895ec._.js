@@ -62,7 +62,8 @@ function SchoolSettings() {
         name: settings.name,
         logo: settings.logo,
         academicYear: settings.academicYear,
-        currentTerm: settings.currentTerm
+        currentTerm: settings.currentTerm,
+        motto: ''
     });
     (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useEffect"])(()=>{
         const load = async ()=>{
@@ -81,7 +82,8 @@ function SchoolSettings() {
                         name: data.name || '',
                         logo: data.logo || '',
                         academicYear: data.academicYear || '',
-                        currentTerm: data.currentTerm || ''
+                        currentTerm: data.currentTerm || '',
+                        motto: data.motto || ''
                     });
                 }
                 if (cRes.status === 'fulfilled') setCats(cRes.value || []);
@@ -101,7 +103,8 @@ function SchoolSettings() {
                 name: formData.name,
                 logo: formData.logo,
                 academicYear: formData.academicYear,
-                currentTerm: formData.currentTerm
+                currentTerm: formData.currentTerm,
+                motto: formData.motto
             });
             try {
                 const userStr = window.localStorage.getItem('user');
@@ -112,6 +115,7 @@ function SchoolSettings() {
                         user.School[0].logo = formData.logo;
                         user.School[0].academicYear = formData.academicYear;
                         user.School[0].currentTerm = formData.currentTerm;
+                        user.School[0].motto = formData.motto;
                         window.localStorage.setItem('user', JSON.stringify(user));
                     }
                 }
@@ -326,7 +330,7 @@ function SchoolSettings() {
                         children: "School Settings"
                     }, void 0, false, {
                         fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                        lineNumber: 285,
+                        lineNumber: 289,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -334,13 +338,13 @@ function SchoolSettings() {
                         children: "Manage school information and curriculum"
                     }, void 0, false, {
                         fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                        lineNumber: 286,
+                        lineNumber: 290,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                lineNumber: 284,
+                lineNumber: 288,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$src$2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Card"], {
@@ -354,7 +358,7 @@ function SchoolSettings() {
                                 children: "Basic Information"
                             }, void 0, false, {
                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                lineNumber: 292,
+                                lineNumber: 296,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Button"], {
@@ -373,7 +377,7 @@ function SchoolSettings() {
                                             size: 16
                                         }, void 0, false, {
                                             fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                            lineNumber: 305,
+                                            lineNumber: 309,
                                             columnNumber: 17
                                         }, this),
                                         "Save Changes"
@@ -385,7 +389,7 @@ function SchoolSettings() {
                                             size: 16
                                         }, void 0, false, {
                                             fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                            lineNumber: 310,
+                                            lineNumber: 314,
                                             columnNumber: 17
                                         }, this),
                                         "Edit"
@@ -393,13 +397,13 @@ function SchoolSettings() {
                                 }, void 0, true)
                             }, void 0, false, {
                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                lineNumber: 293,
+                                lineNumber: 297,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                        lineNumber: 291,
+                        lineNumber: 295,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -411,7 +415,7 @@ function SchoolSettings() {
                                         children: "School Name"
                                     }, void 0, false, {
                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                        lineNumber: 319,
+                                        lineNumber: 323,
                                         columnNumber: 13
                                     }, this),
                                     isEditingBasic ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$src$2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Input"], {
@@ -423,20 +427,64 @@ function SchoolSettings() {
                                         placeholder: "Enter school name"
                                     }, void 0, false, {
                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                        lineNumber: 321,
+                                        lineNumber: 325,
                                         columnNumber: 15
                                     }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                                         className: "mt-2 p-2 bg-gray-50 rounded",
                                         children: settings.name
                                     }, void 0, false, {
                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                        lineNumber: 327,
+                                        lineNumber: 331,
                                         columnNumber: 15
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                lineNumber: 318,
+                                lineNumber: 322,
+                                columnNumber: 11
+                            }, this),
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                children: [
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$src$2f$components$2f$ui$2f$label$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Label"], {
+                                        children: [
+                                            "School Motto ",
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                                className: "text-gray-400 font-normal text-xs",
+                                                children: "(optional)"
+                                            }, void 0, false, {
+                                                fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
+                                                lineNumber: 336,
+                                                columnNumber: 33
+                                            }, this)
+                                        ]
+                                    }, void 0, true, {
+                                        fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
+                                        lineNumber: 336,
+                                        columnNumber: 13
+                                    }, this),
+                                    isEditingBasic ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$src$2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Input"], {
+                                        value: formData.motto,
+                                        onChange: (e)=>setFormData((prev)=>({
+                                                    ...prev,
+                                                    motto: e.target.value
+                                                })),
+                                        placeholder: "e.g. Excellence in Education"
+                                    }, void 0, false, {
+                                        fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
+                                        lineNumber: 338,
+                                        columnNumber: 15
+                                    }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                        className: "mt-2 p-2 bg-gray-50 rounded",
+                                        children: settings.motto || '—'
+                                    }, void 0, false, {
+                                        fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
+                                        lineNumber: 344,
+                                        columnNumber: 15
+                                    }, this)
+                                ]
+                            }, void 0, true, {
+                                fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
+                                lineNumber: 335,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -445,7 +493,7 @@ function SchoolSettings() {
                                         children: "Academic Year"
                                     }, void 0, false, {
                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                        lineNumber: 332,
+                                        lineNumber: 349,
                                         columnNumber: 13
                                     }, this),
                                     isEditingBasic ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$src$2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Input"], {
@@ -457,20 +505,20 @@ function SchoolSettings() {
                                         placeholder: "e.g., 2024/2025"
                                     }, void 0, false, {
                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                        lineNumber: 334,
+                                        lineNumber: 351,
                                         columnNumber: 15
                                     }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                                         className: "mt-2 p-2 bg-gray-50 rounded",
                                         children: settings.academicYear
                                     }, void 0, false, {
                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                        lineNumber: 340,
+                                        lineNumber: 357,
                                         columnNumber: 15
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                lineNumber: 331,
+                                lineNumber: 348,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -479,7 +527,7 @@ function SchoolSettings() {
                                         children: "Current Term"
                                     }, void 0, false, {
                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                        lineNumber: 345,
+                                        lineNumber: 362,
                                         columnNumber: 13
                                     }, this),
                                     isEditingBasic ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$src$2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Input"], {
@@ -491,20 +539,20 @@ function SchoolSettings() {
                                         placeholder: "e.g., Term 1"
                                     }, void 0, false, {
                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                        lineNumber: 347,
+                                        lineNumber: 364,
                                         columnNumber: 15
                                     }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                                         className: "mt-2 p-2 bg-gray-50 rounded",
                                         children: settings.currentTerm
                                     }, void 0, false, {
                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                        lineNumber: 353,
+                                        lineNumber: 370,
                                         columnNumber: 15
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                lineNumber: 344,
+                                lineNumber: 361,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -513,7 +561,7 @@ function SchoolSettings() {
                                         children: "School Logo"
                                     }, void 0, false, {
                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                        lineNumber: 358,
+                                        lineNumber: 375,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -529,7 +577,7 @@ function SchoolSettings() {
                                                                 size: 14
                                                             }, void 0, false, {
                                                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                                                lineNumber: 364,
+                                                                lineNumber: 381,
                                                                 columnNumber: 19
                                                             }, this),
                                                             logoUploading ? 'Uploading…' : 'Choose image',
@@ -541,13 +589,13 @@ function SchoolSettings() {
                                                                 disabled: logoUploading
                                                             }, void 0, false, {
                                                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                                                lineNumber: 366,
+                                                                lineNumber: 383,
                                                                 columnNumber: 19
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                                        lineNumber: 361,
+                                                        lineNumber: 378,
                                                         columnNumber: 17
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -555,13 +603,13 @@ function SchoolSettings() {
                                                         children: "JPG, PNG or WebP · max 5 MB"
                                                     }, void 0, false, {
                                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                                        lineNumber: 374,
+                                                        lineNumber: 391,
                                                         columnNumber: 17
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                                lineNumber: 360,
+                                                lineNumber: 377,
                                                 columnNumber: 15
                                             }, this),
                                             logoError && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -569,7 +617,7 @@ function SchoolSettings() {
                                                 children: logoError
                                             }, void 0, false, {
                                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                                lineNumber: 377,
+                                                lineNumber: 394,
                                                 columnNumber: 17
                                             }, this),
                                             settings.logo && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -577,31 +625,31 @@ function SchoolSettings() {
                                                 children: settings.logo
                                             }, void 0, false, {
                                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                                lineNumber: 380,
+                                                lineNumber: 397,
                                                 columnNumber: 17
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                        lineNumber: 359,
+                                        lineNumber: 376,
                                         columnNumber: 13
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                lineNumber: 357,
+                                lineNumber: 374,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                        lineNumber: 317,
+                        lineNumber: 321,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                lineNumber: 290,
+                lineNumber: 294,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$src$2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Card"], {
@@ -616,7 +664,7 @@ function SchoolSettings() {
                                     children: "Charge Categories"
                                 }, void 0, false, {
                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                    lineNumber: 391,
+                                    lineNumber: 408,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -629,13 +677,13 @@ function SchoolSettings() {
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                    lineNumber: 392,
+                                    lineNumber: 409,
                                     columnNumber: 13
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                            lineNumber: 390,
+                            lineNumber: 407,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Button"], {
@@ -647,25 +695,25 @@ function SchoolSettings() {
                                     size: 16
                                 }, void 0, false, {
                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                    lineNumber: 397,
+                                    lineNumber: 414,
                                     columnNumber: 13
                                 }, this),
                                 "Manage Categories"
                             ]
                         }, void 0, true, {
                             fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                            lineNumber: 396,
+                            lineNumber: 413,
                             columnNumber: 11
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                    lineNumber: 389,
+                    lineNumber: 406,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                lineNumber: 388,
+                lineNumber: 405,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$src$2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Card"], {
@@ -679,7 +727,7 @@ function SchoolSettings() {
                                 children: "Subjects Per Class"
                             }, void 0, false, {
                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                lineNumber: 406,
+                                lineNumber: 423,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Button"], {
@@ -690,20 +738,20 @@ function SchoolSettings() {
                                         size: 16
                                     }, void 0, false, {
                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                        lineNumber: 408,
+                                        lineNumber: 425,
                                         columnNumber: 13
                                     }, this),
                                     "Add Class"
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                lineNumber: 407,
+                                lineNumber: 424,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                        lineNumber: 405,
+                        lineNumber: 422,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -719,7 +767,7 @@ function SchoolSettings() {
                                                 children: classConfig.className
                                             }, void 0, false, {
                                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                                lineNumber: 417,
+                                                lineNumber: 434,
                                                 columnNumber: 17
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -736,12 +784,12 @@ function SchoolSettings() {
                                                             size: 14
                                                         }, void 0, false, {
                                                             fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                                            lineNumber: 427,
+                                                            lineNumber: 444,
                                                             columnNumber: 21
                                                         }, this)
                                                     }, void 0, false, {
                                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                                        lineNumber: 419,
+                                                        lineNumber: 436,
                                                         columnNumber: 19
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Button"], {
@@ -752,24 +800,24 @@ function SchoolSettings() {
                                                             size: 14
                                                         }, void 0, false, {
                                                             fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                                            lineNumber: 434,
+                                                            lineNumber: 451,
                                                             columnNumber: 21
                                                         }, this)
                                                     }, void 0, false, {
                                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                                        lineNumber: 429,
+                                                        lineNumber: 446,
                                                         columnNumber: 19
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                                lineNumber: 418,
+                                                lineNumber: 435,
                                                 columnNumber: 17
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                        lineNumber: 416,
+                                        lineNumber: 433,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -783,12 +831,12 @@ function SchoolSettings() {
                                                             placeholder: `${classConfig.subjects.length} subjects configured`
                                                         }, void 0, false, {
                                                             fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                                            lineNumber: 443,
+                                                            lineNumber: 460,
                                                             columnNumber: 23
                                                         }, this)
                                                     }, void 0, false, {
                                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                                        lineNumber: 442,
+                                                        lineNumber: 459,
                                                         columnNumber: 21
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$src$2f$components$2f$ui$2f$select$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["SelectContent"], {
@@ -797,25 +845,25 @@ function SchoolSettings() {
                                                                 children: subject
                                                             }, idx, false, {
                                                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                                                lineNumber: 447,
+                                                                lineNumber: 464,
                                                                 columnNumber: 25
                                                             }, this))
                                                     }, void 0, false, {
                                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                                        lineNumber: 445,
+                                                        lineNumber: 462,
                                                         columnNumber: 21
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                                lineNumber: 441,
+                                                lineNumber: 458,
                                                 columnNumber: 19
                                             }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                                                 className: "text-sm text-gray-500 italic",
                                                 children: "No subjects configured"
                                             }, void 0, false, {
                                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                                lineNumber: 454,
+                                                lineNumber: 471,
                                                 columnNumber: 19
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -827,30 +875,30 @@ function SchoolSettings() {
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                                lineNumber: 456,
+                                                lineNumber: 473,
                                                 columnNumber: 17
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                        lineNumber: 439,
+                                        lineNumber: 456,
                                         columnNumber: 15
                                     }, this)
                                 ]
                             }, classConfig.id, true, {
                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                lineNumber: 415,
+                                lineNumber: 432,
                                 columnNumber: 13
                             }, this))
                     }, void 0, false, {
                         fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                        lineNumber: 413,
+                        lineNumber: 430,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                lineNumber: 404,
+                lineNumber: 421,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -866,12 +914,12 @@ function SchoolSettings() {
                     children: "Logout"
                 }, void 0, false, {
                     fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                    lineNumber: 467,
+                    lineNumber: 484,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                lineNumber: 466,
+                lineNumber: 483,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$src$2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Dialog"], {
@@ -892,20 +940,20 @@ function SchoolSettings() {
                                     children: "Charge Categories"
                                 }, void 0, false, {
                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                    lineNumber: 490,
+                                    lineNumber: 507,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$src$2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["DialogDescription"], {
                                     children: "Manage charge categories. Built-in categories cannot be renamed or deleted."
                                 }, void 0, false, {
                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                    lineNumber: 491,
+                                    lineNumber: 508,
                                     columnNumber: 13
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                            lineNumber: 489,
+                            lineNumber: 506,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -916,7 +964,7 @@ function SchoolSettings() {
                                     children: "No categories yet. Run the seed script to add built-in categories."
                                 }, void 0, false, {
                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                    lineNumber: 498,
+                                    lineNumber: 515,
                                     columnNumber: 15
                                 }, this),
                                 cats.map((cat)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -931,7 +979,7 @@ function SchoolSettings() {
                                                     placeholder: "Category name"
                                                 }, void 0, false, {
                                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                                    lineNumber: 504,
+                                                    lineNumber: 521,
                                                     columnNumber: 21
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$src$2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Input"], {
@@ -943,7 +991,7 @@ function SchoolSettings() {
                                                     placeholder: "Limit (FCFA)"
                                                 }, void 0, false, {
                                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                                    lineNumber: 511,
+                                                    lineNumber: 528,
                                                     columnNumber: 21
                                                 }, this),
                                                 editError && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -951,7 +999,7 @@ function SchoolSettings() {
                                                     children: editError
                                                 }, void 0, false, {
                                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                                    lineNumber: 519,
+                                                    lineNumber: 536,
                                                     columnNumber: 35
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Button"], {
@@ -961,12 +1009,12 @@ function SchoolSettings() {
                                                         size: 14
                                                     }, void 0, false, {
                                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                                        lineNumber: 521,
+                                                        lineNumber: 538,
                                                         columnNumber: 23
                                                     }, this)
                                                 }, void 0, false, {
                                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                                    lineNumber: 520,
+                                                    lineNumber: 537,
                                                     columnNumber: 21
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Button"], {
@@ -980,12 +1028,12 @@ function SchoolSettings() {
                                                         size: 14
                                                     }, void 0, false, {
                                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                                        lineNumber: 524,
+                                                        lineNumber: 541,
                                                         columnNumber: 23
                                                     }, this)
                                                 }, void 0, false, {
                                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                                    lineNumber: 523,
+                                                    lineNumber: 540,
                                                     columnNumber: 21
                                                 }, this)
                                             ]
@@ -999,7 +1047,7 @@ function SchoolSettings() {
                                                             children: cat.name
                                                         }, void 0, false, {
                                                             fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                                            lineNumber: 530,
+                                                            lineNumber: 547,
                                                             columnNumber: 23
                                                         }, this),
                                                         cat.isBuiltIn && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -1007,13 +1055,13 @@ function SchoolSettings() {
                                                             children: "built-in"
                                                         }, void 0, false, {
                                                             fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                                            lineNumber: 532,
+                                                            lineNumber: 549,
                                                             columnNumber: 25
                                                         }, this)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                                    lineNumber: 529,
+                                                    lineNumber: 546,
                                                     columnNumber: 21
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -1021,7 +1069,7 @@ function SchoolSettings() {
                                                     children: cat.limit > 0 ? `Limit: ${cat.limit.toLocaleString()} FCFA` : 'No limit'
                                                 }, void 0, false, {
                                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                                    lineNumber: 537,
+                                                    lineNumber: 554,
                                                     columnNumber: 21
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Button"], {
@@ -1037,12 +1085,12 @@ function SchoolSettings() {
                                                         size: 14
                                                     }, void 0, false, {
                                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                                        lineNumber: 550,
+                                                        lineNumber: 567,
                                                         columnNumber: 23
                                                     }, this)
                                                 }, void 0, false, {
                                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                                    lineNumber: 540,
+                                                    lineNumber: 557,
                                                     columnNumber: 21
                                                 }, this),
                                                 !cat.isBuiltIn && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Button"], {
@@ -1054,25 +1102,25 @@ function SchoolSettings() {
                                                         size: 14
                                                     }, void 0, false, {
                                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                                        lineNumber: 559,
+                                                        lineNumber: 576,
                                                         columnNumber: 25
                                                     }, this)
                                                 }, void 0, false, {
                                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                                    lineNumber: 553,
+                                                    lineNumber: 570,
                                                     columnNumber: 23
                                                 }, this)
                                             ]
                                         }, void 0, true)
                                     }, cat.id, false, {
                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                        lineNumber: 501,
+                                        lineNumber: 518,
                                         columnNumber: 15
                                     }, this))
                             ]
                         }, void 0, true, {
                             fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                            lineNumber: 496,
+                            lineNumber: 513,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1083,7 +1131,7 @@ function SchoolSettings() {
                                     children: "Add Category"
                                 }, void 0, false, {
                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                    lineNumber: 569,
+                                    lineNumber: 586,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1096,7 +1144,7 @@ function SchoolSettings() {
                                                     children: "Name"
                                                 }, void 0, false, {
                                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                                    lineNumber: 572,
+                                                    lineNumber: 589,
                                                     columnNumber: 17
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$src$2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Input"], {
@@ -1106,13 +1154,13 @@ function SchoolSettings() {
                                                     className: "w-48"
                                                 }, void 0, false, {
                                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                                    lineNumber: 573,
+                                                    lineNumber: 590,
                                                     columnNumber: 17
                                                 }, this)
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                            lineNumber: 571,
+                                            lineNumber: 588,
                                             columnNumber: 15
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1126,13 +1174,13 @@ function SchoolSettings() {
                                                             children: "optional"
                                                         }, void 0, false, {
                                                             fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                                            lineNumber: 582,
+                                                            lineNumber: 599,
                                                             columnNumber: 32
                                                         }, this)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                                    lineNumber: 581,
+                                                    lineNumber: 598,
                                                     columnNumber: 17
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$src$2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Input"], {
@@ -1144,13 +1192,13 @@ function SchoolSettings() {
                                                     className: "w-36"
                                                 }, void 0, false, {
                                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                                    lineNumber: 584,
+                                                    lineNumber: 601,
                                                     columnNumber: 17
                                                 }, this)
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                            lineNumber: 580,
+                                            lineNumber: 597,
                                             columnNumber: 15
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Button"], {
@@ -1162,20 +1210,20 @@ function SchoolSettings() {
                                                     className: "mr-1"
                                                 }, void 0, false, {
                                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                                    lineNumber: 594,
+                                                    lineNumber: 611,
                                                     columnNumber: 17
                                                 }, this),
                                                 "Add"
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                            lineNumber: 593,
+                                            lineNumber: 610,
                                             columnNumber: 15
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                    lineNumber: 570,
+                                    lineNumber: 587,
                                     columnNumber: 13
                                 }, this),
                                 addError && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1183,24 +1231,24 @@ function SchoolSettings() {
                                     children: addError
                                 }, void 0, false, {
                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                    lineNumber: 598,
+                                    lineNumber: 615,
                                     columnNumber: 26
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                            lineNumber: 568,
+                            lineNumber: 585,
                             columnNumber: 11
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                    lineNumber: 488,
+                    lineNumber: 505,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                lineNumber: 484,
+                lineNumber: 501,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$src$2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Dialog"], {
@@ -1218,20 +1266,20 @@ function SchoolSettings() {
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                    lineNumber: 607,
+                                    lineNumber: 624,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$src$2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["DialogDescription"], {
                                     children: "Add or remove subjects for this class. Click on a subject to select it."
                                 }, void 0, false, {
                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                    lineNumber: 608,
+                                    lineNumber: 625,
                                     columnNumber: 13
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                            lineNumber: 606,
+                            lineNumber: 623,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1243,7 +1291,7 @@ function SchoolSettings() {
                                             children: "Add New Subject"
                                         }, void 0, false, {
                                             fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                            lineNumber: 616,
+                                            lineNumber: 633,
                                             columnNumber: 15
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1260,7 +1308,7 @@ function SchoolSettings() {
                                                     }
                                                 }, void 0, false, {
                                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                                    lineNumber: 618,
+                                                    lineNumber: 635,
                                                     columnNumber: 17
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Button"], {
@@ -1271,26 +1319,26 @@ function SchoolSettings() {
                                                             className: "mr-2"
                                                         }, void 0, false, {
                                                             fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                                            lineNumber: 629,
+                                                            lineNumber: 646,
                                                             columnNumber: 19
                                                         }, this),
                                                         "Add"
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                                    lineNumber: 628,
+                                                    lineNumber: 645,
                                                     columnNumber: 17
                                                 }, this)
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                            lineNumber: 617,
+                                            lineNumber: 634,
                                             columnNumber: 15
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                    lineNumber: 615,
+                                    lineNumber: 632,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1303,7 +1351,7 @@ function SchoolSettings() {
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                            lineNumber: 637,
+                                            lineNumber: 654,
                                             columnNumber: 15
                                         }, this),
                                         selectedClass && selectedClass.subjects.length > 0 ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$src$2f$components$2f$ui$2f$select$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Select"], {
@@ -1314,12 +1362,12 @@ function SchoolSettings() {
                                                         placeholder: "Select a subject to view"
                                                     }, void 0, false, {
                                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                                        lineNumber: 641,
+                                                        lineNumber: 658,
                                                         columnNumber: 21
                                                     }, this)
                                                 }, void 0, false, {
                                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                                    lineNumber: 640,
+                                                    lineNumber: 657,
                                                     columnNumber: 19
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$src$2f$components$2f$ui$2f$select$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["SelectContent"], {
@@ -1328,31 +1376,31 @@ function SchoolSettings() {
                                                             children: subject
                                                         }, idx, false, {
                                                             fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                                            lineNumber: 645,
+                                                            lineNumber: 662,
                                                             columnNumber: 23
                                                         }, this))
                                                 }, void 0, false, {
                                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                                    lineNumber: 643,
+                                                    lineNumber: 660,
                                                     columnNumber: 19
                                                 }, this)
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                            lineNumber: 639,
+                                            lineNumber: 656,
                                             columnNumber: 17
                                         }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                                             className: "text-sm text-gray-500 italic mt-2",
                                             children: "No subjects configured yet"
                                         }, void 0, false, {
                                             fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                            lineNumber: 652,
+                                            lineNumber: 669,
                                             columnNumber: 17
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                    lineNumber: 636,
+                                    lineNumber: 653,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1361,7 +1409,7 @@ function SchoolSettings() {
                                             children: "Edit Subjects"
                                         }, void 0, false, {
                                             fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                            lineNumber: 658,
+                                            lineNumber: 675,
                                             columnNumber: 15
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1373,7 +1421,7 @@ function SchoolSettings() {
                                                             children: subject
                                                         }, void 0, false, {
                                                             fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                                            lineNumber: 666,
+                                                            lineNumber: 683,
                                                             columnNumber: 23
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Button"], {
@@ -1387,61 +1435,61 @@ function SchoolSettings() {
                                                                     className: "mr-1"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                                                    lineNumber: 673,
+                                                                    lineNumber: 690,
                                                                     columnNumber: 25
                                                                 }, this),
                                                                 "Remove"
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                                            lineNumber: 667,
+                                                            lineNumber: 684,
                                                             columnNumber: 23
                                                         }, this)
                                                     ]
                                                 }, idx, true, {
                                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                                    lineNumber: 662,
+                                                    lineNumber: 679,
                                                     columnNumber: 21
                                                 }, this)) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$Front$2d$end$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                                                 className: "text-sm text-gray-500 text-center py-4",
                                                 children: "No subjects yet. Add your first subject above."
                                             }, void 0, false, {
                                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                                lineNumber: 679,
+                                                lineNumber: 696,
                                                 columnNumber: 19
                                             }, this)
                                         }, void 0, false, {
                                             fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                            lineNumber: 659,
+                                            lineNumber: 676,
                                             columnNumber: 15
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                                    lineNumber: 657,
+                                    lineNumber: 674,
                                     columnNumber: 13
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                            lineNumber: 613,
+                            lineNumber: 630,
                             columnNumber: 11
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                    lineNumber: 605,
+                    lineNumber: 622,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-                lineNumber: 604,
+                lineNumber: 621,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/OneDrive/Desktop/Sis/Code/Front-end/SIS/src/components/SchoolSettings.tsx",
-        lineNumber: 283,
+        lineNumber: 287,
         columnNumber: 5
     }, this);
 }

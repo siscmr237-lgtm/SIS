@@ -69,21 +69,21 @@ export function Timetable() {
     (entry) => entry.class === selectedClass,
   );
 
+  // Load staff once on mount — doesn't change with class selection
   useEffect(() => {
     let mounted = true;
-    const load = async () => {
-      try {
-        const [tt, st] = await Promise.all([
-          api.get(`/timetable?class=${encodeURIComponent(selectedClass)}`),
-          api.get('/staff'),
-        ]);
-        if (mounted) {
-          setTimetable(tt || []);
-          setStaff(st || []);
-        }
-      } catch {}
-    };
-    load();
+    api.get('/staff')
+      .then(st => { if (mounted) setStaff(st || []); })
+      .catch(() => {});
+    return () => { mounted = false; };
+  }, []);
+
+  // Reload timetable when class changes
+  useEffect(() => {
+    let mounted = true;
+    api.get(`/timetable?class=${encodeURIComponent(selectedClass)}`)
+      .then(tt => { if (mounted) setTimetable(tt || []); })
+      .catch(() => {});
     return () => { mounted = false; };
   }, [selectedClass]);
 

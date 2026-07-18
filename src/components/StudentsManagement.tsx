@@ -82,14 +82,12 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
           `/students${params.toString() ? `?${params.toString()}` : ""}`
         );
         if (isMounted) setStudents(data || []);
-      } catch (e) {
-        // noop UI: keep empty
-      }
+      } catch {}
     };
-    load();
-    return () => {
-      isMounted = false;
-    };
+    // Debounce search input; respond immediately to class filter changes
+    const delay = searchTerm ? 300 : 0;
+    const timer = setTimeout(load, delay);
+    return () => { isMounted = false; clearTimeout(timer); };
   }, [searchTerm, selectedClass]);
 
   const handleGenerateFinancialSheet = async (student: Student) => {

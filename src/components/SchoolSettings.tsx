@@ -44,7 +44,8 @@ export function SchoolSettings() {
     name: settings.name,
     logo: settings.logo,
     academicYear: settings.academicYear,
-    currentTerm: settings.currentTerm
+    currentTerm: settings.currentTerm,
+    motto: ''
   });
 
   useEffect(() => {
@@ -62,6 +63,7 @@ export function SchoolSettings() {
             logo: data.logo || '',
             academicYear: data.academicYear || '',
             currentTerm: data.currentTerm || '',
+            motto: data.motto || '',
           });
         }
         if (cRes.status === 'fulfilled') setCats(cRes.value || []);
@@ -80,6 +82,7 @@ export function SchoolSettings() {
         logo: formData.logo,
         academicYear: formData.academicYear,
         currentTerm: formData.currentTerm,
+        motto: formData.motto,
       });
       try {
         const userStr = window.localStorage.getItem('user');
@@ -90,6 +93,7 @@ export function SchoolSettings() {
             user.School[0].logo = formData.logo;
             user.School[0].academicYear = formData.academicYear;
             user.School[0].currentTerm = formData.currentTerm;
+            user.School[0].motto = formData.motto;
             window.localStorage.setItem('user', JSON.stringify(user));
           }
         }
@@ -325,6 +329,19 @@ export function SchoolSettings() {
               />
             ) : (
               <p className="mt-2 p-2 bg-gray-50 rounded">{settings.name}</p>
+            )}
+          </div>
+
+          <div>
+            <Label>School Motto <span className="text-gray-400 font-normal text-xs">(optional)</span></Label>
+            {isEditingBasic ? (
+              <Input
+                value={formData.motto}
+                onChange={(e) => setFormData(prev => ({ ...prev, motto: e.target.value }))}
+                placeholder="e.g. Excellence in Education"
+              />
+            ) : (
+              <p className="mt-2 p-2 bg-gray-50 rounded">{(settings as any).motto || '—'}</p>
             )}
           </div>
 

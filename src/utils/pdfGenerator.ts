@@ -185,47 +185,65 @@ interface LedgerPdfEntry {
 export async function generateFinancialSheet(
   student: Student,
   ledgerData: { entries: LedgerPdfEntry[]; totalCharged: number; totalPaid: number; balance: number },
-  schoolInfo?: { name: string; logo?: string }
+  schoolInfo?: { name: string; logo?: string; motto?: string; academicYear?: string }
 ) {
   const doc = new jsPDF();
 
   // Header background
   doc.setFillColor(37, 99, 235);
-  doc.rect(0, 0, 210, 40, 'F');
+  doc.rect(0, 0, 210, 52, 'F');
 
-  // School logo — top-left, gracefully skipped if unavailable
+  // Logo — top-left
   if (schoolInfo?.logo) {
     const dataUrl = await getLogoDataUrl(schoolInfo.logo);
     if (dataUrl) {
       try {
         const fmt = dataUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG';
-        doc.addImage(dataUrl, fmt, 8, 4, 32, 32);
+        doc.addImage(dataUrl, fmt, 8, 6, 30, 30);
       } catch {}
     }
   }
 
-  // Header text
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(20);
+
+  // School name — centered
+  doc.setFontSize(18);
   doc.text(schoolInfo?.name ?? SCHOOL_INFO.name, 105, 15, { align: 'center' });
-  doc.setFontSize(14);
-  doc.text('Student Financial Statement', 105, 28, { align: 'center' });
+
+  // Motto — centered, italic, only if non-empty
+  const motto = schoolInfo?.motto?.trim();
+  if (motto) {
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'italic');
+    doc.text(motto, 105, 23, { align: 'center' });
+    doc.setFont('helvetica', 'normal');
+  }
+
+  // Academic year — right-aligned
+  if (schoolInfo?.academicYear) {
+    doc.setFontSize(9);
+    doc.text(`Academic Year: ${schoolInfo.academicYear}`, 195, 33, { align: 'right' });
+  }
+
+  // Document title — centered
+  doc.setFontSize(13);
+  doc.text('Individual Financial Sheet', 105, 44, { align: 'center' });
 
   // Student info
   doc.setTextColor(0, 0, 0);
   doc.setFontSize(12);
-  doc.text('Student Information', 20, 50);
+  doc.text('Student Information', 20, 62);
   doc.setFontSize(10);
-  doc.text(`Name: ${student.firstName} ${student.lastName}`, 20, 58);
-  doc.text(`Student ID: ${student.id}`, 20, 65);
-  doc.text(`Class: ${student.class}`, 20, 72);
+  doc.text(`Name: ${student.firstName} ${student.lastName}`, 20, 70);
+  doc.text(`Student ID: ${student.id}`, 20, 77);
+  doc.text(`Class: ${student.class}`, 20, 84);
 
   const { entries, totalCharged, totalPaid, balance } = ledgerData;
 
   if (entries.length === 0) {
     doc.setFontSize(11);
     doc.setTextColor(150, 150, 150);
-    doc.text('No financial records found for this student.', 105, 95, { align: 'center' });
+    doc.text('No financial records found for this student.', 105, 107, { align: 'center' });
   } else {
     const tableData = entries.map(entry => [
       new Date(entry.entryDate).toLocaleDateString('en-GB'),
@@ -236,7 +254,7 @@ export async function generateFinancialSheet(
     ]);
 
     autoTable(doc, {
-      startY: 85,
+      startY: 95,
       head: [['Date', 'Type', 'Category', 'Description', 'Amount (FCFA)']],
       body: tableData,
       theme: 'striped',
@@ -267,7 +285,8 @@ export async function generateFinancialSheet(
     });
   }
 
-  doc.save(`Financial_Statement_${student.firstName}_${student.lastName}.pdf`);
+  const url = doc.output('bloburl');
+  window.open(url, '_blank');
 }
 
 export function generateWorkRecord(record: WorkRecord) {

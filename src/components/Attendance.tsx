@@ -26,31 +26,37 @@ export function Attendance() {
   const studentAttendance = attendance.filter(record => record.type === 'student' && record.date?.startsWith(selectedDate));
   const staffAttendance = attendance.filter(record => record.type === 'staff' && record.date?.startsWith(selectedDate));
 
+  // Load students and staff once on mount — they don't change with the date
   useEffect(() => {
     let mounted = true;
-    const load = async () => {
-      try {
-        const [sList, stList, att] = await Promise.all([
-          api.get('/students'),
-          api.get('/staff'),
-          api.get(`/attendance?date=${encodeURIComponent(selectedDate)}`),
-        ]);
+    Promise.all([api.get('/students'), api.get('/staff')])
+      .then(([sList, stList]) => {
         if (mounted) {
           setStudents(sList || []);
           setStaff(stList || []);
-          setAttendance(att || []);
-          const stuMap: Record<string,string> = {};
-          const stfMap: Record<string,string> = {};
-          (att||[]).forEach((a:any)=>{
-            if (a.type==='student') stuMap[a.personId] = a.status;
-            if (a.type==='staff') stfMap[a.personId] = a.status;
-          });
-          setStudentStatus(stuMap);
-          setStaffStatus(stfMap);
         }
-      } catch {}
-    };
-    load();
+      })
+      .catch(() => {});
+    return () => { mounted = false; };
+  }, []);
+
+  // Reload only attendance records when date changes
+  useEffect(() => {
+    let mounted = true;
+    api.get(`/attendance?date=${encodeURIComponent(selectedDate)}`)
+      .then(att => {
+        if (!mounted) return;
+        setAttendance(att || []);
+        const stuMap: Record<string, string> = {};
+        const stfMap: Record<string, string> = {};
+        (att || []).forEach((a: any) => {
+          if (a.type === 'student') stuMap[a.personId] = a.status;
+          if (a.type === 'staff') stfMap[a.personId] = a.status;
+        });
+        setStudentStatus(stuMap);
+        setStaffStatus(stfMap);
+      })
+      .catch(() => {});
     return () => { mounted = false; };
   }, [selectedDate]);
 
@@ -75,48 +81,36 @@ export function Attendance() {
   };
 
   const saveStudentAttendance = async () => {
-    const classStudents = students.filter((s:any)=>s.class===selectedClass);
-    for (const s of classStudents) {
-      const existing = attendance.find(a=>a.type==='student' && a.personId===s.id && a.date?.startsWith(selectedDate));
-      const status = studentStatus[s.id] || 'present';
-      try {
-        if (existing) {
-          await api.put(`/attendance/${existing.id}`, { status });
-        } else {
-          await api.post('/attendance', {
-            date: selectedDate,
-            type: 'student',
-            personId: s.id,
-            personName: `${s.firstName} ${s.lastName}`,
-            status,
-          });
-        }
-      } catch {}
-    }
-    const att = await api.get(`/attendance?date=${encodeURIComponent(selectedDate)}`);
-    setAttendance(att||[]);
+    const classStudents = students.filter((s: any) => s.class === selectedClass);
+    const records = classStudents.map((s: any) => {
+      const existing = attendance.find(
+        a => a.type === 'student' && a.personId === s.id && a.date?.startsWith(selectedDate)
+      );
+      return existing
+        ? { existingCode: existing.id, status: studentStatus[s.id] || 'present' }
+        : { date: selectedDate, type: 'student', personId: s.id, personName: `${s.firstName} ${s.lastName}`, status: studentStatus[s.id] || 'present' };
+    });
+    try {
+      await api.post('/attendance/bulk', { records });
+      const att = await api.get(`/attendance?date=${encodeURIComponent(selectedDate)}`);
+      setAttendance(att || []);
+    } catch {}
   };
 
   const saveStaffAttendance = async () => {
-    for (const t of staff) {
-      const existing = attendance.find(a=>a.type==='staff' && a.personId===String(t.id) && a.date?.startsWith(selectedDate));
-      const status = staffStatus[t.id] || 'present';
-      try {
-        if (existing) {
-          await api.put(`/attendance/${existing.id}`, { status });
-        } else {
-          await api.post('/attendance', {
-            date: selectedDate,
-            type: 'staff',
-            personId: String(t.id),
-            personName: `${t.firstName} ${t.lastName}`,
-            status,
-          });
-        }
-      } catch {}
-    }
-    const att = await api.get(`/attendance?date=${encodeURIComponent(selectedDate)}`);
-    setAttendance(att||[]);
+    const records = staff.map((t: any) => {
+      const existing = attendance.find(
+        a => a.type === 'staff' && a.personId === String(t.id) && a.date?.startsWith(selectedDate)
+      );
+      return existing
+        ? { existingCode: existing.id, status: staffStatus[t.id] || 'present' }
+        : { date: selectedDate, type: 'staff', personId: String(t.id), personName: `${t.firstName} ${t.lastName}`, status: staffStatus[t.id] || 'present' };
+    });
+    try {
+      await api.post('/attendance/bulk', { records });
+      const att = await api.get(`/attendance?date=${encodeURIComponent(selectedDate)}`);
+      setAttendance(att || []);
+    } catch {}
   };
 
   return (

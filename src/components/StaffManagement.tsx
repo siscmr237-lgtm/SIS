@@ -45,8 +45,10 @@ export function StaffManagement() {
     let mounted = true;
     const load = async () => {
       try {
-        const staffData = await api.get('/staff');
-        const workData = await api.get('/work-records');
+        const [staffData, workData] = await Promise.all([
+          api.get('/staff'),
+          api.get('/work-records'),
+        ]);
         if (mounted) {
           setStaff(staffData || []);
           setWorkRecords(workData || []);
@@ -325,7 +327,12 @@ export function StaffManagement() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => generateWorkRecord(record)}
+                        onClick={async () => {
+                          try {
+                            const full = await api.get(`/work-records/${record.id}`);
+                            generateWorkRecord(full);
+                          } catch {}
+                        }}
                         className="flex items-center gap-2"
                       >
                         <FileText size={16} />

@@ -29,9 +29,10 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
     const init = async () => {
       setLoading(true);
       try {
-        const [dashRes, studentsRes] = await Promise.allSettled([
+        const [dashRes, studentsRes, summaryRes] = await Promise.allSettled([
           api.get('/dashboard'),
           api.get('/students'),
+          api.get('/ledger/summary'),
         ]);
         if (cancelled) return;
 
@@ -41,28 +42,18 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
           ? (studentsRes.value || [])
           : [];
 
-        // Render table immediately with null balance placeholders
-        setRows(students.map(s => ({ student: s, totalCharged: 0, totalPaid: 0, balance: null })));
-        setLoading(false);
-
-        // Fan out all ledger calls in parallel
-        const ledgerResults = await Promise.allSettled(
-          students.map(s => api.get(`/ledger/student/${encodeURIComponent(s.id)}`))
-        );
-        if (cancelled) return;
-
-        setRows(students.map((s, i) => {
-          const res = ledgerResults[i];
-          if (res.status === 'fulfilled' && res.value) {
-            return {
-              student: s,
-              totalCharged: res.value.totalCharged,
-              totalPaid: res.value.totalPaid,
-              balance: res.value.balance,
-            };
+        const summaryMap: Record<string, { totalCharged: number; totalPaid: number; balance: number }> = {};
+        if (summaryRes.status === 'fulfilled' && Array.isArray(summaryRes.value)) {
+          for (const entry of summaryRes.value) {
+            summaryMap[entry.studentId] = entry;
           }
-          return { student: s, totalCharged: 0, totalPaid: 0, balance: null };
+        }
+
+        setRows(students.map(s => {
+          const fin = summaryMap[s.id] ?? { totalCharged: 0, totalPaid: 0, balance: 0 };
+          return { student: s, totalCharged: fin.totalCharged, totalPaid: fin.totalPaid, balance: fin.balance };
         }));
+        setLoading(false);
       } catch {
         if (!cancelled) setLoading(false);
       }
