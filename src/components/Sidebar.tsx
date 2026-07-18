@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { BASE_URL } from '../lib/api';
+import { useSisCache } from '../lib/SisCache';
 import { NavigationPage } from "../App";
 
 interface SidebarProps {
@@ -22,6 +23,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
+  const cache = useSisCache();
   const menuItems = [
     { id: "dashboard" as NavigationPage, label: "Dashboard", icon: Home },
     { id: "students" as NavigationPage, label: "Students", icon: Users },
@@ -46,32 +48,33 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
   const [logoSrc, setLogoSrc] = useState<string | null>(null);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const userStr = window.localStorage.getItem("user");
-      if (userStr) {
-        try {
-          const user = JSON.parse(userStr);
-          if (user && user.School) {
-            const school = user.School[0];
-            setSchoolSettings(school);
-            const logo = school?.logo;
-            if (logo?.startsWith('schools/')) {
-              const token = window.localStorage.getItem('auth_token');
-              fetch(`${BASE_URL}/upload/signed-url?path=${encodeURIComponent(logo)}`, {
-                headers: token ? { Authorization: `Bearer ${token}` } : {},
-              })
-                .then(r => r.ok ? r.json() : null)
-                .then(data => { if (data?.url) setLogoSrc(data.url); })
-                .catch(() => {});
-            } else if (logo) {
-              setLogoSrc(logo);
-            }
-          }
-        } catch (e) {
-          console.error("Failed to parse user from localStorage", e);
-        }
+    if (typeof window === "undefined") return;
+    const userStr = window.localStorage.getItem("user");
+    if (!userStr) return;
+    try {
+      const user = JSON.parse(userStr);
+      if (!user?.School) return;
+      const school = user.School[0];
+      setSchoolSettings(school);
+      const logo = school?.logo;
+      if (!logo) return;
+      const cached = cache.get<string>('logo-url');
+      if (cached) { setLogoSrc(cached); return; }
+      if (logo.startsWith('schools/')) {
+        const token = window.localStorage.getItem('auth_token');
+        fetch(`${BASE_URL}/upload/signed-url?path=${encodeURIComponent(logo)}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        })
+          .then(r => r.ok ? r.json() : null)
+          .then(data => {
+            if (data?.url) { cache.set('logo-url', data.url); setLogoSrc(data.url); }
+          })
+          .catch(() => {});
+      } else {
+        cache.set('logo-url', logo);
+        setLogoSrc(logo);
       }
-    }
+    } catch {}
   }, []);
 
   return (

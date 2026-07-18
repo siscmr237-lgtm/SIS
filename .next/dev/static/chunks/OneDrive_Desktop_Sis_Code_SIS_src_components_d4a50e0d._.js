@@ -19,14 +19,17 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2
 var __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$users$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Users$3e$__ = __turbopack_context__.i("[project]/OneDrive/Desktop/Sis/Code/SIS/node_modules/lucide-react/dist/esm/icons/users.js [app-client] (ecmascript) <export default as Users>");
 var __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/OneDrive/Desktop/Sis/Code/SIS/node_modules/next/dist/compiled/react/index.js [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$lib$2f$api$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/OneDrive/Desktop/Sis/Code/SIS/src/lib/api.ts [app-client] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$lib$2f$SisCache$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/OneDrive/Desktop/Sis/Code/SIS/src/lib/SisCache.tsx [app-client] (ecmascript)");
 ;
 var _s = __turbopack_context__.k.signature();
 "use client";
 ;
 ;
 ;
+;
 function Sidebar({ currentPage, onNavigate }) {
     _s();
+    const cache = (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$lib$2f$SisCache$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useSisCache"])();
     const menuItems = [
         {
             id: "dashboard",
@@ -83,39 +86,45 @@ function Sidebar({ currentPage, onNavigate }) {
     const [logoSrc, setLogoSrc] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(null);
     (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useEffect"])({
         "Sidebar.useEffect": ()=>{
-            if ("TURBOPACK compile-time truthy", 1) {
-                const userStr = window.localStorage.getItem("user");
-                if (userStr) {
-                    try {
-                        const user = JSON.parse(userStr);
-                        if (user && user.School) {
-                            const school = user.School[0];
-                            setSchoolSettings(school);
-                            const logo = school?.logo;
-                            if (logo?.startsWith('schools/')) {
-                                const token = window.localStorage.getItem('auth_token');
-                                fetch(`${__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$lib$2f$api$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["BASE_URL"]}/upload/signed-url?path=${encodeURIComponent(logo)}`, {
-                                    headers: token ? {
-                                        Authorization: `Bearer ${token}`
-                                    } : {}
-                                }).then({
-                                    "Sidebar.useEffect": (r)=>r.ok ? r.json() : null
-                                }["Sidebar.useEffect"]).then({
-                                    "Sidebar.useEffect": (data)=>{
-                                        if (data?.url) setLogoSrc(data.url);
-                                    }
-                                }["Sidebar.useEffect"]).catch({
-                                    "Sidebar.useEffect": ()=>{}
-                                }["Sidebar.useEffect"]);
-                            } else if (logo) {
-                                setLogoSrc(logo);
+            if ("TURBOPACK compile-time falsy", 0) //TURBOPACK unreachable
+            ;
+            const userStr = window.localStorage.getItem("user");
+            if (!userStr) return;
+            try {
+                const user = JSON.parse(userStr);
+                if (!user?.School) return;
+                const school = user.School[0];
+                setSchoolSettings(school);
+                const logo = school?.logo;
+                if (!logo) return;
+                const cached = cache.get('logo-url');
+                if (cached) {
+                    setLogoSrc(cached);
+                    return;
+                }
+                if (logo.startsWith('schools/')) {
+                    const token = window.localStorage.getItem('auth_token');
+                    fetch(`${__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$lib$2f$api$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["BASE_URL"]}/upload/signed-url?path=${encodeURIComponent(logo)}`, {
+                        headers: token ? {
+                            Authorization: `Bearer ${token}`
+                        } : {}
+                    }).then({
+                        "Sidebar.useEffect": (r)=>r.ok ? r.json() : null
+                    }["Sidebar.useEffect"]).then({
+                        "Sidebar.useEffect": (data)=>{
+                            if (data?.url) {
+                                cache.set('logo-url', data.url);
+                                setLogoSrc(data.url);
                             }
                         }
-                    } catch (e) {
-                        console.error("Failed to parse user from localStorage", e);
-                    }
+                    }["Sidebar.useEffect"]).catch({
+                        "Sidebar.useEffect": ()=>{}
+                    }["Sidebar.useEffect"]);
+                } else {
+                    cache.set('logo-url', logo);
+                    setLogoSrc(logo);
                 }
-            }
+            } catch  {}
         }
     }["Sidebar.useEffect"], []);
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("aside", {
@@ -132,7 +141,7 @@ function Sidebar({ currentPage, onNavigate }) {
                             className: "w-12 h-12 object-cover rounded-lg border-2 border-blue-700"
                         }, void 0, false, {
                             fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/Sidebar.tsx",
-                            lineNumber: 82,
+                            lineNumber: 85,
                             columnNumber: 13
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -143,7 +152,7 @@ function Sidebar({ currentPage, onNavigate }) {
                                     children: schoolSettings.name
                                 }, void 0, false, {
                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/Sidebar.tsx",
-                                    lineNumber: 89,
+                                    lineNumber: 92,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -151,24 +160,24 @@ function Sidebar({ currentPage, onNavigate }) {
                                     children: "School Admin"
                                 }, void 0, false, {
                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/Sidebar.tsx",
-                                    lineNumber: 92,
+                                    lineNumber: 95,
                                     columnNumber: 13
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/Sidebar.tsx",
-                            lineNumber: 88,
+                            lineNumber: 91,
                             columnNumber: 11
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/Sidebar.tsx",
-                    lineNumber: 80,
+                    lineNumber: 83,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/Sidebar.tsx",
-                lineNumber: 79,
+                lineNumber: 82,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("nav", {
@@ -184,26 +193,26 @@ function Sidebar({ currentPage, onNavigate }) {
                                 size: 18
                             }, void 0, false, {
                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/Sidebar.tsx",
-                                lineNumber: 112,
+                                lineNumber: 115,
                                 columnNumber: 15
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                 children: item.label
                             }, void 0, false, {
                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/Sidebar.tsx",
-                                lineNumber: 113,
+                                lineNumber: 116,
                                 columnNumber: 15
                             }, this)
                         ]
                     }, item.id, true, {
                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/Sidebar.tsx",
-                        lineNumber: 103,
+                        lineNumber: 106,
                         columnNumber: 13
                     }, this);
                 })
             }, void 0, false, {
                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/Sidebar.tsx",
-                lineNumber: 97,
+                lineNumber: 100,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -216,25 +225,25 @@ function Sidebar({ currentPage, onNavigate }) {
                             size: 18
                         }, void 0, false, {
                             fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/Sidebar.tsx",
-                            lineNumber: 128,
+                            lineNumber: 131,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                             children: "School Settings"
                         }, void 0, false, {
                             fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/Sidebar.tsx",
-                            lineNumber: 129,
+                            lineNumber: 132,
                             columnNumber: 11
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/Sidebar.tsx",
-                    lineNumber: 120,
+                    lineNumber: 123,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/Sidebar.tsx",
-                lineNumber: 119,
+                lineNumber: 122,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -245,7 +254,7 @@ function Sidebar({ currentPage, onNavigate }) {
                         children: schoolSettings.academicYear
                     }, void 0, false, {
                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/Sidebar.tsx",
-                        lineNumber: 134,
+                        lineNumber: 137,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -253,23 +262,27 @@ function Sidebar({ currentPage, onNavigate }) {
                         children: schoolSettings.currentTerm
                     }, void 0, false, {
                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/Sidebar.tsx",
-                        lineNumber: 135,
+                        lineNumber: 138,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/Sidebar.tsx",
-                lineNumber: 133,
+                lineNumber: 136,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/Sidebar.tsx",
-        lineNumber: 78,
+        lineNumber: 81,
         columnNumber: 5
     }, this);
 }
-_s(Sidebar, "lq2I9I2AJkRiwGlnhGPPeS0m5HE=");
+_s(Sidebar, "PQ1I3KPaAnTVxI0jqnjVQG3dAck=", false, function() {
+    return [
+        __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$lib$2f$SisCache$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useSisCache"]
+    ];
+});
 _c = Sidebar;
 var _c;
 __turbopack_context__.k.register(_c, "Sidebar");
@@ -1372,6 +1385,7 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2
 var __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$users$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Users$3e$__ = __turbopack_context__.i("[project]/OneDrive/Desktop/Sis/Code/SIS/node_modules/lucide-react/dist/esm/icons/users.js [app-client] (ecmascript) <export default as Users>");
 var __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/OneDrive/Desktop/Sis/Code/SIS/node_modules/next/dist/compiled/react/index.js [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$lib$2f$api$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/OneDrive/Desktop/Sis/Code/SIS/src/lib/api.ts [app-client] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$lib$2f$SisCache$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/OneDrive/Desktop/Sis/Code/SIS/src/lib/SisCache.tsx [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ui/card.tsx [app-client] (ecmascript)");
 ;
 var _s = __turbopack_context__.k.signature();
@@ -1380,10 +1394,12 @@ var _s = __turbopack_context__.k.signature();
 ;
 ;
 ;
+;
 function Dashboard() {
     _s();
     const [dashboardData, setDashboardData] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(null);
     const [loading, setLoading] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(true);
+    const cache = (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$lib$2f$SisCache$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useSisCache"])();
     const [schoolSettings, setSchoolSettings] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])({
         name: "School",
         logo: "https://images.unsplash.com/photo-1599305445671-ac291c95aaa9?w=200&h=200&fit=crop",
@@ -1393,57 +1409,75 @@ function Dashboard() {
     const [logoSrc, setLogoSrc] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(null);
     (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useEffect"])({
         "Dashboard.useEffect": ()=>{
-            if ("TURBOPACK compile-time truthy", 1) {
-                const userStr = window.localStorage.getItem("user");
-                if (userStr) {
-                    try {
-                        const user = JSON.parse(userStr);
-                        if (user && user.School) {
-                            const school = user.School[0];
-                            setSchoolSettings(school);
-                            const logo = school?.logo;
-                            if (logo?.startsWith('schools/')) {
-                                const token = window.localStorage.getItem('auth_token');
-                                fetch(`${__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$lib$2f$api$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["BASE_URL"]}/upload/signed-url?path=${encodeURIComponent(logo)}`, {
-                                    headers: token ? {
-                                        Authorization: `Bearer ${token}`
-                                    } : {}
-                                }).then({
-                                    "Dashboard.useEffect": (r)=>r.ok ? r.json() : null
-                                }["Dashboard.useEffect"]).then({
-                                    "Dashboard.useEffect": (data)=>{
-                                        if (data?.url) setLogoSrc(data.url);
-                                    }
-                                }["Dashboard.useEffect"]).catch({
-                                    "Dashboard.useEffect": ()=>{}
-                                }["Dashboard.useEffect"]);
-                            } else if (logo) {
-                                setLogoSrc(logo);
+            if ("TURBOPACK compile-time falsy", 0) //TURBOPACK unreachable
+            ;
+            const userStr = window.localStorage.getItem("user");
+            if (!userStr) return;
+            try {
+                const user = JSON.parse(userStr);
+                if (!user?.School) return;
+                const school = user.School[0];
+                setSchoolSettings(school);
+                const logo = school?.logo;
+                if (!logo) return;
+                // Sidebar resolves this on app load; read from cache instead of re-fetching
+                const cached = cache.get('logo-url');
+                if (cached) {
+                    setLogoSrc(cached);
+                    return;
+                }
+                // Fallback: fetch and cache (handles rare case where Dashboard mounts before Sidebar)
+                if (logo.startsWith('schools/')) {
+                    const token = window.localStorage.getItem('auth_token');
+                    fetch(`${__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$lib$2f$api$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["BASE_URL"]}/upload/signed-url?path=${encodeURIComponent(logo)}`, {
+                        headers: token ? {
+                            Authorization: `Bearer ${token}`
+                        } : {}
+                    }).then({
+                        "Dashboard.useEffect": (r)=>r.ok ? r.json() : null
+                    }["Dashboard.useEffect"]).then({
+                        "Dashboard.useEffect": (data)=>{
+                            if (data?.url) {
+                                cache.set('logo-url', data.url);
+                                setLogoSrc(data.url);
                             }
                         }
-                    } catch (e) {
-                        console.error("Failed to parse user from localStorage", e);
-                    }
+                    }["Dashboard.useEffect"]).catch({
+                        "Dashboard.useEffect": ()=>{}
+                    }["Dashboard.useEffect"]);
+                } else {
+                    cache.set('logo-url', logo);
+                    setLogoSrc(logo);
                 }
-            }
+            } catch  {}
         }
     }["Dashboard.useEffect"], []);
     (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useEffect"])({
         "Dashboard.useEffect": ()=>{
-            const fetchDashboardData = {
-                "Dashboard.useEffect.fetchDashboardData": async ()=>{
+            let mounted = true;
+            const cached = cache.get('dashboard');
+            if (cached) {
+                setDashboardData(cached);
+                setLoading(false);
+                return;
+            }
+            ({
+                "Dashboard.useEffect": async ()=>{
                     try {
-                        setLoading(true);
                         const data = await __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$lib$2f$api$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["api"].get("/dashboard");
-                        setDashboardData(data);
-                    } catch (error) {
-                        console.error("Failed to fetch dashboard data:", error);
-                    } finally{
-                        setLoading(false);
-                    }
+                        if (mounted && data) {
+                            cache.set('dashboard', data);
+                            setDashboardData(data);
+                        }
+                    } catch  {}
+                    if (mounted) setLoading(false);
                 }
-            }["Dashboard.useEffect.fetchDashboardData"];
-            fetchDashboardData();
+            })["Dashboard.useEffect"]();
+            return ({
+                "Dashboard.useEffect": ()=>{
+                    mounted = false;
+                }
+            })["Dashboard.useEffect"];
         }
     }["Dashboard.useEffect"], []);
     const stats = [
@@ -1478,7 +1512,7 @@ function Dashboard() {
             children: "Loading dashboard..."
         }, void 0, false, {
             fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/Dashboard.tsx",
-            lineNumber: 91,
+            lineNumber: 101,
             columnNumber: 12
         }, this);
     }
@@ -1496,7 +1530,7 @@ function Dashboard() {
                             className: "w-20 h-20 object-cover rounded-lg border-2 border-white shadow-lg"
                         }, void 0, false, {
                             fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/Dashboard.tsx",
-                            lineNumber: 100,
+                            lineNumber: 110,
                             columnNumber: 13
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1507,7 +1541,7 @@ function Dashboard() {
                                     children: schoolSettings.name
                                 }, void 0, false, {
                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/Dashboard.tsx",
-                                    lineNumber: 107,
+                                    lineNumber: 117,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1520,44 +1554,44 @@ function Dashboard() {
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/Dashboard.tsx",
-                                            lineNumber: 109,
+                                            lineNumber: 119,
                                             columnNumber: 15
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                             children: "•"
                                         }, void 0, false, {
                                             fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/Dashboard.tsx",
-                                            lineNumber: 110,
+                                            lineNumber: 120,
                                             columnNumber: 15
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                             children: schoolSettings.currentTerm
                                         }, void 0, false, {
                                             fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/Dashboard.tsx",
-                                            lineNumber: 111,
+                                            lineNumber: 121,
                                             columnNumber: 15
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/Dashboard.tsx",
-                                    lineNumber: 108,
+                                    lineNumber: 118,
                                     columnNumber: 13
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/Dashboard.tsx",
-                            lineNumber: 106,
+                            lineNumber: 116,
                             columnNumber: 11
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/Dashboard.tsx",
-                    lineNumber: 98,
+                    lineNumber: 108,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/Dashboard.tsx",
-                lineNumber: 97,
+                lineNumber: 107,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1568,7 +1602,7 @@ function Dashboard() {
                         children: "Dashboard Overview"
                     }, void 0, false, {
                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/Dashboard.tsx",
-                        lineNumber: 118,
+                        lineNumber: 128,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1576,13 +1610,13 @@ function Dashboard() {
                         children: "Key metrics and recent activities"
                     }, void 0, false, {
                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/Dashboard.tsx",
-                        lineNumber: 119,
+                        lineNumber: 129,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/Dashboard.tsx",
-                lineNumber: 117,
+                lineNumber: 127,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1600,17 +1634,17 @@ function Dashboard() {
                                         size: 24
                                     }, void 0, false, {
                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/Dashboard.tsx",
-                                        lineNumber: 129,
+                                        lineNumber: 139,
                                         columnNumber: 19
                                     }, this)
                                 }, void 0, false, {
                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/Dashboard.tsx",
-                                    lineNumber: 128,
+                                    lineNumber: 138,
                                     columnNumber: 17
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/Dashboard.tsx",
-                                lineNumber: 127,
+                                lineNumber: 137,
                                 columnNumber: 15
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("h3", {
@@ -1618,7 +1652,7 @@ function Dashboard() {
                                 children: stat.title
                             }, void 0, false, {
                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/Dashboard.tsx",
-                                lineNumber: 132,
+                                lineNumber: 142,
                                 columnNumber: 15
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1626,19 +1660,19 @@ function Dashboard() {
                                 children: stat.value
                             }, void 0, false, {
                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/Dashboard.tsx",
-                                lineNumber: 133,
+                                lineNumber: 143,
                                 columnNumber: 15
                             }, this)
                         ]
                     }, index, true, {
                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/Dashboard.tsx",
-                        lineNumber: 126,
+                        lineNumber: 136,
                         columnNumber: 13
                     }, this);
                 })
             }, void 0, false, {
                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/Dashboard.tsx",
-                lineNumber: 122,
+                lineNumber: 132,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1652,7 +1686,7 @@ function Dashboard() {
                                 children: "Recent Expenses"
                             }, void 0, false, {
                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/Dashboard.tsx",
-                                lineNumber: 141,
+                                lineNumber: 151,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1666,7 +1700,7 @@ function Dashboard() {
                                                         children: expense.description
                                                     }, void 0, false, {
                                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/Dashboard.tsx",
-                                                        lineNumber: 149,
+                                                        lineNumber: 159,
                                                         columnNumber: 19
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1674,13 +1708,13 @@ function Dashboard() {
                                                         children: expense.category
                                                     }, void 0, false, {
                                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/Dashboard.tsx",
-                                                        lineNumber: 150,
+                                                        lineNumber: 160,
                                                         columnNumber: 19
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/Dashboard.tsx",
-                                                lineNumber: 148,
+                                                lineNumber: 158,
                                                 columnNumber: 17
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1691,30 +1725,30 @@ function Dashboard() {
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/Dashboard.tsx",
-                                                lineNumber: 154,
+                                                lineNumber: 164,
                                                 columnNumber: 17
                                             }, this)
                                         ]
                                     }, expense.id, true, {
                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/Dashboard.tsx",
-                                        lineNumber: 144,
+                                        lineNumber: 154,
                                         columnNumber: 15
                                     }, this)) ?? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                                     children: "No recent expenses."
                                 }, void 0, false, {
                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/Dashboard.tsx",
-                                    lineNumber: 158,
+                                    lineNumber: 168,
                                     columnNumber: 19
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/Dashboard.tsx",
-                                lineNumber: 142,
+                                lineNumber: 152,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/Dashboard.tsx",
-                        lineNumber: 140,
+                        lineNumber: 150,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Card"], {
@@ -1725,7 +1759,7 @@ function Dashboard() {
                                 children: "Financial Summary"
                             }, void 0, false, {
                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/Dashboard.tsx",
-                                lineNumber: 163,
+                                lineNumber: 173,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1739,7 +1773,7 @@ function Dashboard() {
                                                 children: "Total Income"
                                             }, void 0, false, {
                                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/Dashboard.tsx",
-                                                lineNumber: 166,
+                                                lineNumber: 176,
                                                 columnNumber: 15
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -1751,13 +1785,13 @@ function Dashboard() {
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/Dashboard.tsx",
-                                                lineNumber: 167,
+                                                lineNumber: 177,
                                                 columnNumber: 15
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/Dashboard.tsx",
-                                        lineNumber: 165,
+                                        lineNumber: 175,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1768,7 +1802,7 @@ function Dashboard() {
                                                 children: "Total Expenses"
                                             }, void 0, false, {
                                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/Dashboard.tsx",
-                                                lineNumber: 175,
+                                                lineNumber: 185,
                                                 columnNumber: 15
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -1780,13 +1814,13 @@ function Dashboard() {
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/Dashboard.tsx",
-                                                lineNumber: 176,
+                                                lineNumber: 186,
                                                 columnNumber: 15
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/Dashboard.tsx",
-                                        lineNumber: 174,
+                                        lineNumber: 184,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1796,7 +1830,7 @@ function Dashboard() {
                                                 children: "Net Balance"
                                             }, void 0, false, {
                                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/Dashboard.tsx",
-                                                lineNumber: 184,
+                                                lineNumber: 194,
                                                 columnNumber: 15
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -1808,41 +1842,45 @@ function Dashboard() {
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/Dashboard.tsx",
-                                                lineNumber: 185,
+                                                lineNumber: 195,
                                                 columnNumber: 15
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/Dashboard.tsx",
-                                        lineNumber: 183,
+                                        lineNumber: 193,
                                         columnNumber: 13
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/Dashboard.tsx",
-                                lineNumber: 164,
+                                lineNumber: 174,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/Dashboard.tsx",
-                        lineNumber: 162,
+                        lineNumber: 172,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/Dashboard.tsx",
-                lineNumber: 139,
+                lineNumber: 149,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/Dashboard.tsx",
-        lineNumber: 95,
+        lineNumber: 105,
         columnNumber: 5
     }, this);
 }
-_s(Dashboard, "lF10HJcp4eiWBZ8cDGlp1Ysp+xg=");
+_s(Dashboard, "yMFYogHxGiAKTvnqhn8Lo90Aags=", false, function() {
+    return [
+        __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$lib$2f$SisCache$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useSisCache"]
+    ];
+});
 _c = Dashboard;
 var _c;
 __turbopack_context__.k.register(_c, "Dashboard");
@@ -1859,6 +1897,7 @@ __turbopack_context__.s([
 ]);
 var __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/OneDrive/Desktop/Sis/Code/SIS/node_modules/next/dist/compiled/react/jsx-dev-runtime.js [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$lib$2f$api$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/OneDrive/Desktop/Sis/Code/SIS/src/lib/api.ts [app-client] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$lib$2f$SisCache$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/OneDrive/Desktop/Sis/Code/SIS/src/lib/SisCache.tsx [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$lib$2f$classes$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/OneDrive/Desktop/Sis/Code/SIS/src/lib/classes.ts [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$file$2d$text$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__FileText$3e$__ = __turbopack_context__.i("[project]/OneDrive/Desktop/Sis/Code/SIS/node_modules/lucide-react/dist/esm/icons/file-text.js [app-client] (ecmascript) <export default as FileText>");
 var __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$plus$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Plus$3e$__ = __turbopack_context__.i("[project]/OneDrive/Desktop/Sis/Code/SIS/node_modules/lucide-react/dist/esm/icons/plus.js [app-client] (ecmascript) <export default as Plus>");
@@ -1886,9 +1925,11 @@ var _s = __turbopack_context__.k.signature();
 ;
 ;
 ;
+;
 function StudentsManagement({ onNavigate, onViewStudent }) {
     _s();
     const [students, setStudents] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])([]);
+    const cache = (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$lib$2f$SisCache$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useSisCache"])();
     const [searchTerm, setSearchTerm] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])("");
     const [selectedClass, setSelectedClass] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])("all");
     const [openAdd, setOpenAdd] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(false);
@@ -1912,6 +1953,14 @@ function StudentsManagement({ onNavigate, onViewStudent }) {
     (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useEffect"])({
         "StudentsManagement.useEffect": ()=>{
             let isMounted = true;
+            const isDefault = !searchTerm && selectedClass === 'all';
+            if (isDefault) {
+                const cached = cache.get('students');
+                if (cached) {
+                    setStudents(cached);
+                    return;
+                }
+            }
             const load = {
                 "StudentsManagement.useEffect.load": async ()=>{
                     try {
@@ -1919,7 +1968,12 @@ function StudentsManagement({ onNavigate, onViewStudent }) {
                         if (searchTerm) params.set("q", searchTerm);
                         if (selectedClass && selectedClass !== "all") params.set("class", selectedClass);
                         const data = await __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$lib$2f$api$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["api"].get(`/students${params.toString() ? `?${params.toString()}` : ""}`);
-                        if (isMounted) setStudents(data || []);
+                        if (isMounted) {
+                            if (isDefault && Array.isArray(data) && data.length > 0) {
+                                cache.set('students', data);
+                            }
+                            setStudents(data || []);
+                        }
                     } catch  {}
                 }
             }["StudentsManagement.useEffect.load"];
@@ -1972,7 +2026,7 @@ function StudentsManagement({ onNavigate, onViewStudent }) {
                                 children: "Students Management"
                             }, void 0, false, {
                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                lineNumber: 116,
+                                lineNumber: 133,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1980,13 +2034,13 @@ function StudentsManagement({ onNavigate, onViewStudent }) {
                                 children: "Manage student records and information"
                             }, void 0, false, {
                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                lineNumber: 117,
+                                lineNumber: 134,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                        lineNumber: 115,
+                        lineNumber: 132,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Dialog"], {
@@ -2002,19 +2056,19 @@ function StudentsManagement({ onNavigate, onViewStudent }) {
                                             size: 20
                                         }, void 0, false, {
                                             fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                            lineNumber: 124,
+                                            lineNumber: 141,
                                             columnNumber: 15
                                         }, this),
                                         "Add Student"
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                    lineNumber: 123,
+                                    lineNumber: 140,
                                     columnNumber: 13
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                lineNumber: 122,
+                                lineNumber: 139,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["DialogContent"], {
@@ -2026,20 +2080,20 @@ function StudentsManagement({ onNavigate, onViewStudent }) {
                                                 children: "Add New Student"
                                             }, void 0, false, {
                                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                                lineNumber: 130,
+                                                lineNumber: 147,
                                                 columnNumber: 15
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["DialogDescription"], {
                                                 children: "Enter the student's information below"
                                             }, void 0, false, {
                                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                                lineNumber: 131,
+                                                lineNumber: 148,
                                                 columnNumber: 15
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                        lineNumber: 129,
+                                        lineNumber: 146,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2051,7 +2105,7 @@ function StudentsManagement({ onNavigate, onViewStudent }) {
                                                         children: "First Name"
                                                     }, void 0, false, {
                                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                                        lineNumber: 137,
+                                                        lineNumber: 154,
                                                         columnNumber: 17
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Input"], {
@@ -2063,13 +2117,13 @@ function StudentsManagement({ onNavigate, onViewStudent }) {
                                                                 }))
                                                     }, void 0, false, {
                                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                                        lineNumber: 138,
+                                                        lineNumber: 155,
                                                         columnNumber: 17
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                                lineNumber: 136,
+                                                lineNumber: 153,
                                                 columnNumber: 15
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2078,7 +2132,7 @@ function StudentsManagement({ onNavigate, onViewStudent }) {
                                                         children: "Last Name"
                                                     }, void 0, false, {
                                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                                        lineNumber: 147,
+                                                        lineNumber: 164,
                                                         columnNumber: 17
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Input"], {
@@ -2090,13 +2144,13 @@ function StudentsManagement({ onNavigate, onViewStudent }) {
                                                                 }))
                                                     }, void 0, false, {
                                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                                        lineNumber: 148,
+                                                        lineNumber: 165,
                                                         columnNumber: 17
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                                lineNumber: 146,
+                                                lineNumber: 163,
                                                 columnNumber: 15
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2105,7 +2159,7 @@ function StudentsManagement({ onNavigate, onViewStudent }) {
                                                         children: "Date of Birth"
                                                     }, void 0, false, {
                                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                                        lineNumber: 157,
+                                                        lineNumber: 174,
                                                         columnNumber: 17
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Input"], {
@@ -2117,13 +2171,13 @@ function StudentsManagement({ onNavigate, onViewStudent }) {
                                                                 }))
                                                     }, void 0, false, {
                                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                                        lineNumber: 158,
+                                                        lineNumber: 175,
                                                         columnNumber: 17
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                                lineNumber: 156,
+                                                lineNumber: 173,
                                                 columnNumber: 15
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2132,7 +2186,7 @@ function StudentsManagement({ onNavigate, onViewStudent }) {
                                                         children: "Gender"
                                                     }, void 0, false, {
                                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                                        lineNumber: 167,
+                                                        lineNumber: 184,
                                                         columnNumber: 17
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$select$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Select"], {
@@ -2147,71 +2201,6 @@ function StudentsManagement({ onNavigate, onViewStudent }) {
                                                                     placeholder: "Select gender"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                                                    lineNumber: 175,
-                                                                    columnNumber: 21
-                                                                }, this)
-                                                            }, void 0, false, {
-                                                                fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                                                lineNumber: 174,
-                                                                columnNumber: 19
-                                                            }, this),
-                                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$select$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["SelectContent"], {
-                                                                children: [
-                                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$select$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["SelectItem"], {
-                                                                        value: "male",
-                                                                        children: "Male"
-                                                                    }, void 0, false, {
-                                                                        fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                                                        lineNumber: 178,
-                                                                        columnNumber: 21
-                                                                    }, this),
-                                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$select$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["SelectItem"], {
-                                                                        value: "female",
-                                                                        children: "Female"
-                                                                    }, void 0, false, {
-                                                                        fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                                                        lineNumber: 179,
-                                                                        columnNumber: 21
-                                                                    }, this)
-                                                                ]
-                                                            }, void 0, true, {
-                                                                fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                                                lineNumber: 177,
-                                                                columnNumber: 19
-                                                            }, this)
-                                                        ]
-                                                    }, void 0, true, {
-                                                        fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                                        lineNumber: 168,
-                                                        columnNumber: 17
-                                                    }, this)
-                                                ]
-                                            }, void 0, true, {
-                                                fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                                lineNumber: 166,
-                                                columnNumber: 15
-                                            }, this),
-                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                                children: [
-                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$label$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Label"], {
-                                                        children: "Class"
-                                                    }, void 0, false, {
-                                                        fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                                        lineNumber: 184,
-                                                        columnNumber: 17
-                                                    }, this),
-                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$select$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Select"], {
-                                                        value: form.class,
-                                                        onValueChange: (v)=>setForm((s)=>({
-                                                                    ...s,
-                                                                    class: v
-                                                                })),
-                                                        children: [
-                                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$select$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["SelectTrigger"], {
-                                                                children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$select$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["SelectValue"], {
-                                                                    placeholder: "Select class"
-                                                                }, void 0, false, {
-                                                                    fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
                                                                     lineNumber: 192,
                                                                     columnNumber: 21
                                                                 }, this)
@@ -2221,15 +2210,25 @@ function StudentsManagement({ onNavigate, onViewStudent }) {
                                                                 columnNumber: 19
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$select$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["SelectContent"], {
-                                                                children: classes.map((cls)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$select$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["SelectItem"], {
-                                                                        value: cls,
-                                                                        children: cls
-                                                                    }, cls, false, {
+                                                                children: [
+                                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$select$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["SelectItem"], {
+                                                                        value: "male",
+                                                                        children: "Male"
+                                                                    }, void 0, false, {
+                                                                        fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
+                                                                        lineNumber: 195,
+                                                                        columnNumber: 21
+                                                                    }, this),
+                                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$select$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["SelectItem"], {
+                                                                        value: "female",
+                                                                        children: "Female"
+                                                                    }, void 0, false, {
                                                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
                                                                         lineNumber: 196,
-                                                                        columnNumber: 23
-                                                                    }, this))
-                                                            }, void 0, false, {
+                                                                        columnNumber: 21
+                                                                    }, this)
+                                                                ]
+                                                            }, void 0, true, {
                                                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
                                                                 lineNumber: 194,
                                                                 columnNumber: 19
@@ -2249,10 +2248,65 @@ function StudentsManagement({ onNavigate, onViewStudent }) {
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                                 children: [
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$label$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Label"], {
+                                                        children: "Class"
+                                                    }, void 0, false, {
+                                                        fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
+                                                        lineNumber: 201,
+                                                        columnNumber: 17
+                                                    }, this),
+                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$select$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Select"], {
+                                                        value: form.class,
+                                                        onValueChange: (v)=>setForm((s)=>({
+                                                                    ...s,
+                                                                    class: v
+                                                                })),
+                                                        children: [
+                                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$select$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["SelectTrigger"], {
+                                                                children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$select$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["SelectValue"], {
+                                                                    placeholder: "Select class"
+                                                                }, void 0, false, {
+                                                                    fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
+                                                                    lineNumber: 209,
+                                                                    columnNumber: 21
+                                                                }, this)
+                                                            }, void 0, false, {
+                                                                fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
+                                                                lineNumber: 208,
+                                                                columnNumber: 19
+                                                            }, this),
+                                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$select$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["SelectContent"], {
+                                                                children: classes.map((cls)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$select$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["SelectItem"], {
+                                                                        value: cls,
+                                                                        children: cls
+                                                                    }, cls, false, {
+                                                                        fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
+                                                                        lineNumber: 213,
+                                                                        columnNumber: 23
+                                                                    }, this))
+                                                            }, void 0, false, {
+                                                                fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
+                                                                lineNumber: 211,
+                                                                columnNumber: 19
+                                                            }, this)
+                                                        ]
+                                                    }, void 0, true, {
+                                                        fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
+                                                        lineNumber: 202,
+                                                        columnNumber: 17
+                                                    }, this)
+                                                ]
+                                            }, void 0, true, {
+                                                fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
+                                                lineNumber: 200,
+                                                columnNumber: 15
+                                            }, this),
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                children: [
+                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$label$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Label"], {
                                                         children: "Parent Name"
                                                     }, void 0, false, {
                                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                                        lineNumber: 204,
+                                                        lineNumber: 221,
                                                         columnNumber: 17
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Input"], {
@@ -2264,13 +2318,13 @@ function StudentsManagement({ onNavigate, onViewStudent }) {
                                                                 }))
                                                     }, void 0, false, {
                                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                                        lineNumber: 205,
+                                                        lineNumber: 222,
                                                         columnNumber: 17
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                                lineNumber: 203,
+                                                lineNumber: 220,
                                                 columnNumber: 15
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2279,7 +2333,7 @@ function StudentsManagement({ onNavigate, onViewStudent }) {
                                                         children: "Parent Phone"
                                                     }, void 0, false, {
                                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                                        lineNumber: 214,
+                                                        lineNumber: 231,
                                                         columnNumber: 17
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Input"], {
@@ -2291,13 +2345,13 @@ function StudentsManagement({ onNavigate, onViewStudent }) {
                                                                 }))
                                                     }, void 0, false, {
                                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                                        lineNumber: 215,
+                                                        lineNumber: 232,
                                                         columnNumber: 17
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                                lineNumber: 213,
+                                                lineNumber: 230,
                                                 columnNumber: 15
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2306,7 +2360,7 @@ function StudentsManagement({ onNavigate, onViewStudent }) {
                                                         children: "Enrollment Date"
                                                     }, void 0, false, {
                                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                                        lineNumber: 224,
+                                                        lineNumber: 241,
                                                         columnNumber: 17
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Input"], {
@@ -2318,13 +2372,13 @@ function StudentsManagement({ onNavigate, onViewStudent }) {
                                                                 }))
                                                     }, void 0, false, {
                                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                                        lineNumber: 225,
+                                                        lineNumber: 242,
                                                         columnNumber: 17
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                                lineNumber: 223,
+                                                lineNumber: 240,
                                                 columnNumber: 15
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2334,7 +2388,7 @@ function StudentsManagement({ onNavigate, onViewStudent }) {
                                                         children: "Address"
                                                     }, void 0, false, {
                                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                                        lineNumber: 234,
+                                                        lineNumber: 251,
                                                         columnNumber: 17
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Input"], {
@@ -2346,19 +2400,19 @@ function StudentsManagement({ onNavigate, onViewStudent }) {
                                                                 }))
                                                     }, void 0, false, {
                                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                                        lineNumber: 235,
+                                                        lineNumber: 252,
                                                         columnNumber: 17
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                                lineNumber: 233,
+                                                lineNumber: 250,
                                                 columnNumber: 15
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                        lineNumber: 135,
+                                        lineNumber: 152,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2371,12 +2425,12 @@ function StudentsManagement({ onNavigate, onViewStudent }) {
                                                     children: "Cancel"
                                                 }, void 0, false, {
                                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                                    lineNumber: 246,
+                                                    lineNumber: 263,
                                                     columnNumber: 17
                                                 }, this)
                                             }, void 0, false, {
                                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                                lineNumber: 245,
+                                                lineNumber: 262,
                                                 columnNumber: 15
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Button"], {
@@ -2393,6 +2447,7 @@ function StudentsManagement({ onNavigate, onViewStudent }) {
                                                             enrollmentDate: form.enrollmentDate,
                                                             address: form.address
                                                         });
+                                                        cache.invalidate('students', 'dashboard');
                                                         const params = new URLSearchParams();
                                                         if (searchTerm) params.set("q", searchTerm);
                                                         if (selectedClass && selectedClass !== "all") params.set("class", selectedClass);
@@ -2417,31 +2472,31 @@ function StudentsManagement({ onNavigate, onViewStudent }) {
                                                 children: "Save Student"
                                             }, void 0, false, {
                                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                                lineNumber: 248,
+                                                lineNumber: 265,
                                                 columnNumber: 15
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                        lineNumber: 244,
+                                        lineNumber: 261,
                                         columnNumber: 13
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                lineNumber: 128,
+                                lineNumber: 145,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                        lineNumber: 121,
+                        lineNumber: 138,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                lineNumber: 114,
+                lineNumber: 131,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Card"], {
@@ -2457,7 +2512,7 @@ function StudentsManagement({ onNavigate, onViewStudent }) {
                                     size: 20
                                 }, void 0, false, {
                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                    lineNumber: 299,
+                                    lineNumber: 317,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Input"], {
@@ -2467,13 +2522,13 @@ function StudentsManagement({ onNavigate, onViewStudent }) {
                                     className: "pl-10"
                                 }, void 0, false, {
                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                    lineNumber: 303,
+                                    lineNumber: 321,
                                     columnNumber: 13
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                            lineNumber: 298,
+                            lineNumber: 316,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$select$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Select"], {
@@ -2486,12 +2541,12 @@ function StudentsManagement({ onNavigate, onViewStudent }) {
                                         placeholder: "Filter by class"
                                     }, void 0, false, {
                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                        lineNumber: 312,
+                                        lineNumber: 330,
                                         columnNumber: 15
                                     }, this)
                                 }, void 0, false, {
                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                    lineNumber: 311,
+                                    lineNumber: 329,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$select$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["SelectContent"], {
@@ -2501,7 +2556,7 @@ function StudentsManagement({ onNavigate, onViewStudent }) {
                                             children: "All Classes"
                                         }, void 0, false, {
                                             fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                            lineNumber: 315,
+                                            lineNumber: 333,
                                             columnNumber: 15
                                         }, this),
                                         classes.map((cls)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$select$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["SelectItem"], {
@@ -2509,30 +2564,30 @@ function StudentsManagement({ onNavigate, onViewStudent }) {
                                                 children: cls
                                             }, cls, false, {
                                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                                lineNumber: 317,
+                                                lineNumber: 335,
                                                 columnNumber: 17
                                             }, this))
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                    lineNumber: 314,
+                                    lineNumber: 332,
                                     columnNumber: 13
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                            lineNumber: 310,
+                            lineNumber: 328,
                             columnNumber: 11
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                    lineNumber: 297,
+                    lineNumber: 315,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                lineNumber: 296,
+                lineNumber: 314,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Card"], {
@@ -2545,60 +2600,60 @@ function StudentsManagement({ onNavigate, onViewStudent }) {
                                         children: "Student ID"
                                     }, void 0, false, {
                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                        lineNumber: 330,
+                                        lineNumber: 348,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableHead"], {
                                         children: "Name"
                                     }, void 0, false, {
                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                        lineNumber: 331,
+                                        lineNumber: 349,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableHead"], {
                                         children: "Class"
                                     }, void 0, false, {
                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                        lineNumber: 332,
+                                        lineNumber: 350,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableHead"], {
                                         children: "Gender"
                                     }, void 0, false, {
                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                        lineNumber: 333,
+                                        lineNumber: 351,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableHead"], {
                                         children: "Parent Name"
                                     }, void 0, false, {
                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                        lineNumber: 334,
+                                        lineNumber: 352,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableHead"], {
                                         children: "Parent Phone"
                                     }, void 0, false, {
                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                        lineNumber: 335,
+                                        lineNumber: 353,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableHead"], {
                                         children: "Actions"
                                     }, void 0, false, {
                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                        lineNumber: 336,
+                                        lineNumber: 354,
                                         columnNumber: 15
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                lineNumber: 329,
+                                lineNumber: 347,
                                 columnNumber: 13
                             }, this)
                         }, void 0, false, {
                             fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                            lineNumber: 328,
+                            lineNumber: 346,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableBody"], {
@@ -2608,7 +2663,7 @@ function StudentsManagement({ onNavigate, onViewStudent }) {
                                             children: student.id
                                         }, void 0, false, {
                                             fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                            lineNumber: 342,
+                                            lineNumber: 360,
                                             columnNumber: 17
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableCell"], {
@@ -2622,19 +2677,19 @@ function StudentsManagement({ onNavigate, onViewStudent }) {
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                                lineNumber: 344,
+                                                lineNumber: 362,
                                                 columnNumber: 19
                                             }, this)
                                         }, void 0, false, {
                                             fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                            lineNumber: 343,
+                                            lineNumber: 361,
                                             columnNumber: 17
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableCell"], {
                                             children: student.class
                                         }, void 0, false, {
                                             fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                            lineNumber: 351,
+                                            lineNumber: 369,
                                             columnNumber: 17
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableCell"], {
@@ -2642,21 +2697,21 @@ function StudentsManagement({ onNavigate, onViewStudent }) {
                                             children: student.gender
                                         }, void 0, false, {
                                             fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                            lineNumber: 352,
+                                            lineNumber: 370,
                                             columnNumber: 17
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableCell"], {
                                             children: student.parentName
                                         }, void 0, false, {
                                             fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                            lineNumber: 353,
+                                            lineNumber: 371,
                                             columnNumber: 17
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableCell"], {
                                             children: student.parentPhone
                                         }, void 0, false, {
                                             fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                            lineNumber: 354,
+                                            lineNumber: 372,
                                             columnNumber: 17
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableCell"], {
@@ -2670,51 +2725,55 @@ function StudentsManagement({ onNavigate, onViewStudent }) {
                                                         size: 16
                                                     }, void 0, false, {
                                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                                        lineNumber: 362,
+                                                        lineNumber: 380,
                                                         columnNumber: 21
                                                     }, this),
                                                     "Financial Sheet"
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                                lineNumber: 356,
+                                                lineNumber: 374,
                                                 columnNumber: 19
                                             }, this)
                                         }, void 0, false, {
                                             fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                            lineNumber: 355,
+                                            lineNumber: 373,
                                             columnNumber: 17
                                         }, this)
                                     ]
                                 }, student.id, true, {
                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                                    lineNumber: 341,
+                                    lineNumber: 359,
                                     columnNumber: 15
                                 }, this))
                         }, void 0, false, {
                             fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                            lineNumber: 339,
+                            lineNumber: 357,
                             columnNumber: 11
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                    lineNumber: 327,
+                    lineNumber: 345,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-                lineNumber: 326,
+                lineNumber: 344,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/StudentsManagement.tsx",
-        lineNumber: 113,
+        lineNumber: 130,
         columnNumber: 5
     }, this);
 }
-_s(StudentsManagement, "OtVVCsuQFJE+fQEbBFDopbsHlck=");
+_s(StudentsManagement, "0mAHt2cuceBYhqa9tQSMqAMLID0=", false, function() {
+    return [
+        __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$lib$2f$SisCache$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useSisCache"]
+    ];
+});
 _c = StudentsManagement;
 var _c;
 __turbopack_context__.k.register(_c, "StudentsManagement");
@@ -2733,10 +2792,12 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2
 var __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$search$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Search$3e$__ = __turbopack_context__.i("[project]/OneDrive/Desktop/Sis/Code/SIS/node_modules/lucide-react/dist/esm/icons/search.js [app-client] (ecmascript) <export default as Search>");
 var __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/OneDrive/Desktop/Sis/Code/SIS/node_modules/next/dist/compiled/react/index.js [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$lib$2f$api$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/OneDrive/Desktop/Sis/Code/SIS/src/lib/api.ts [app-client] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$lib$2f$SisCache$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/OneDrive/Desktop/Sis/Code/SIS/src/lib/SisCache.tsx [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ui/card.tsx [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ui/input.tsx [app-client] (ecmascript)");
 ;
 var _s = __turbopack_context__.k.signature();
+;
 ;
 ;
 ;
@@ -2748,11 +2809,37 @@ function FinanceOverview({ onNavigate, onViewStudent }) {
     const [rows, setRows] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])([]);
     const [loading, setLoading] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(true);
     const [search, setSearch] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])('');
+    const cache = (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$lib$2f$SisCache$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useSisCache"])();
     (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useEffect"])({
         "FinanceOverview.useEffect": ()=>{
             let cancelled = false;
-            const init = {
-                "FinanceOverview.useEffect.init": async ()=>{
+            const cachedDash = cache.get('dashboard');
+            const cachedStudents = cache.get('students');
+            const cachedSummary = cache.get('ledger-summary');
+            if (cachedDash && cachedStudents && cachedSummary) {
+                setSummary(cachedDash);
+                const map = {};
+                for (const e of cachedSummary)map[e.studentId] = e;
+                setRows(cachedStudents.map({
+                    "FinanceOverview.useEffect": (s)=>{
+                        const fin = map[s.id] ?? {
+                            totalCharged: 0,
+                            totalPaid: 0,
+                            balance: 0
+                        };
+                        return {
+                            student: s,
+                            totalCharged: fin.totalCharged,
+                            totalPaid: fin.totalPaid,
+                            balance: fin.balance
+                        };
+                    }
+                }["FinanceOverview.useEffect"]));
+                setLoading(false);
+                return;
+            }
+            ({
+                "FinanceOverview.useEffect": async ()=>{
                     setLoading(true);
                     try {
                         const [dashRes, studentsRes, summaryRes] = await Promise.allSettled([
@@ -2761,17 +2848,20 @@ function FinanceOverview({ onNavigate, onViewStudent }) {
                             __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$lib$2f$api$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["api"].get('/ledger/summary')
                         ]);
                         if (cancelled) return;
-                        if (dashRes.status === 'fulfilled') setSummary(dashRes.value);
-                        const students = studentsRes.status === 'fulfilled' ? studentsRes.value || [] : [];
-                        const summaryMap = {};
-                        if (summaryRes.status === 'fulfilled' && Array.isArray(summaryRes.value)) {
-                            for (const entry of summaryRes.value){
-                                summaryMap[entry.studentId] = entry;
-                            }
+                        const dashData = dashRes.status === 'fulfilled' ? dashRes.value : null;
+                        if (dashData) {
+                            cache.set('dashboard', dashData);
+                            setSummary(dashData);
                         }
+                        const students = studentsRes.status === 'fulfilled' && Array.isArray(studentsRes.value) && studentsRes.value.length > 0 ? studentsRes.value : [];
+                        if (students.length > 0) cache.set('students', students);
+                        const summaryData = summaryRes.status === 'fulfilled' && Array.isArray(summaryRes.value) ? summaryRes.value : [];
+                        if (summaryData.length > 0) cache.set('ledger-summary', summaryData);
+                        const map = {};
+                        for (const e of summaryData)map[e.studentId] = e;
                         setRows(students.map({
-                            "FinanceOverview.useEffect.init": (s)=>{
-                                const fin = summaryMap[s.id] ?? {
+                            "FinanceOverview.useEffect": (s)=>{
+                                const fin = map[s.id] ?? {
                                     totalCharged: 0,
                                     totalPaid: 0,
                                     balance: 0
@@ -2783,14 +2873,13 @@ function FinanceOverview({ onNavigate, onViewStudent }) {
                                     balance: fin.balance
                                 };
                             }
-                        }["FinanceOverview.useEffect.init"]));
+                        }["FinanceOverview.useEffect"]));
                         setLoading(false);
                     } catch  {
                         if (!cancelled) setLoading(false);
                     }
                 }
-            }["FinanceOverview.useEffect.init"];
-            init();
+            })["FinanceOverview.useEffect"]();
             return ({
                 "FinanceOverview.useEffect": ()=>{
                     cancelled = true;
@@ -2816,7 +2905,7 @@ function FinanceOverview({ onNavigate, onViewStudent }) {
                         children: "Finance"
                     }, void 0, false, {
                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/FinanceOverview.tsx",
-                        lineNumber: 82,
+                        lineNumber: 101,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2824,13 +2913,13 @@ function FinanceOverview({ onNavigate, onViewStudent }) {
                         children: "School-wide financial overview"
                     }, void 0, false, {
                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/FinanceOverview.tsx",
-                        lineNumber: 83,
+                        lineNumber: 102,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/FinanceOverview.tsx",
-                lineNumber: 81,
+                lineNumber: 100,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2844,7 +2933,7 @@ function FinanceOverview({ onNavigate, onViewStudent }) {
                                 children: "Total Charged"
                             }, void 0, false, {
                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/FinanceOverview.tsx",
-                                lineNumber: 88,
+                                lineNumber: 107,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2855,13 +2944,13 @@ function FinanceOverview({ onNavigate, onViewStudent }) {
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/FinanceOverview.tsx",
-                                lineNumber: 89,
+                                lineNumber: 108,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/FinanceOverview.tsx",
-                        lineNumber: 87,
+                        lineNumber: 106,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Card"], {
@@ -2872,7 +2961,7 @@ function FinanceOverview({ onNavigate, onViewStudent }) {
                                 children: "Total Collected"
                             }, void 0, false, {
                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/FinanceOverview.tsx",
-                                lineNumber: 92,
+                                lineNumber: 111,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2883,13 +2972,13 @@ function FinanceOverview({ onNavigate, onViewStudent }) {
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/FinanceOverview.tsx",
-                                lineNumber: 93,
+                                lineNumber: 112,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/FinanceOverview.tsx",
-                        lineNumber: 91,
+                        lineNumber: 110,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Card"], {
@@ -2900,7 +2989,7 @@ function FinanceOverview({ onNavigate, onViewStudent }) {
                                 children: "Outstanding"
                             }, void 0, false, {
                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/FinanceOverview.tsx",
-                                lineNumber: 96,
+                                lineNumber: 115,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2911,19 +3000,19 @@ function FinanceOverview({ onNavigate, onViewStudent }) {
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/FinanceOverview.tsx",
-                                lineNumber: 97,
+                                lineNumber: 116,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/FinanceOverview.tsx",
-                        lineNumber: 95,
+                        lineNumber: 114,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/FinanceOverview.tsx",
-                lineNumber: 86,
+                lineNumber: 105,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Card"], {
@@ -2938,7 +3027,7 @@ function FinanceOverview({ onNavigate, onViewStudent }) {
                                     size: 16
                                 }, void 0, false, {
                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/FinanceOverview.tsx",
-                                    lineNumber: 106,
+                                    lineNumber: 125,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Input"], {
@@ -2948,18 +3037,18 @@ function FinanceOverview({ onNavigate, onViewStudent }) {
                                     className: "pl-9"
                                 }, void 0, false, {
                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/FinanceOverview.tsx",
-                                    lineNumber: 107,
+                                    lineNumber: 126,
                                     columnNumber: 13
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/FinanceOverview.tsx",
-                            lineNumber: 105,
+                            lineNumber: 124,
                             columnNumber: 11
                         }, this)
                     }, void 0, false, {
                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/FinanceOverview.tsx",
-                        lineNumber: 104,
+                        lineNumber: 123,
                         columnNumber: 9
                     }, this),
                     loading ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2967,7 +3056,7 @@ function FinanceOverview({ onNavigate, onViewStudent }) {
                         children: "Loading..."
                     }, void 0, false, {
                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/FinanceOverview.tsx",
-                        lineNumber: 117,
+                        lineNumber: 136,
                         columnNumber: 11
                     }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                         className: "overflow-x-auto",
@@ -2983,7 +3072,7 @@ function FinanceOverview({ onNavigate, onViewStudent }) {
                                                 children: "Student"
                                             }, void 0, false, {
                                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/FinanceOverview.tsx",
-                                                lineNumber: 123,
+                                                lineNumber: 142,
                                                 columnNumber: 19
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("th", {
@@ -2991,7 +3080,7 @@ function FinanceOverview({ onNavigate, onViewStudent }) {
                                                 children: "Class"
                                             }, void 0, false, {
                                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/FinanceOverview.tsx",
-                                                lineNumber: 124,
+                                                lineNumber: 143,
                                                 columnNumber: 19
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("th", {
@@ -2999,7 +3088,7 @@ function FinanceOverview({ onNavigate, onViewStudent }) {
                                                 children: "Charged"
                                             }, void 0, false, {
                                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/FinanceOverview.tsx",
-                                                lineNumber: 125,
+                                                lineNumber: 144,
                                                 columnNumber: 19
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("th", {
@@ -3007,7 +3096,7 @@ function FinanceOverview({ onNavigate, onViewStudent }) {
                                                 children: "Paid"
                                             }, void 0, false, {
                                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/FinanceOverview.tsx",
-                                                lineNumber: 126,
+                                                lineNumber: 145,
                                                 columnNumber: 19
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("th", {
@@ -3015,18 +3104,18 @@ function FinanceOverview({ onNavigate, onViewStudent }) {
                                                 children: "Balance"
                                             }, void 0, false, {
                                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/FinanceOverview.tsx",
-                                                lineNumber: 127,
+                                                lineNumber: 146,
                                                 columnNumber: 19
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/FinanceOverview.tsx",
-                                        lineNumber: 122,
+                                        lineNumber: 141,
                                         columnNumber: 17
                                     }, this)
                                 }, void 0, false, {
                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/FinanceOverview.tsx",
-                                    lineNumber: 121,
+                                    lineNumber: 140,
                                     columnNumber: 15
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("tbody", {
@@ -3037,12 +3126,12 @@ function FinanceOverview({ onNavigate, onViewStudent }) {
                                             children: "No students found."
                                         }, void 0, false, {
                                             fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/FinanceOverview.tsx",
-                                            lineNumber: 133,
+                                            lineNumber: 152,
                                             columnNumber: 21
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/FinanceOverview.tsx",
-                                        lineNumber: 132,
+                                        lineNumber: 151,
                                         columnNumber: 19
                                     }, this) : filtered.map(({ student, totalCharged, totalPaid, balance })=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("tr", {
                                             className: `border-b last:border-0 hover:bg-gray-50 ${balance !== null && balance > 0 ? 'bg-red-50/40' : ''}`,
@@ -3059,12 +3148,12 @@ function FinanceOverview({ onNavigate, onViewStudent }) {
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/FinanceOverview.tsx",
-                                                        lineNumber: 145,
+                                                        lineNumber: 164,
                                                         columnNumber: 23
                                                     }, this)
                                                 }, void 0, false, {
                                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/FinanceOverview.tsx",
-                                                    lineNumber: 144,
+                                                    lineNumber: 163,
                                                     columnNumber: 21
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("td", {
@@ -3072,7 +3161,7 @@ function FinanceOverview({ onNavigate, onViewStudent }) {
                                                     children: student.class
                                                 }, void 0, false, {
                                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/FinanceOverview.tsx",
-                                                    lineNumber: 152,
+                                                    lineNumber: 171,
                                                     columnNumber: 21
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("td", {
@@ -3080,7 +3169,7 @@ function FinanceOverview({ onNavigate, onViewStudent }) {
                                                     children: balance === null ? '—' : `${totalCharged.toLocaleString()} FCFA`
                                                 }, void 0, false, {
                                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/FinanceOverview.tsx",
-                                                    lineNumber: 153,
+                                                    lineNumber: 172,
                                                     columnNumber: 21
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("td", {
@@ -3088,7 +3177,7 @@ function FinanceOverview({ onNavigate, onViewStudent }) {
                                                     children: balance === null ? '—' : `${totalPaid.toLocaleString()} FCFA`
                                                 }, void 0, false, {
                                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/FinanceOverview.tsx",
-                                                    lineNumber: 156,
+                                                    lineNumber: 175,
                                                     columnNumber: 21
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("td", {
@@ -3096,45 +3185,49 @@ function FinanceOverview({ onNavigate, onViewStudent }) {
                                                     children: balance === null ? '...' : `${balance.toLocaleString()} FCFA`
                                                 }, void 0, false, {
                                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/FinanceOverview.tsx",
-                                                    lineNumber: 159,
+                                                    lineNumber: 178,
                                                     columnNumber: 21
                                                 }, this)
                                             ]
                                         }, student.id, true, {
                                             fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/FinanceOverview.tsx",
-                                            lineNumber: 138,
+                                            lineNumber: 157,
                                             columnNumber: 19
                                         }, this))
                                 }, void 0, false, {
                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/FinanceOverview.tsx",
-                                    lineNumber: 130,
+                                    lineNumber: 149,
                                     columnNumber: 15
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/FinanceOverview.tsx",
-                            lineNumber: 120,
+                            lineNumber: 139,
                             columnNumber: 13
                         }, this)
                     }, void 0, false, {
                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/FinanceOverview.tsx",
-                        lineNumber: 119,
+                        lineNumber: 138,
                         columnNumber: 11
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/FinanceOverview.tsx",
-                lineNumber: 103,
+                lineNumber: 122,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/FinanceOverview.tsx",
-        lineNumber: 80,
+        lineNumber: 99,
         columnNumber: 5
     }, this);
 }
-_s(FinanceOverview, "rdw/93BIyfYBge/ARgHPcR7T8hg=");
+_s(FinanceOverview, "X9PgEGJP341+eBQAiOPSVurbz8M=", false, function() {
+    return [
+        __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$lib$2f$SisCache$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useSisCache"]
+    ];
+});
 _c = FinanceOverview;
 var _c;
 __turbopack_context__.k.register(_c, "FinanceOverview");
@@ -5881,6 +5974,7 @@ __turbopack_context__.s([
 var __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/OneDrive/Desktop/Sis/Code/SIS/node_modules/next/dist/compiled/react/jsx-dev-runtime.js [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/OneDrive/Desktop/Sis/Code/SIS/node_modules/next/dist/compiled/react/index.js [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$lib$2f$api$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/OneDrive/Desktop/Sis/Code/SIS/src/lib/api.ts [app-client] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$lib$2f$SisCache$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/OneDrive/Desktop/Sis/Code/SIS/src/lib/SisCache.tsx [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$lib$2f$classes$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/OneDrive/Desktop/Sis/Code/SIS/src/lib/classes.ts [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$book$2d$open$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__BookOpen$3e$__ = __turbopack_context__.i("[project]/OneDrive/Desktop/Sis/Code/SIS/node_modules/lucide-react/dist/esm/icons/book-open.js [app-client] (ecmascript) <export default as BookOpen>");
 var __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$plus$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Plus$3e$__ = __turbopack_context__.i("[project]/OneDrive/Desktop/Sis/Code/SIS/node_modules/lucide-react/dist/esm/icons/plus.js [app-client] (ecmascript) <export default as Plus>");
@@ -5903,8 +5997,10 @@ var _s = __turbopack_context__.k.signature();
 ;
 ;
 ;
+;
 function ClassesManagement({ onNavigate }) {
     _s();
+    const cache = (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$lib$2f$SisCache$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useSisCache"])();
     const [classes, setClasses] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])([]);
     const [teachers, setTeachers] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])([]);
     const [allSubjects, setAllSubjects] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])([]);
@@ -5922,8 +6018,18 @@ function ClassesManagement({ onNavigate }) {
     (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useEffect"])({
         "ClassesManagement.useEffect": ()=>{
             let mounted = true;
-            const init = {
-                "ClassesManagement.useEffect.init": async ()=>{
+            const cachedClasses = cache.get('classes');
+            const cachedStaff = cache.get('staff');
+            if (cachedClasses && cachedStaff && mounted) {
+                setClasses(cachedClasses);
+                setTeachers(cachedStaff.filter({
+                    "ClassesManagement.useEffect": (s)=>s.isTeacher
+                }["ClassesManagement.useEffect"]));
+                setLoading(false);
+                return;
+            }
+            ({
+                "ClassesManagement.useEffect": async ()=>{
                     try {
                         const [classData, staffData, subjectData] = await Promise.all([
                             __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$lib$2f$api$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["api"].get('/classes'),
@@ -5931,17 +6037,18 @@ function ClassesManagement({ onNavigate }) {
                             __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$lib$2f$api$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["api"].get('/subjects')
                         ]);
                         if (mounted) {
+                            if (Array.isArray(classData) && classData.length > 0) cache.set('classes', classData);
+                            if (Array.isArray(staffData) && staffData.length > 0) cache.set('staff', staffData);
                             setClasses(classData || []);
                             setTeachers((staffData || []).filter({
-                                "ClassesManagement.useEffect.init": (s)=>s.isTeacher
-                            }["ClassesManagement.useEffect.init"]));
+                                "ClassesManagement.useEffect": (s)=>s.isTeacher
+                            }["ClassesManagement.useEffect"]));
                             setAllSubjects(subjectData || []);
                         }
                     } catch  {}
                     if (mounted) setLoading(false);
                 }
-            }["ClassesManagement.useEffect.init"];
-            init();
+            })["ClassesManagement.useEffect"]();
             return ({
                 "ClassesManagement.useEffect": ()=>{
                     mounted = false;
@@ -5952,6 +6059,7 @@ function ClassesManagement({ onNavigate }) {
     const refresh = async ()=>{
         try {
             const data = await __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$lib$2f$api$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["api"].get('/classes');
+            if (Array.isArray(data) && data.length > 0) cache.set('classes', data);
             setClasses(data || []);
         } catch  {}
     };
@@ -6083,7 +6191,7 @@ function ClassesManagement({ onNavigate }) {
                                 children: "Classes"
                             }, void 0, false, {
                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                lineNumber: 184,
+                                lineNumber: 196,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -6091,13 +6199,13 @@ function ClassesManagement({ onNavigate }) {
                                 children: "Manage school classes"
                             }, void 0, false, {
                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                lineNumber: 185,
+                                lineNumber: 197,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                        lineNumber: 183,
+                        lineNumber: 195,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -6112,14 +6220,14 @@ function ClassesManagement({ onNavigate }) {
                                         size: 20
                                     }, void 0, false, {
                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                        lineNumber: 193,
+                                        lineNumber: 205,
                                         columnNumber: 13
                                     }, this),
                                     "Manage Subjects"
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                lineNumber: 188,
+                                lineNumber: 200,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Dialog"], {
@@ -6135,19 +6243,19 @@ function ClassesManagement({ onNavigate }) {
                                                     size: 20
                                                 }, void 0, false, {
                                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                                    lineNumber: 199,
+                                                    lineNumber: 211,
                                                     columnNumber: 17
                                                 }, this),
                                                 "Add Class"
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                            lineNumber: 198,
+                                            lineNumber: 210,
                                             columnNumber: 15
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                        lineNumber: 197,
+                                        lineNumber: 209,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["DialogContent"], {
@@ -6158,20 +6266,20 @@ function ClassesManagement({ onNavigate }) {
                                                         children: "Add New Class"
                                                     }, void 0, false, {
                                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                                        lineNumber: 205,
+                                                        lineNumber: 217,
                                                         columnNumber: 17
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["DialogDescription"], {
                                                         children: "Enter the class name below"
                                                     }, void 0, false, {
                                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                                        lineNumber: 206,
+                                                        lineNumber: 218,
                                                         columnNumber: 17
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                                lineNumber: 204,
+                                                lineNumber: 216,
                                                 columnNumber: 15
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -6181,7 +6289,7 @@ function ClassesManagement({ onNavigate }) {
                                                         children: "Class Name"
                                                     }, void 0, false, {
                                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                                        lineNumber: 209,
+                                                        lineNumber: 221,
                                                         columnNumber: 17
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Input"], {
@@ -6193,13 +6301,13 @@ function ClassesManagement({ onNavigate }) {
                                                         }
                                                     }, void 0, false, {
                                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                                        lineNumber: 210,
+                                                        lineNumber: 222,
                                                         columnNumber: 17
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                                lineNumber: 208,
+                                                lineNumber: 220,
                                                 columnNumber: 15
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -6212,12 +6320,12 @@ function ClassesManagement({ onNavigate }) {
                                                             children: "Cancel"
                                                         }, void 0, false, {
                                                             fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                                            lineNumber: 219,
+                                                            lineNumber: 231,
                                                             columnNumber: 19
                                                         }, this)
                                                     }, void 0, false, {
                                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                                        lineNumber: 218,
+                                                        lineNumber: 230,
                                                         columnNumber: 17
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Button"], {
@@ -6225,37 +6333,37 @@ function ClassesManagement({ onNavigate }) {
                                                         children: "Save Class"
                                                     }, void 0, false, {
                                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                                        lineNumber: 221,
+                                                        lineNumber: 233,
                                                         columnNumber: 17
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                                lineNumber: 217,
+                                                lineNumber: 229,
                                                 columnNumber: 15
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                        lineNumber: 203,
+                                        lineNumber: 215,
                                         columnNumber: 13
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                lineNumber: 196,
+                                lineNumber: 208,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                        lineNumber: 187,
+                        lineNumber: 199,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                lineNumber: 182,
+                lineNumber: 194,
                 columnNumber: 7
             }, this),
             loading ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -6263,7 +6371,7 @@ function ClassesManagement({ onNavigate }) {
                 children: "Loading classes..."
             }, void 0, false, {
                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                lineNumber: 229,
+                lineNumber: 241,
                 columnNumber: 9
             }, this) : classes.length === 0 ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Card"], {
                 className: "p-12 flex flex-col items-center gap-4 text-center",
@@ -6273,7 +6381,7 @@ function ClassesManagement({ onNavigate }) {
                         children: "No classes have been created yet."
                     }, void 0, false, {
                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                        lineNumber: 232,
+                        lineNumber: 244,
                         columnNumber: 11
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Button"], {
@@ -6282,7 +6390,7 @@ function ClassesManagement({ onNavigate }) {
                         children: creating ? 'Creating...' : 'Create standard classes'
                     }, void 0, false, {
                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                        lineNumber: 233,
+                        lineNumber: 245,
                         columnNumber: 11
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -6293,13 +6401,13 @@ function ClassesManagement({ onNavigate }) {
                         ]
                     }, void 0, true, {
                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                        lineNumber: 236,
+                        lineNumber: 248,
                         columnNumber: 11
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                lineNumber: 231,
+                lineNumber: 243,
                 columnNumber: 9
             }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Card"], {
                 children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Table"], {
@@ -6311,39 +6419,39 @@ function ClassesManagement({ onNavigate }) {
                                         children: "Name"
                                     }, void 0, false, {
                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                        lineNumber: 245,
+                                        lineNumber: 257,
                                         columnNumber: 17
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableHead"], {
                                         children: "Class Teacher"
                                     }, void 0, false, {
                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                        lineNumber: 246,
+                                        lineNumber: 258,
                                         columnNumber: 17
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableHead"], {
                                         children: "Subjects"
                                     }, void 0, false, {
                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                        lineNumber: 247,
+                                        lineNumber: 259,
                                         columnNumber: 17
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableHead"], {
                                         children: "Actions"
                                     }, void 0, false, {
                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                        lineNumber: 248,
+                                        lineNumber: 260,
                                         columnNumber: 17
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                lineNumber: 244,
+                                lineNumber: 256,
                                 columnNumber: 15
                             }, this)
                         }, void 0, false, {
                             fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                            lineNumber: 243,
+                            lineNumber: 255,
                             columnNumber: 13
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableBody"], {
@@ -6353,7 +6461,7 @@ function ClassesManagement({ onNavigate }) {
                                             children: cls.name
                                         }, void 0, false, {
                                             fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                            lineNumber: 254,
+                                            lineNumber: 266,
                                             columnNumber: 19
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableCell"], {
@@ -6367,7 +6475,7 @@ function ClassesManagement({ onNavigate }) {
                                                         children: "— None —"
                                                     }, void 0, false, {
                                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                                        lineNumber: 261,
+                                                        lineNumber: 273,
                                                         columnNumber: 23
                                                     }, this),
                                                     teachers.map((t)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
@@ -6379,18 +6487,18 @@ function ClassesManagement({ onNavigate }) {
                                                             ]
                                                         }, t.id, true, {
                                                             fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                                            lineNumber: 263,
+                                                            lineNumber: 275,
                                                             columnNumber: 25
                                                         }, this))
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                                lineNumber: 256,
+                                                lineNumber: 268,
                                                 columnNumber: 21
                                             }, this)
                                         }, void 0, false, {
                                             fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                            lineNumber: 255,
+                                            lineNumber: 267,
                                             columnNumber: 19
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableCell"], {
@@ -6404,19 +6512,19 @@ function ClassesManagement({ onNavigate }) {
                                                         size: 16
                                                     }, void 0, false, {
                                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                                        lineNumber: 276,
+                                                        lineNumber: 288,
                                                         columnNumber: 23
                                                     }, this),
                                                     "Subjects"
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                                lineNumber: 270,
+                                                lineNumber: 282,
                                                 columnNumber: 21
                                             }, this)
                                         }, void 0, false, {
                                             fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                            lineNumber: 269,
+                                            lineNumber: 281,
                                             columnNumber: 19
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableCell"], {
@@ -6430,41 +6538,41 @@ function ClassesManagement({ onNavigate }) {
                                                         size: 16
                                                     }, void 0, false, {
                                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                                        lineNumber: 287,
+                                                        lineNumber: 299,
                                                         columnNumber: 23
                                                     }, this),
                                                     "Delete"
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                                lineNumber: 281,
+                                                lineNumber: 293,
                                                 columnNumber: 21
                                             }, this)
                                         }, void 0, false, {
                                             fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                            lineNumber: 280,
+                                            lineNumber: 292,
                                             columnNumber: 19
                                         }, this)
                                     ]
                                 }, cls.id, true, {
                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                    lineNumber: 253,
+                                    lineNumber: 265,
                                     columnNumber: 17
                                 }, this))
                         }, void 0, false, {
                             fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                            lineNumber: 251,
+                            lineNumber: 263,
                             columnNumber: 13
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                    lineNumber: 242,
+                    lineNumber: 254,
                     columnNumber: 11
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                lineNumber: 241,
+                lineNumber: 253,
                 columnNumber: 9
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Dialog"], {
@@ -6489,20 +6597,20 @@ function ClassesManagement({ onNavigate }) {
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                    lineNumber: 303,
+                                    lineNumber: 315,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["DialogDescription"], {
                                     children: "Manage subjects and their assigned teachers"
                                 }, void 0, false, {
                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                    lineNumber: 304,
+                                    lineNumber: 316,
                                     columnNumber: 13
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                            lineNumber: 302,
+                            lineNumber: 314,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -6512,7 +6620,7 @@ function ClassesManagement({ onNavigate }) {
                                 children: "Loading..."
                             }, void 0, false, {
                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                lineNumber: 308,
+                                lineNumber: 320,
                                 columnNumber: 15
                             }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Fragment"], {
                                 children: [
@@ -6521,7 +6629,7 @@ function ClassesManagement({ onNavigate }) {
                                         children: "No subjects assigned yet."
                                     }, void 0, false, {
                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                        lineNumber: 312,
+                                        lineNumber: 324,
                                         columnNumber: 19
                                     }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                         className: "divide-y",
@@ -6540,7 +6648,7 @@ function ClassesManagement({ onNavigate }) {
                                                                 children: subject.name
                                                             }, void 0, false, {
                                                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                                                lineNumber: 322,
+                                                                lineNumber: 334,
                                                                 columnNumber: 29
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Button"], {
@@ -6552,18 +6660,18 @@ function ClassesManagement({ onNavigate }) {
                                                                     size: 14
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                                                    lineNumber: 329,
+                                                                    lineNumber: 341,
                                                                     columnNumber: 31
                                                                 }, this)
                                                             }, void 0, false, {
                                                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                                                lineNumber: 323,
+                                                                lineNumber: 335,
                                                                 columnNumber: 29
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                                        lineNumber: 321,
+                                                        lineNumber: 333,
                                                         columnNumber: 27
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -6574,7 +6682,7 @@ function ClassesManagement({ onNavigate }) {
                                                                 children: "No teachers assigned"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                                                lineNumber: 334,
+                                                                lineNumber: 346,
                                                                 columnNumber: 31
                                                             }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                                                 className: "flex flex-wrap gap-1",
@@ -6590,18 +6698,18 @@ function ClassesManagement({ onNavigate }) {
                                                                                 children: "×"
                                                                             }, void 0, false, {
                                                                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                                                                lineNumber: 340,
+                                                                                lineNumber: 352,
                                                                                 columnNumber: 37
                                                                             }, this)
                                                                         ]
                                                                     }, st.id, true, {
                                                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                                                        lineNumber: 338,
+                                                                        lineNumber: 350,
                                                                         columnNumber: 35
                                                                     }, this))
                                                             }, void 0, false, {
                                                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                                                lineNumber: 336,
+                                                                lineNumber: 348,
                                                                 columnNumber: 31
                                                             }, this),
                                                             available.length > 0 && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -6620,7 +6728,7 @@ function ClassesManagement({ onNavigate }) {
                                                                                 children: "Add teacher…"
                                                                             }, void 0, false, {
                                                                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                                                                lineNumber: 357,
+                                                                                lineNumber: 369,
                                                                                 columnNumber: 35
                                                                             }, this),
                                                                             available.map((t)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
@@ -6632,13 +6740,13 @@ function ClassesManagement({ onNavigate }) {
                                                                                     ]
                                                                                 }, t.id, true, {
                                                                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                                                                    lineNumber: 359,
+                                                                                    lineNumber: 371,
                                                                                     columnNumber: 37
                                                                                 }, this))
                                                                         ]
                                                                     }, void 0, true, {
                                                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                                                        lineNumber: 352,
+                                                                        lineNumber: 364,
                                                                         columnNumber: 33
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Button"], {
@@ -6649,31 +6757,31 @@ function ClassesManagement({ onNavigate }) {
                                                                         children: "Add"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                                                        lineNumber: 362,
+                                                                        lineNumber: 374,
                                                                         columnNumber: 33
                                                                     }, this)
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                                                lineNumber: 351,
+                                                                lineNumber: 363,
                                                                 columnNumber: 31
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                                        lineNumber: 332,
+                                                        lineNumber: 344,
                                                         columnNumber: 27
                                                     }, this)
                                                 ]
                                             }, subject.id, true, {
                                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                                lineNumber: 320,
+                                                lineNumber: 332,
                                                 columnNumber: 25
                                             }, this);
                                         })
                                     }, void 0, false, {
                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                        lineNumber: 314,
+                                        lineNumber: 326,
                                         columnNumber: 19
                                     }, this),
                                     availableSubjects.length > 0 && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -6689,7 +6797,7 @@ function ClassesManagement({ onNavigate }) {
                                                         children: "Select subject to add"
                                                     }, void 0, false, {
                                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                                        lineNumber: 385,
+                                                        lineNumber: 397,
                                                         columnNumber: 23
                                                     }, this),
                                                     availableSubjects.map((s)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
@@ -6697,13 +6805,13 @@ function ClassesManagement({ onNavigate }) {
                                                             children: s.name
                                                         }, s.id, false, {
                                                             fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                                            lineNumber: 387,
+                                                            lineNumber: 399,
                                                             columnNumber: 25
                                                         }, this))
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                                lineNumber: 380,
+                                                lineNumber: 392,
                                                 columnNumber: 21
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Button"], {
@@ -6713,20 +6821,20 @@ function ClassesManagement({ onNavigate }) {
                                                 children: "Add"
                                             }, void 0, false, {
                                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                                lineNumber: 390,
+                                                lineNumber: 402,
                                                 columnNumber: 21
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                        lineNumber: 379,
+                                        lineNumber: 391,
                                         columnNumber: 19
                                     }, this)
                                 ]
                             }, void 0, true)
                         }, void 0, false, {
                             fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                            lineNumber: 306,
+                            lineNumber: 318,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -6738,38 +6846,42 @@ function ClassesManagement({ onNavigate }) {
                                     children: "Done"
                                 }, void 0, false, {
                                     fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                    lineNumber: 400,
+                                    lineNumber: 412,
                                     columnNumber: 15
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                                lineNumber: 399,
+                                lineNumber: 411,
                                 columnNumber: 13
                             }, this)
                         }, void 0, false, {
                             fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                            lineNumber: 398,
+                            lineNumber: 410,
                             columnNumber: 11
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                    lineNumber: 301,
+                    lineNumber: 313,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-                lineNumber: 297,
+                lineNumber: 309,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/components/ClassesManagement.tsx",
-        lineNumber: 181,
+        lineNumber: 193,
         columnNumber: 5
     }, this);
 }
-_s(ClassesManagement, "6nriS9wLuxQ1n9ckkc0V74KpRSE=");
+_s(ClassesManagement, "gNGlyKxWhDJttj1MckV6hqtQQuU=", false, function() {
+    return [
+        __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$lib$2f$SisCache$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useSisCache"]
+    ];
+});
 _c = ClassesManagement;
 var _c;
 __turbopack_context__.k.register(_c, "ClassesManagement");

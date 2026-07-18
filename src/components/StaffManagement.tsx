@@ -12,10 +12,12 @@ import { Badge } from './ui/badge';
 import { Checkbox } from './ui/checkbox';
 import { generateWorkRecord } from '../utils/pdfGenerator';
 import { api } from '@/lib/api';
+import { useSisCache } from '@/lib/SisCache';
 
 export function StaffManagement() {
   const [staff, setStaff] = useState<any[]>([]);
   const [workRecords, setWorkRecords] = useState<any[]>([]);
+  const cache = useSisCache();
   const [searchTerm, setSearchTerm] = useState('');
   const [openAddStaff, setOpenAddStaff] = useState(false);
   const [newStaff, setNewStaff] = useState({
@@ -43,19 +45,33 @@ export function StaffManagement() {
 
   useEffect(() => {
     let mounted = true;
-    const load = async () => {
-      try {
-        const [staffData, workData] = await Promise.all([
-          api.get('/staff'),
-          api.get('/work-records'),
-        ]);
-        if (mounted) {
-          setStaff(staffData || []);
-          setWorkRecords(workData || []);
-        }
-      } catch {}
-    };
-    load();
+    const cachedStaff = cache.get<any[]>('staff');
+    const cachedWork  = cache.get<any[]>('work-records');
+    if (cachedStaff) setStaff(cachedStaff);
+    if (cachedWork)  setWorkRecords(cachedWork);
+    if (cachedStaff && cachedWork) return;
+    (async () => {
+      const fetches: Promise<void>[] = [];
+      if (!cachedStaff) {
+        fetches.push(
+          api.get('/staff').then(data => {
+            if (!mounted) return;
+            if (Array.isArray(data) && data.length > 0) cache.set('staff', data);
+            setStaff(data || []);
+          }).catch(() => {})
+        );
+      }
+      if (!cachedWork) {
+        fetches.push(
+          api.get('/work-records').then(data => {
+            if (!mounted) return;
+            if (Array.isArray(data) && data.length > 0) cache.set('work-records', data);
+            setWorkRecords(data || []);
+          }).catch(() => {})
+        );
+      }
+      await Promise.all(fetches);
+    })();
     return () => { mounted = false; };
   }, []);
 
@@ -144,6 +160,8 @@ export function StaffManagement() {
                       isTeacher: newStaff.isTeacher,
                     });
                     const list = await api.get('/staff');
+                    if (Array.isArray(list) && list.length > 0) cache.set('staff', list);
+                    cache.invalidate('dashboard');
                     setStaff(list||[]);
                     setOpenAddStaff(false);
                     setNewStaff({ firstName:'', lastName:'', role:'', phone:'', email:'', hireDate:'', salary:'', isTeacher: false });
@@ -293,6 +311,7 @@ export function StaffManagement() {
                         remarks: workForm.remarks,
                       });
                       const list = await api.get('/work-records');
+                      if (Array.isArray(list) && list.length > 0) cache.set('work-records', list);
                       setWorkRecords(list||[]);
                       setOpenWork(false);
                       setWorkForm({ date:'', class:'', subject:'', topic:'', objectives:'', activities:'', evaluation:'', remarks:'', staffId:'' });

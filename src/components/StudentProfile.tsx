@@ -2,6 +2,7 @@ import { ArrowLeft, FileText, Plus } from 'lucide-react';
 import { generateFinancialSheet } from '../utils/pdfGenerator';
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
+import { useSisCache } from '../lib/SisCache';
 import { NavigationPage } from '../App';
 import { Student } from '../types';
 import { Card } from './ui/card';
@@ -51,6 +52,7 @@ const PAYMENT_METHODS = ['Cash', 'Bank Transfer', 'Mobile Money', 'Cheque'];
 
 export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
   const [activeTab, setActiveTab] = useState<Tab>('general');
+  const cache = useSisCache();
   const [ledgerData, setLedgerData] = useState<LedgerData | null>(null);
   const [ledgerLoading, setLedgerLoading] = useState(false);
   const [ledgerError, setLedgerError] = useState<string | null>(null);
@@ -136,6 +138,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
         entryDate: chargeForm.entryDate,
         ...(chargeForm.paymentMethod ? { paymentMethod: chargeForm.paymentMethod } : {}),
       });
+      cache.invalidate('ledger-summary', 'dashboard');
       setShowCharge(false);
       setChargeForm({ categoryId: '', description: '', amount: '', entryDate: new Date().toISOString().split('T')[0], paymentMethod: '' });
       await refreshLedger();
@@ -157,6 +160,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
         entryDate: paymentForm.entryDate,
         paymentMethod: paymentForm.paymentMethod,
       });
+      cache.invalidate('ledger-summary', 'dashboard');
       setShowPayment(false);
       setPaymentForm({ description: '', amount: '', entryDate: new Date().toISOString().split('T')[0], paymentMethod: '' });
       await refreshLedger();

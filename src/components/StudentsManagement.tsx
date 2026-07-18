@@ -1,4 +1,5 @@
 import { api } from "@/lib/api";
+import { useSisCache } from "@/lib/SisCache";
 import { NavigationPage } from '../App';
 
 interface StudentsManagementProps {
@@ -41,6 +42,7 @@ import {
 
 export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManagementProps) {
   const [students, setStudents] = useState<Student[]>([]);
+  const cache = useSisCache();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedClass, setSelectedClass] = useState<string>("all");
   const [openAdd, setOpenAdd] = useState(false);
@@ -72,6 +74,16 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
 
   useEffect(() => {
     let isMounted = true;
+    const isDefault = !searchTerm && selectedClass === 'all';
+
+    if (isDefault) {
+      const cached = cache.get<Student[]>('students');
+      if (cached) {
+        setStudents(cached);
+        return;
+      }
+    }
+
     const load = async () => {
       try {
         const params = new URLSearchParams();
@@ -81,7 +93,12 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
         const data = await api.get(
           `/students${params.toString() ? `?${params.toString()}` : ""}`
         );
-        if (isMounted) setStudents(data || []);
+        if (isMounted) {
+          if (isDefault && Array.isArray(data) && data.length > 0) {
+            cache.set('students', data);
+          }
+          setStudents(data || []);
+        }
       } catch {}
     };
     // Debounce search input; respond immediately to class filter changes
@@ -259,6 +276,7 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
                       enrollmentDate: form.enrollmentDate,
                       address: form.address,
                     });
+                    cache.invalidate('students', 'dashboard');
                     const params = new URLSearchParams();
                     if (searchTerm) params.set("q", searchTerm);
                     if (selectedClass && selectedClass !== "all")

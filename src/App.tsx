@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { SisCacheProvider } from './lib/SisCache';
 import { Sidebar } from './components/Sidebar';
 import { Dashboard } from './components/Dashboard';
 import { StudentsManagement } from './components/StudentsManagement';
@@ -81,11 +82,13 @@ export default function App() {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50">
-      <Sidebar currentPage={currentPage} onNavigate={setCurrentPage} />
-      <main className="flex-1 overflow-y-auto">
-        {renderPage()}
-      </main>
-    </div>
+    <SisCacheProvider>
+      <div className="flex h-screen overflow-hidden bg-gray-50">
+        <Sidebar currentPage={currentPage} onNavigate={setCurrentPage} />
+        <main className="flex-1 overflow-y-auto">
+          {renderPage()}
+        </main>
+      </div>
+    </SisCacheProvider>
   );
 }

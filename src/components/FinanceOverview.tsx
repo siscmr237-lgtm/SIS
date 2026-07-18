@@ -1,6 +1,7 @@
 import { Search } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
+import { useSisCache } from '../lib/SisCache';
 import { NavigationPage } from '../App';
 import { Student } from '../types';
 import { Card } from './ui/card';
@@ -23,10 +24,27 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
   const [rows, setRows] = useState<StudentRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const cache = useSisCache();
 
   useEffect(() => {
     let cancelled = false;
-    const init = async () => {
+
+    const cachedDash     = cache.get<any>('dashboard');
+    const cachedStudents = cache.get<Student[]>('students');
+    const cachedSummary  = cache.get<any[]>('ledger-summary');
+    if (cachedDash && cachedStudents && cachedSummary) {
+      setSummary(cachedDash);
+      const map: Record<string, any> = {};
+      for (const e of cachedSummary) map[e.studentId] = e;
+      setRows(cachedStudents.map(s => {
+        const fin = map[s.id] ?? { totalCharged: 0, totalPaid: 0, balance: 0 };
+        return { student: s, totalCharged: fin.totalCharged, totalPaid: fin.totalPaid, balance: fin.balance };
+      }));
+      setLoading(false);
+      return;
+    }
+
+    (async () => {
       setLoading(true);
       try {
         const [dashRes, studentsRes, summaryRes] = await Promise.allSettled([
@@ -36,29 +54,30 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
         ]);
         if (cancelled) return;
 
-        if (dashRes.status === 'fulfilled') setSummary(dashRes.value);
+        const dashData = dashRes.status === 'fulfilled' ? dashRes.value : null;
+        if (dashData) { cache.set('dashboard', dashData); setSummary(dashData); }
 
-        const students: Student[] = studentsRes.status === 'fulfilled'
-          ? (studentsRes.value || [])
+        const students: Student[] = studentsRes.status === 'fulfilled' && Array.isArray(studentsRes.value) && studentsRes.value.length > 0
+          ? studentsRes.value
           : [];
+        if (students.length > 0) cache.set('students', students);
 
-        const summaryMap: Record<string, { totalCharged: number; totalPaid: number; balance: number }> = {};
-        if (summaryRes.status === 'fulfilled' && Array.isArray(summaryRes.value)) {
-          for (const entry of summaryRes.value) {
-            summaryMap[entry.studentId] = entry;
-          }
-        }
+        const summaryData: any[] = summaryRes.status === 'fulfilled' && Array.isArray(summaryRes.value)
+          ? summaryRes.value
+          : [];
+        if (summaryData.length > 0) cache.set('ledger-summary', summaryData);
 
+        const map: Record<string, any> = {};
+        for (const e of summaryData) map[e.studentId] = e;
         setRows(students.map(s => {
-          const fin = summaryMap[s.id] ?? { totalCharged: 0, totalPaid: 0, balance: 0 };
+          const fin = map[s.id] ?? { totalCharged: 0, totalPaid: 0, balance: 0 };
           return { student: s, totalCharged: fin.totalCharged, totalPaid: fin.totalPaid, balance: fin.balance };
         }));
         setLoading(false);
       } catch {
         if (!cancelled) setLoading(false);
       }
-    };
-    init();
+    })();
     return () => { cancelled = true; };
   }, []);
 

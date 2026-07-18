@@ -1160,7 +1160,7 @@ function App() {
             case 'dashboard':
                 return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$Dashboard$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Dashboard"], {}, void 0, false, {
                     fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/App.tsx",
-                    lineNumber: 38,
+                    lineNumber: 39,
                     columnNumber: 16
                 }, this);
             case 'students':
@@ -1172,7 +1172,7 @@ function App() {
                     }
                 }, void 0, false, {
                     fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/App.tsx",
-                    lineNumber: 41,
+                    lineNumber: 42,
                     columnNumber: 11
                 }, this);
             case 'student-profile':
@@ -1181,7 +1181,7 @@ function App() {
                     onNavigate: setCurrentPage
                 }, void 0, false, {
                     fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/App.tsx",
-                    lineNumber: 48,
+                    lineNumber: 49,
                     columnNumber: 11
                 }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$StudentsManagement$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["StudentsManagement"], {
                     onNavigate: setCurrentPage,
@@ -1191,13 +1191,13 @@ function App() {
                     }
                 }, void 0, false, {
                     fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/App.tsx",
-                    lineNumber: 50,
+                    lineNumber: 51,
                     columnNumber: 11
                 }, this);
             case 'staff':
                 return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$StaffManagement$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["StaffManagement"], {}, void 0, false, {
                     fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/App.tsx",
-                    lineNumber: 56,
+                    lineNumber: 57,
                     columnNumber: 16
                 }, this);
             case 'finance':
@@ -1209,31 +1209,31 @@ function App() {
                     }
                 }, void 0, false, {
                     fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/App.tsx",
-                    lineNumber: 59,
+                    lineNumber: 60,
                     columnNumber: 11
                 }, this);
             case 'expenses':
                 return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ExpensesManagement$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["ExpensesManagement"], {}, void 0, false, {
                     fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/App.tsx",
-                    lineNumber: 65,
+                    lineNumber: 66,
                     columnNumber: 16
                 }, this);
             case 'report-cards':
                 return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$ReportCards$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["ReportCards"], {}, void 0, false, {
                     fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/App.tsx",
-                    lineNumber: 67,
+                    lineNumber: 68,
                     columnNumber: 16
                 }, this);
             case 'attendance':
                 return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$Attendance$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Attendance"], {}, void 0, false, {
                     fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/App.tsx",
-                    lineNumber: 69,
+                    lineNumber: 70,
                     columnNumber: 16
                 }, this);
             case 'timetable':
                 return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$Timetable$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Timetable"], {}, void 0, false, {
                     fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/App.tsx",
-                    lineNumber: 71,
+                    lineNumber: 72,
                     columnNumber: 16
                 }, this);
             case 'classes':
@@ -1241,7 +1241,7 @@ function App() {
                     onNavigate: setCurrentPage
                 }, void 0, false, {
                     fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/App.tsx",
-                    lineNumber: 73,
+                    lineNumber: 74,
                     columnNumber: 16
                 }, this);
             case 'subjects':
@@ -1249,19 +1249,19 @@ function App() {
                     onNavigate: setCurrentPage
                 }, void 0, false, {
                     fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/App.tsx",
-                    lineNumber: 75,
+                    lineNumber: 76,
                     columnNumber: 16
                 }, this);
             case 'settings':
                 return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$SchoolSettings$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["SchoolSettings"], {}, void 0, false, {
                     fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/App.tsx",
-                    lineNumber: 77,
+                    lineNumber: 78,
                     columnNumber: 16
                 }, this);
             default:
                 return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$src$2f$components$2f$Dashboard$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Dashboard"], {}, void 0, false, {
                     fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/App.tsx",
-                    lineNumber: 79,
+                    lineNumber: 80,
                     columnNumber: 16
                 }, this);
         }
@@ -1274,7 +1274,7 @@ function App() {
                 onNavigate: setCurrentPage
             }, void 0, false, {
                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/App.tsx",
-                lineNumber: 85,
+                lineNumber: 86,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$Sis$2f$Code$2f$SIS$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("main", {
@@ -1282,13 +1282,13 @@ function App() {
                 children: renderPage()
             }, void 0, false, {
                 fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/App.tsx",
-                lineNumber: 86,
+                lineNumber: 87,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/OneDrive/Desktop/Sis/Code/SIS/src/App.tsx",
-        lineNumber: 84,
+        lineNumber: 85,
         columnNumber: 5
     }, this);
 }

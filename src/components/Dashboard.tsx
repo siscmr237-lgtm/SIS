@@ -3,11 +3,13 @@
 import { DollarSign, TrendingUp, UserCheck, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api, BASE_URL } from "../../src/lib/api";
+import { useSisCache } from "../../src/lib/SisCache";
 import { Card } from "./ui/card";
 
 export function Dashboard() {
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const cache = useSisCache();
   const [schoolSettings, setSchoolSettings] = useState({
     name: "School",
     logo: "https://images.unsplash.com/photo-1599305445671-ac291c95aaa9?w=200&h=200&fit=crop",
@@ -17,47 +19,55 @@ export function Dashboard() {
   const [logoSrc, setLogoSrc] = useState<string | null>(null);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const userStr = window.localStorage.getItem("user");
-      if (userStr) {
-        try {
-          const user = JSON.parse(userStr);
-          if (user && user.School) {
-            const school = user.School[0];
-            setSchoolSettings(school);
-            const logo = school?.logo;
-            if (logo?.startsWith('schools/')) {
-              const token = window.localStorage.getItem('auth_token');
-              fetch(`${BASE_URL}/upload/signed-url?path=${encodeURIComponent(logo)}`, {
-                headers: token ? { Authorization: `Bearer ${token}` } : {},
-              })
-                .then(r => r.ok ? r.json() : null)
-                .then(data => { if (data?.url) setLogoSrc(data.url); })
-                .catch(() => {});
-            } else if (logo) {
-              setLogoSrc(logo);
-            }
-          }
-        } catch (e) {
-          console.error("Failed to parse user from localStorage", e);
-        }
+    if (typeof window === "undefined") return;
+    const userStr = window.localStorage.getItem("user");
+    if (!userStr) return;
+    try {
+      const user = JSON.parse(userStr);
+      if (!user?.School) return;
+      const school = user.School[0];
+      setSchoolSettings(school);
+      const logo = school?.logo;
+      if (!logo) return;
+      // Sidebar resolves this on app load; read from cache instead of re-fetching
+      const cached = cache.get<string>('logo-url');
+      if (cached) { setLogoSrc(cached); return; }
+      // Fallback: fetch and cache (handles rare case where Dashboard mounts before Sidebar)
+      if (logo.startsWith('schools/')) {
+        const token = window.localStorage.getItem('auth_token');
+        fetch(`${BASE_URL}/upload/signed-url?path=${encodeURIComponent(logo)}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        })
+          .then(r => r.ok ? r.json() : null)
+          .then(data => {
+            if (data?.url) { cache.set('logo-url', data.url); setLogoSrc(data.url); }
+          })
+          .catch(() => {});
+      } else {
+        cache.set('logo-url', logo);
+        setLogoSrc(logo);
       }
-    }
+    } catch {}
   }, []);
   useEffect(() => {
-    const fetchDashboardData = async () => {
+    let mounted = true;
+    const cached = cache.get<any>('dashboard');
+    if (cached) {
+      setDashboardData(cached);
+      setLoading(false);
+      return;
+    }
+    (async () => {
       try {
-        setLoading(true);
         const data = await api.get("/dashboard");
-        setDashboardData(data);
-      } catch (error) {
-        console.error("Failed to fetch dashboard data:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchDashboardData();
+        if (mounted && data) {
+          cache.set('dashboard', data);
+          setDashboardData(data);
+        }
+      } catch {}
+      if (mounted) setLoading(false);
+    })();
+    return () => { mounted = false; };
   }, []);
 
   const stats = [

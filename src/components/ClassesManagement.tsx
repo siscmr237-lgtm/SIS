@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { NavigationPage } from '../App';
 import { api } from '@/lib/api';
+import { useSisCache } from '@/lib/SisCache';
 import { SCHOOL_CLASSES } from '@/lib/classes';
 import { BookOpen, Plus, Trash2 } from 'lucide-react';
 import { Button } from './ui/button';
@@ -20,6 +21,7 @@ interface ClassesManagementProps {
 }
 
 export function ClassesManagement({ onNavigate }: ClassesManagementProps) {
+  const cache = useSisCache();
   const [classes, setClasses] = useState<any[]>([]);
   const [teachers, setTeachers] = useState<any[]>([]);
   const [allSubjects, setAllSubjects] = useState<any[]>([]);
@@ -37,7 +39,15 @@ export function ClassesManagement({ onNavigate }: ClassesManagementProps) {
 
   useEffect(() => {
     let mounted = true;
-    const init = async () => {
+    const cachedClasses = cache.get<any[]>('classes');
+    const cachedStaff   = cache.get<any[]>('staff');
+    if (cachedClasses && cachedStaff && mounted) {
+      setClasses(cachedClasses);
+      setTeachers(cachedStaff.filter((s: any) => s.isTeacher));
+      setLoading(false);
+      return;
+    }
+    (async () => {
       try {
         const [classData, staffData, subjectData] = await Promise.all([
           api.get('/classes'),
@@ -45,20 +55,22 @@ export function ClassesManagement({ onNavigate }: ClassesManagementProps) {
           api.get('/subjects'),
         ]);
         if (mounted) {
+          if (Array.isArray(classData) && classData.length > 0) cache.set('classes', classData);
+          if (Array.isArray(staffData) && staffData.length > 0) cache.set('staff', staffData);
           setClasses(classData || []);
           setTeachers((staffData || []).filter((s: any) => s.isTeacher));
           setAllSubjects(subjectData || []);
         }
       } catch {}
       if (mounted) setLoading(false);
-    };
-    init();
+    })();
     return () => { mounted = false; };
   }, []);
 
   const refresh = async () => {
     try {
       const data = await api.get('/classes');
+      if (Array.isArray(data) && data.length > 0) cache.set('classes', data);
       setClasses(data || []);
     } catch {}
   };
