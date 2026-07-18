@@ -8,12 +8,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Textarea } from './ui/textarea';
 import { Plus, FileText, Search } from 'lucide-react';
+import { Badge } from './ui/badge';
+import { Checkbox } from './ui/checkbox';
 import { generateWorkRecord } from '../utils/pdfGenerator';
 import { api } from '@/lib/api';
+import { useSisCache } from '@/lib/SisCache';
 
 export function StaffManagement() {
   const [staff, setStaff] = useState<any[]>([]);
   const [workRecords, setWorkRecords] = useState<any[]>([]);
+  const cache = useSisCache();
   const [searchTerm, setSearchTerm] = useState('');
   const [openAddStaff, setOpenAddStaff] = useState(false);
   const [newStaff, setNewStaff] = useState({
@@ -24,6 +28,7 @@ export function StaffManagement() {
     email: '',
     hireDate: '',
     salary: '' as any,
+    isTeacher: false,
   });
   const [openWork, setOpenWork] = useState(false);
   const [workForm, setWorkForm] = useState({
@@ -40,17 +45,33 @@ export function StaffManagement() {
 
   useEffect(() => {
     let mounted = true;
-    const load = async () => {
-      try {
-        const staffData = await api.get('/staff');
-        const workData = await api.get('/work-records');
-        if (mounted) {
-          setStaff(staffData || []);
-          setWorkRecords(workData || []);
-        }
-      } catch {}
-    };
-    load();
+    const cachedStaff = cache.get<any[]>('staff');
+    const cachedWork  = cache.get<any[]>('work-records');
+    if (cachedStaff) setStaff(cachedStaff);
+    if (cachedWork)  setWorkRecords(cachedWork);
+    if (cachedStaff && cachedWork) return;
+    (async () => {
+      const fetches: Promise<void>[] = [];
+      if (!cachedStaff) {
+        fetches.push(
+          api.get('/staff').then(data => {
+            if (!mounted) return;
+            if (Array.isArray(data) && data.length > 0) cache.set('staff', data);
+            setStaff(data || []);
+          }).catch(() => {})
+        );
+      }
+      if (!cachedWork) {
+        fetches.push(
+          api.get('/work-records').then(data => {
+            if (!mounted) return;
+            if (Array.isArray(data) && data.length > 0) cache.set('work-records', data);
+            setWorkRecords(data || []);
+          }).catch(() => {})
+        );
+      }
+      await Promise.all(fetches);
+    })();
     return () => { mounted = false; };
   }, []);
 
@@ -59,7 +80,7 @@ export function StaffManagement() {
     return (
       member.firstName.toLowerCase().includes(searchLower) ||
       member.lastName.toLowerCase().includes(searchLower) ||
-      member.id.toLowerCase().includes(searchLower) ||
+      member.code.toLowerCase().includes(searchLower) ||
       member.role.toLowerCase().includes(searchLower)
     );
   });
@@ -112,6 +133,14 @@ export function StaffManagement() {
                 <Label>Salary (FCFA)</Label>
                 <Input type="number" placeholder="150000" value={newStaff.salary} onChange={e=>setNewStaff(s=>({...s, salary:e.target.value}))} />
               </div>
+              <div className="col-span-2 flex items-center gap-3 pt-2">
+                <Checkbox
+                  id="isTeacher"
+                  checked={newStaff.isTeacher}
+                  onCheckedChange={(checked) => setNewStaff(s => ({ ...s, isTeacher: !!checked }))}
+                />
+                <Label htmlFor="isTeacher">This staff member is a teacher</Label>
+              </div>
             </div>
             <div className="flex justify-end gap-2">
               <DialogClose asChild>
@@ -128,11 +157,14 @@ export function StaffManagement() {
                       email: newStaff.email,
                       hireDate: newStaff.hireDate,
                       salary: Number(newStaff.salary)||0,
+                      isTeacher: newStaff.isTeacher,
                     });
                     const list = await api.get('/staff');
+                    if (Array.isArray(list) && list.length > 0) cache.set('staff', list);
+                    cache.invalidate('dashboard');
                     setStaff(list||[]);
                     setOpenAddStaff(false);
-                    setNewStaff({ firstName:'', lastName:'', role:'', phone:'', email:'', hireDate:'', salary:'' });
+                    setNewStaff({ firstName:'', lastName:'', role:'', phone:'', email:'', hireDate:'', salary:'', isTeacher: false });
                   } catch {}
                 }}
               >Save Staff</Button>
@@ -176,8 +208,13 @@ export function StaffManagement() {
               <TableBody>
                 {filteredStaff.map((member) => (
                   <TableRow key={member.id}>
-                    <TableCell>{member.id}</TableCell>
-                    <TableCell>{member.firstName} {member.lastName}</TableCell>
+                    <TableCell>{member.code}</TableCell>
+                    <TableCell>
+                      <span className="flex items-center gap-2">
+                        {member.firstName} {member.lastName}
+                        {member.isTeacher && <Badge className="bg-blue-500 text-white text-xs">Teacher</Badge>}
+                      </span>
+                    </TableCell>
                     <TableCell>{member.role}</TableCell>
                     <TableCell>{member.phone}</TableCell>
                     <TableCell>{member.email}</TableCell>
@@ -260,7 +297,7 @@ export function StaffManagement() {
                   </DialogClose>
                   <Button onClick={async ()=>{
                     try {
-                      const teacher = staff.find((s:any)=>s.id===workForm.staffId);
+                      const teacher = staff.find((s:any)=>String(s.id)===workForm.staffId);
                       await api.post('/work-records', {
                         staffId: workForm.staffId,
                         staffName: teacher ? `${teacher.firstName} ${teacher.lastName}` : '',
@@ -274,6 +311,7 @@ export function StaffManagement() {
                         remarks: workForm.remarks,
                       });
                       const list = await api.get('/work-records');
+                      if (Array.isArray(list) && list.length > 0) cache.set('work-records', list);
                       setWorkRecords(list||[]);
                       setOpenWork(false);
                       setWorkForm({ date:'', class:'', subject:'', topic:'', objectives:'', activities:'', evaluation:'', remarks:'', staffId:'' });
@@ -308,7 +346,12 @@ export function StaffManagement() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => generateWorkRecord(record)}
+                        onClick={async () => {
+                          try {
+                            const full = await api.get(`/work-records/${record.id}`);
+                            generateWorkRecord(full);
+                          } catch {}
+                        }}
                         className="flex items-center gap-2"
                       >
                         <FileText size={16} />

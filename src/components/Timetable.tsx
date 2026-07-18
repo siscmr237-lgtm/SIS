@@ -28,13 +28,14 @@ import {
 } from "./ui/table";
 import { Plus, FileText, Trash2 } from "lucide-react";
 import { api } from '@/lib/api';
+import { SCHOOL_CLASSES } from "@/lib/classes";
 import { generateTimetable } from "../utils/pdfGenerator";
 
 export function Timetable() {
   const [timetable, setTimetable] = useState<any[]>([]);
   const [staff, setStaff] = useState<any[]>([]);
   const [selectedClass, setSelectedClass] =
-    useState<string>("Primary 3");
+    useState<string>("Class 3");
   const [openAdd, setOpenAdd] = useState(false);
   const [form, setForm] = useState({
     cls: '',
@@ -44,15 +45,7 @@ export function Timetable() {
     teacher: '',
   });
 
-  const classes = [
-    "Nursery",
-    "Primary 1",
-    "Primary 2",
-    "Primary 3",
-    "Primary 4",
-    "Primary 5",
-    "Primary 6",
-  ];
+  const classes = SCHOOL_CLASSES;
   const days = [
     "Monday",
     "Tuesday",
@@ -76,21 +69,21 @@ export function Timetable() {
     (entry) => entry.class === selectedClass,
   );
 
+  // Load staff once on mount — doesn't change with class selection
   useEffect(() => {
     let mounted = true;
-    const load = async () => {
-      try {
-        const [tt, st] = await Promise.all([
-          api.get(`/timetable?class=${encodeURIComponent(selectedClass)}`),
-          api.get('/staff'),
-        ]);
-        if (mounted) {
-          setTimetable(tt || []);
-          setStaff(st || []);
-        }
-      } catch {}
-    };
-    load();
+    api.get('/staff')
+      .then(st => { if (mounted) setStaff(st || []); })
+      .catch(() => {});
+    return () => { mounted = false; };
+  }, []);
+
+  // Reload timetable when class changes
+  useEffect(() => {
+    let mounted = true;
+    api.get(`/timetable?class=${encodeURIComponent(selectedClass)}`)
+      .then(tt => { if (mounted) setTimetable(tt || []); })
+      .catch(() => {});
     return () => { mounted = false; };
   }, [selectedClass]);
 

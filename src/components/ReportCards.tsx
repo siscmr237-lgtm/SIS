@@ -237,7 +237,12 @@ export function ReportCards() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => generateReportCard(report)}
+                    onClick={async () => {
+                      try {
+                        const full = await api.get(`/report-cards/${report.id}`);
+                        generateReportCard(full);
+                      } catch {}
+                    }}
                     className="flex items-center gap-2"
                   >
                     <FileText size={16} />

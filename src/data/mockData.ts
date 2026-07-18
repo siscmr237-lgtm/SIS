@@ -1,4 +1,4 @@
-import { Student, Staff, Fee, Expense, ReportCard, AttendanceRecord, WorkRecord, TimetableEntry, SchoolSettings } from '../types';
+import { Student, Staff, Expense, ReportCard, AttendanceRecord, WorkRecord, TimetableEntry, SchoolSettings } from '../types';
 
 export const mockStudents: Student[] = [
   {
@@ -91,45 +91,6 @@ export const mockStaff: Staff[] = [
     email: 's.nkeng@school.cm',
     hireDate: '2019-09-01',
     salary: 140000
-  }
-];
-
-export const mockFees: Fee[] = [
-  {
-    id: 'FEE001',
-    studentId: 'STU001',
-    studentName: 'Amina Ngono',
-    class: 'Primary 3',
-    term: 'Term 1',
-    academicYear: '2024/2025',
-    tuitionFee: 75000,
-    registrationFee: 15000,
-    uniformFee: 10000,
-    booksFee: 20000,
-    otherFees: 5000,
-    totalAmount: 125000,
-    amountPaid: 125000,
-    balance: 0,
-    paymentDate: '2024-09-15',
-    paymentMethod: 'Bank Transfer'
-  },
-  {
-    id: 'FEE002',
-    studentId: 'STU002',
-    studentName: 'Kouam Tchinda',
-    class: 'Primary 2',
-    term: 'Term 1',
-    academicYear: '2024/2025',
-    tuitionFee: 70000,
-    registrationFee: 15000,
-    uniformFee: 10000,
-    booksFee: 18000,
-    otherFees: 5000,
-    totalAmount: 118000,
-    amountPaid: 60000,
-    balance: 58000,
-    paymentDate: '2024-09-10',
-    paymentMethod: 'Cash'
   }
 ];
 
@@ -249,42 +210,52 @@ export let schoolSettings: SchoolSettings = {
   subjectsPerClass: [
     {
       id: 'SC001',
-      className: 'Nursery 1',
+      className: 'Day Care',
       subjects: ['English', 'Mathematics', 'Creative Arts', 'Physical Education']
     },
     {
       id: 'SC002',
-      className: 'Nursery 2',
+      className: 'Pre-Nursery',
       subjects: ['English', 'Mathematics', 'Creative Arts', 'Physical Education', 'Environmental Studies']
     },
     {
       id: 'SC003',
-      className: 'Primary 1',
-      subjects: ['English', 'Mathematics', 'Science', 'Social Studies', 'French', 'Physical Education', 'Creative Arts']
+      className: 'Nursery 1',
+      subjects: ['English', 'Mathematics', 'Creative Arts', 'Physical Education', 'Environmental Studies']
     },
     {
       id: 'SC004',
-      className: 'Primary 2',
-      subjects: ['English', 'Mathematics', 'Science', 'Social Studies', 'French', 'Physical Education', 'Creative Arts', 'ICT']
+      className: 'Nursery 2',
+      subjects: ['English', 'Mathematics', 'Creative Arts', 'Physical Education', 'Environmental Studies']
     },
     {
       id: 'SC005',
-      className: 'Primary 3',
-      subjects: ['English', 'Mathematics', 'Science', 'Social Studies', 'French', 'Physical Education', 'Creative Arts', 'ICT']
+      className: 'Class 1',
+      subjects: ['English', 'Mathematics', 'Science', 'Social Studies', 'French', 'Physical Education', 'Creative Arts']
     },
     {
       id: 'SC006',
-      className: 'Primary 4',
-      subjects: ['English', 'Mathematics', 'Science', 'Social Studies', 'French', 'Physical Education', 'Creative Arts', 'ICT', 'Religious Education']
+      className: 'Class 2',
+      subjects: ['English', 'Mathematics', 'Science', 'Social Studies', 'French', 'Physical Education', 'Creative Arts', 'ICT']
     },
     {
       id: 'SC007',
-      className: 'Primary 5',
-      subjects: ['English', 'Mathematics', 'Science', 'Social Studies', 'French', 'Physical Education', 'Creative Arts', 'ICT', 'Religious Education']
+      className: 'Class 3',
+      subjects: ['English', 'Mathematics', 'Science', 'Social Studies', 'French', 'Physical Education', 'Creative Arts', 'ICT']
     },
     {
       id: 'SC008',
-      className: 'Primary 6',
+      className: 'Class 4',
+      subjects: ['English', 'Mathematics', 'Science', 'Social Studies', 'French', 'Physical Education', 'Creative Arts', 'ICT', 'Religious Education']
+    },
+    {
+      id: 'SC009',
+      className: 'Class 5',
+      subjects: ['English', 'Mathematics', 'Science', 'Social Studies', 'French', 'Physical Education', 'Creative Arts', 'ICT', 'Religious Education']
+    },
+    {
+      id: 'SC010',
+      className: 'Class 6',
       subjects: ['English', 'Mathematics', 'Science', 'Social Studies', 'French', 'Physical Education', 'Creative Arts', 'ICT', 'Religious Education']
     }
   ]

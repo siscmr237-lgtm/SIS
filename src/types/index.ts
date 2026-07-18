@@ -12,7 +12,8 @@ export interface Student {
 }
 
 export interface Staff {
-  id: string;
+  id: number;
+  code: string;
   firstName: string;
   lastName: string;
   role: string;
@@ -20,25 +21,7 @@ export interface Staff {
   email: string;
   hireDate: string;
   salary: number;
-}
-
-export interface Fee {
-  id: string;
-  studentId: string;
-  studentName: string;
-  class: string;
-  term: string;
-  academicYear: string;
-  tuitionFee: number;
-  registrationFee: number;
-  uniformFee: number;
-  booksFee: number;
-  otherFees: number;
-  totalAmount: number;
-  amountPaid: number;
-  balance: number;
-  paymentDate?: string;
-  paymentMethod?: string;
+  isTeacher: boolean;
 }
 
 export interface Expense {

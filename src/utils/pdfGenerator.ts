@@ -1,6 +1,7 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { Fee, Expense, Student, ReportCard, WorkRecord, TimetableEntry, AttendanceRecord } from '../types';
+import { Expense, Student, ReportCard, WorkRecord, TimetableEntry, AttendanceRecord } from '../types';
+import { BASE_URL } from '../lib/api';
 
 const SCHOOL_INFO = {
   name: 'École Primaire et Maternelle',
@@ -8,102 +9,6 @@ const SCHOOL_INFO = {
   phone: '+237 670 000 000',
   email: 'info@school.cm'
 };
-
-export function generateFeeInvoice(fee: Fee) {
-  const doc = new jsPDF();
-  
-  // Header
-  doc.setFillColor(37, 99, 235);
-  doc.rect(0, 0, 210, 40, 'F');
-  
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(20);
-  doc.text(SCHOOL_INFO.name, 105, 15, { align: 'center' });
-  doc.setFontSize(10);
-  doc.text(SCHOOL_INFO.address, 105, 22, { align: 'center' });
-  doc.text(`Tel: ${SCHOOL_INFO.phone} | Email: ${SCHOOL_INFO.email}`, 105, 28, { align: 'center' });
-  
-  // Title
-  doc.setTextColor(0, 0, 0);
-  doc.setFontSize(16);
-  doc.text('SCHOOL FEES INVOICE', 105, 50, { align: 'center' });
-  
-  // Invoice details
-  doc.setFontSize(10);
-  doc.text(`Invoice No: ${fee.id}`, 20, 65);
-  doc.text(`Date: ${new Date().toLocaleDateString()}`, 20, 72);
-  
-  // Student details
-  doc.setFontSize(12);
-  doc.text('Student Information', 20, 85);
-  doc.setFontSize(10);
-  doc.text(`Name: ${fee.studentName}`, 20, 93);
-  doc.text(`Class: ${fee.class}`, 20, 100);
-  doc.text(`Academic Year: ${fee.academicYear}`, 20, 107);
-  doc.text(`Term: ${fee.term}`, 20, 114);
-  
-  // Fees table (support object, array, or legacy flat keys)
-  const raw: any = (fee as any).breakdown ?? (fee as any).feesBreakdown ?? (fee as any).details ?? (fee as any).payments ?? (fee as any).breakdownLines ?? (fee as any).items ?? null;
-  let breakdownObj: Record<string, number> = {};
-
-  if (raw && Array.isArray(raw)) {
-    // Accept items like { name/label/key, amount/value }
-    raw.forEach((it:any)=>{
-      const label = it.category || it.description || it.label || it.name || it.key || 'Item';
-      const amount = Number(it.amountPaid ?? it.amount ?? it.value ?? 0) || 0;
-      breakdownObj[label] = (breakdownObj[label] || 0) + amount;
-    });
-  } else if (raw && typeof raw === 'object') {
-    breakdownObj = Object.fromEntries(Object.entries(raw).map(([k,v]) => [k, Number(v) || 0]));
-  } else {
-    breakdownObj = {
-      'Tuition Fee': Number((fee as any).tuitionFee ?? (fee as any).tuition_fee ?? 0),
-      'Registration Fee': Number((fee as any).registrationFee ?? (fee as any).registration_fee ?? 0),
-      'Uniform Fee': Number((fee as any).uniformFee ?? (fee as any).uniform_fee ?? 0),
-      'Books Fee': Number((fee as any).booksFee ?? (fee as any).books_fee ?? 0),
-      'Other Fees': Number((fee as any).otherFees ?? (fee as any).other_fees ?? 0),
-    };
-  }
-
-  // Include all categories; if values are zero they will display 0
-  const rows: string[][] = [];
-  Object.entries(breakdownObj).forEach(([label, value]) => {
-    rows.push([label, Number(value || 0).toLocaleString()]);
-  });
-  rows.push(['', '']);
-  const totalAmount = (fee as any).totalAmount != null
-    ? Number((fee as any).totalAmount)
-    : Object.values(breakdownObj).reduce((s: number, v: any) => s + (Number(v) || 0), 0);
-  const amountPaid = (fee as any).amountPaid != null ? Number((fee as any).amountPaid) : totalAmount;
-  const balance = (fee as any).balance != null ? Number((fee as any).balance) : Math.max(totalAmount - amountPaid, 0);
-
-  rows.push(['Total Amount', totalAmount.toLocaleString()]);
-  rows.push(['Amount Paid', amountPaid.toLocaleString()]);
-  rows.push(['Balance Due', balance.toLocaleString()]);
-
-  autoTable(doc, {
-    startY: 125,
-    head: [['Description', 'Amount (FCFA)']],
-    body: rows,
-    theme: 'striped',
-    headStyles: { fillColor: [37, 99, 235] },
-    footStyles: { fillColor: [243, 244, 246] }
-  });
-  
-  // Footer: Signature section for school authority
-  const finalY = (doc as any).lastAutoTable.finalY + 20;
-  doc.setFontSize(10);
-  doc.text('Authorized By:', 20, finalY);
-  doc.line(50, finalY + 5, 120, finalY + 5);
-  doc.text('Signature', 50, finalY + 10);
-  doc.line(140, finalY + 5, 190, finalY + 5);
-  doc.text('Date', 140, finalY + 10);
-  doc.setFontSize(9);
-  doc.text('Thank you for your payment!', 105, finalY + 20, { align: 'center' });
-  doc.text('For any queries, please contact the school office.', 105, finalY + 25, { align: 'center' });
-  
-  doc.save(`Invoice_${fee.studentName}_${fee.term}.pdf`);
-}
 
 export function generateExpenseInvoice(expense: Expense) {
   const doc = new jsPDF();
@@ -232,61 +137,156 @@ export function generateAttendanceSheet(date: string, className: string, student
   doc.save(`Attendance_${className}_${date}.pdf`);
 }
 
-export function generateFinancialSheet(student: Student, fees: Fee[]) {
+// Fallback for legacy public URLs — browser-side fetch
+async function loadImageAsDataUrl(url: string): Promise<string | null> {
+  try {
+    const blob = await (await fetch(url)).blob();
+    return await new Promise(resolve => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string | null);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
+// Routes storage-path logos through the backend (avoids browser CORS on private bucket).
+// Falls back to browser fetch for legacy plain URLs.
+async function getLogoDataUrl(logo: string): Promise<string | null> {
+  if (logo.startsWith('schools/')) {
+    try {
+      const token = typeof window !== 'undefined'
+        ? window.localStorage.getItem('auth_token')
+        : null;
+      const res = await fetch(
+        `${BASE_URL}/upload/image-data?path=${encodeURIComponent(logo)}`,
+        { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+      );
+      if (!res.ok) return null;
+      const { dataUrl } = await res.json();
+      return dataUrl || null;
+    } catch {
+      return null;
+    }
+  }
+  return loadImageAsDataUrl(logo);
+}
+
+interface LedgerPdfEntry {
+  type: 'CHARGE' | 'PAYMENT';
+  description: string;
+  amount: number;
+  entryDate: string;
+  category?: { name: string } | null;
+}
+
+export async function generateFinancialSheet(
+  student: Student,
+  ledgerData: { entries: LedgerPdfEntry[]; totalCharged: number; totalPaid: number; balance: number },
+  schoolInfo?: { name: string; logo?: string; motto?: string; academicYear?: string }
+) {
   const doc = new jsPDF();
-  
-  // Header
+
+  // Header background
   doc.setFillColor(37, 99, 235);
-  doc.rect(0, 0, 210, 40, 'F');
-  
+  doc.rect(0, 0, 210, 52, 'F');
+
+  // Logo — top-left
+  if (schoolInfo?.logo) {
+    const dataUrl = await getLogoDataUrl(schoolInfo.logo);
+    if (dataUrl) {
+      try {
+        const fmt = dataUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG';
+        doc.addImage(dataUrl, fmt, 8, 6, 30, 30);
+      } catch {}
+    }
+  }
+
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(20);
-  doc.text(SCHOOL_INFO.name, 105, 15, { align: 'center' });
-  doc.setFontSize(14);
-  doc.text('Student Financial Statement', 105, 28, { align: 'center' });
-  
+
+  // School name — centered
+  doc.setFontSize(18);
+  doc.text(schoolInfo?.name ?? SCHOOL_INFO.name, 105, 15, { align: 'center' });
+
+  // Motto — centered, italic, only if non-empty
+  const motto = schoolInfo?.motto?.trim();
+  if (motto) {
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'italic');
+    doc.text(motto, 105, 23, { align: 'center' });
+    doc.setFont('helvetica', 'normal');
+  }
+
+  // Academic year — right-aligned
+  if (schoolInfo?.academicYear) {
+    doc.setFontSize(9);
+    doc.text(`Academic Year: ${schoolInfo.academicYear}`, 195, 33, { align: 'right' });
+  }
+
+  // Document title — centered
+  doc.setFontSize(13);
+  doc.text('Individual Financial Sheet', 105, 44, { align: 'center' });
+
   // Student info
   doc.setTextColor(0, 0, 0);
   doc.setFontSize(12);
-  doc.text('Student Information', 20, 50);
+  doc.text('Student Information', 20, 62);
   doc.setFontSize(10);
-  doc.text(`Name: ${student.firstName} ${student.lastName}`, 20, 58);
-  doc.text(`Student ID: ${student.id}`, 20, 65);
-  doc.text(`Class: ${student.class}`, 20, 72);
-  
-  // Financial records
-  const tableData = fees.map(fee => [
-    fee.term,
-    fee.academicYear,
-    fee.totalAmount.toLocaleString(),
-    fee.amountPaid.toLocaleString(),
-    fee.balance.toLocaleString(),
-    fee.paymentDate || 'Pending'
-  ]);
-  
-  const totalAmount = fees.reduce((sum, fee) => sum + fee.totalAmount, 0);
-  const totalPaid = fees.reduce((sum, fee) => sum + fee.amountPaid, 0);
-  const totalBalance = fees.reduce((sum, fee) => sum + fee.balance, 0);
-  
-  tableData.push([
-    'TOTAL',
-    '',
-    totalAmount.toLocaleString(),
-    totalPaid.toLocaleString(),
-    totalBalance.toLocaleString(),
-    ''
-  ]);
-  
-  autoTable(doc, {
-    startY: 85,
-    head: [['Term', 'Academic Year', 'Total (FCFA)', 'Paid (FCFA)', 'Balance (FCFA)', 'Payment Date']],
-    body: tableData,
-    theme: 'striped',
-    headStyles: { fillColor: [37, 99, 235] },
-    styles: { fontSize: 9 }
-  });
-  
-  doc.save(`Financial_Statement_${student.firstName}_${student.lastName}.pdf`);
+  doc.text(`Name: ${student.firstName} ${student.lastName}`, 20, 70);
+  doc.text(`Student ID: ${student.id}`, 20, 77);
+  doc.text(`Class: ${student.class}`, 20, 84);
+
+  const { entries, totalCharged, totalPaid, balance } = ledgerData;
+
+  if (entries.length === 0) {
+    doc.setFontSize(11);
+    doc.setTextColor(150, 150, 150);
+    doc.text('No financial records found for this student.', 105, 107, { align: 'center' });
+  } else {
+    const tableData = entries.map(entry => [
+      new Date(entry.entryDate).toLocaleDateString('en-GB'),
+      entry.type === 'CHARGE' ? 'Charge' : 'Payment',
+      entry.category?.name ?? '—',
+      entry.description,
+      `${entry.amount.toLocaleString()} FCFA`,
+    ]);
+
+    autoTable(doc, {
+      startY: 95,
+      head: [['Date', 'Type', 'Category', 'Description', 'Amount (FCFA)']],
+      body: tableData,
+      theme: 'striped',
+      headStyles: { fillColor: [37, 99, 235] },
+      styles: { fontSize: 9 },
+      columnStyles: {
+        0: { cellWidth: 28 },
+        1: { cellWidth: 22 },
+        2: { cellWidth: 32 },
+        4: { cellWidth: 30, halign: 'right' },
+      },
+    });
+
+    autoTable(doc, {
+      startY: (doc as any).lastAutoTable.finalY + 8,
+      body: [
+        ['Total Charged', `${totalCharged.toLocaleString()} FCFA`],
+        ['Total Paid',    `${totalPaid.toLocaleString()} FCFA`],
+        ['Balance Owed',  `${balance.toLocaleString()} FCFA`],
+      ],
+      theme: 'plain',
+      styles: { fontSize: 10 },
+      columnStyles: {
+        0: { cellWidth: 60, fontStyle: 'bold' },
+        1: { cellWidth: 60, halign: 'right' },
+      },
+      margin: { left: 110 },
+    });
+  }
+
+  const url = doc.output('bloburl');
+  window.open(url, '_blank');
 }
 
 export function generateWorkRecord(record: WorkRecord) {

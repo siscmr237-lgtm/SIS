@@ -1,4 +1,12 @@
 import { api } from "@/lib/api";
+import { useSisCache } from "@/lib/SisCache";
+import { NavigationPage } from '../App';
+
+interface StudentsManagementProps {
+  onNavigate?: (page: NavigationPage) => void;
+  onViewStudent?: (student: Student) => void;
+}
+import { SCHOOL_CLASSES } from "@/lib/classes";
 import { FileText, Plus, Search } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Student } from "../types";
@@ -32,8 +40,9 @@ import {
   TableRow,
 } from "./ui/table";
 
-export function StudentsManagement() {
+export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManagementProps) {
   const [students, setStudents] = useState<Student[]>([]);
+  const cache = useSisCache();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedClass, setSelectedClass] = useState<string>("all");
   const [openAdd, setOpenAdd] = useState(false);
@@ -49,15 +58,7 @@ export function StudentsManagement() {
     address: "",
   });
 
-  const classes = [
-    "Nursery",
-    "Primary 1",
-    "Primary 2",
-    "Primary 3",
-    "Primary 4",
-    "Primary 5",
-    "Primary 6",
-  ];
+  const classes = SCHOOL_CLASSES;
 
   const filteredStudents = students.filter((student) => {
     const matchesSearch =
@@ -73,6 +74,16 @@ export function StudentsManagement() {
 
   useEffect(() => {
     let isMounted = true;
+    const isDefault = !searchTerm && selectedClass === 'all';
+
+    if (isDefault) {
+      const cached = cache.get<Student[]>('students');
+      if (cached) {
+        setStudents(cached);
+        return;
+      }
+    }
+
     const load = async () => {
       try {
         const params = new URLSearchParams();
@@ -82,25 +93,36 @@ export function StudentsManagement() {
         const data = await api.get(
           `/students${params.toString() ? `?${params.toString()}` : ""}`
         );
-        if (isMounted) setStudents(data || []);
-      } catch (e) {
-        // noop UI: keep empty
-      }
+        if (isMounted) {
+          if (isDefault && Array.isArray(data) && data.length > 0) {
+            cache.set('students', data);
+          }
+          setStudents(data || []);
+        }
+      } catch {}
     };
-    load();
-    return () => {
-      isMounted = false;
-    };
+    // Debounce search input; respond immediately to class filter changes
+    const delay = searchTerm ? 300 : 0;
+    const timer = setTimeout(load, delay);
+    return () => { isMounted = false; clearTimeout(timer); };
   }, [searchTerm, selectedClass]);
 
   const handleGenerateFinancialSheet = async (student: Student) => {
+    let schoolInfo: { name: string; logo?: string } | undefined;
     try {
-      const data = await api.get(
-        `/fees?studentId=${encodeURIComponent(student.id)}`
-      );
-      generateFinancialSheet(student, data || []);
-    } catch (e) {
-      generateFinancialSheet(student, []);
+      const userStr = window.localStorage.getItem('user');
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        if (user?.School?.[0]) schoolInfo = user.School[0];
+      }
+    } catch {}
+
+    const empty = { entries: [], totalCharged: 0, totalPaid: 0, balance: 0 };
+    try {
+      const data = await api.get(`/ledger/student/${encodeURIComponent(student.id)}`);
+      await generateFinancialSheet(student, data || empty, schoolInfo);
+    } catch {
+      await generateFinancialSheet(student, empty, schoolInfo);
     }
   };
 
@@ -254,6 +276,7 @@ export function StudentsManagement() {
                       enrollmentDate: form.enrollmentDate,
                       address: form.address,
                     });
+                    cache.invalidate('students', 'dashboard');
                     const params = new URLSearchParams();
                     if (searchTerm) params.set("q", searchTerm);
                     if (selectedClass && selectedClass !== "all")
@@ -336,7 +359,12 @@ export function StudentsManagement() {
               <TableRow key={student.id}>
                 <TableCell>{student.id}</TableCell>
                 <TableCell>
-                  {student.firstName} {student.lastName}
+                  <button
+                    onClick={() => onViewStudent?.(student)}
+                    className="text-blue-600 hover:underline text-left font-medium"
+                  >
+                    {student.firstName} {student.lastName}
+                  </button>
                 </TableCell>
                 <TableCell>{student.class}</TableCell>
                 <TableCell className="capitalize">{student.gender}</TableCell>
