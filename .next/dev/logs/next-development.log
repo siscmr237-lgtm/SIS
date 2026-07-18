@@ -3837,3 +3837,495 @@ Import traces:
     ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Server Component]
 
 https://nextjs.org/docs/messages/module-not-found
+[00:25:47.619] Browser ERROR   ./OneDrive/Desktop/Sis/Code/SIS/src/App.tsx:21:9
+Module not found: Can't resolve './components/ClassesManagement'
+  19 |   | 'report-cards'
+  20 |   | 'attendance'
+> 21 |   | 'timetable'
+     |         ^^^^^^^
+> 22 |   | 'settings';
+     | ^^^^^^^^^^^^^^^
+> 23 |
+     | ^^^^^^^^^^^^^^^
+> 24 | export default function App() {
+     | ^^^^^^^^^^^^^^^
+> 25 |   const [currentPage, setCurrentPage] = useState<NavigationPage>('dashboard');
+     | ^^^^^^^
+  26 |
+  27 |   const renderPage = () => {
+  28 |     switch (currentPage) {
+
+Import traces:
+  Client Component Browser:
+    ./OneDrive/Desktop/Sis/Code/SIS/src/App.tsx [Client Component Browser]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Client Component Browser]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./OneDrive/Desktop/Sis/Code/SIS/src/App.tsx [Client Component SSR]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Client Component SSR]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+[00:25:47.619] Browser ERROR   ./OneDrive/Desktop/Sis/Code/SIS/src/App.tsx:8:18
+Module not found: Can't resolve './components/FinanceOverview'
+   6 | import { FeesManagement } from './components/FeesManagement';
+   7 | import { ExpensesManagement } from './components/ExpensesManagement';
+>  8 | import { ReportCards } from './components/ReportCards';
+     |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>  9 | import { Attendance } from './components/Attendance';
+     | ^^^^^^^^^^^^^^^^^^^^^^^^
+  10 | import { Timetable } from './components/Timetable';
+  11 | import { SchoolSettings } from './components/SchoolSettings';
+  12 |
+
+Import traces:
+  Client Component Browser:
+    ./OneDrive/Desktop/Sis/Code/SIS/src/App.tsx [Client Component Browser]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Client Component Browser]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./OneDrive/Desktop/Sis/Code/SIS/src/App.tsx [Client Component SSR]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Client Component SSR]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+[00:25:47.619] Browser ERROR   ./OneDrive/Desktop/Sis/Code/SIS/src/App.tsx:5:53
+Module not found: Can't resolve './components/StudentProfile'
+  3 | import { Dashboard } from './components/Dashboard';
+  4 | import { StudentsManagement } from './components/StudentsManagement';
+> 5 | import { StaffManagement } from './components/StaffManagement';
+    |                                                     ^^^^^^^^^^^
+> 6 | import { FeesManagement } from './components/FeesManagement';
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  7 | import { ExpensesManagement } from './components/ExpensesManagement';
+  8 | import { ReportCards } from './components/ReportCards';
+  9 | import { Attendance } from './components/Attendance';
+
+Import traces:
+  Client Component Browser:
+    ./OneDrive/Desktop/Sis/Code/SIS/src/App.tsx [Client Component Browser]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Client Component Browser]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./OneDrive/Desktop/Sis/Code/SIS/src/App.tsx [Client Component SSR]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Client Component SSR]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+[00:25:47.619] Browser ERROR   ./OneDrive/Desktop/Sis/Code/SIS/src/App.tsx:25:9
+Module not found: Can't resolve './components/SubjectsManagement'
+  23 |
+  24 | export default function App() {
+> 25 |   const [currentPage, setCurrentPage] = useState<NavigationPage>('dashboard');
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  26 |
+  27 |   const renderPage = () => {
+  28 |     switch (currentPage) {
+
+Import traces:
+  Client Component Browser:
+    ./OneDrive/Desktop/Sis/Code/SIS/src/App.tsx [Client Component Browser]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Client Component Browser]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./OneDrive/Desktop/Sis/Code/SIS/src/App.tsx [Client Component SSR]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Client Component SSR]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+[00:25:47.619] Browser ERROR   ./OneDrive/Desktop/Sis/Code/SIS/src/App.tsx:2:1
+Module not found: Can't resolve './lib/SisCache'
+  1 | import { useState } from 'react';
+> 2 | import { Sidebar } from './components/Sidebar';
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 3 | import { Dashboard } from './components/Dashboard';
+    | ^^
+  4 | import { StudentsManagement } from './components/StudentsManagement';
+  5 | import { StaffManagement } from './components/StaffManagement';
+  6 | import { FeesManagement } from './components/FeesManagement';
+
+Import traces:
+  Client Component Browser:
+    ./OneDrive/Desktop/Sis/Code/SIS/src/App.tsx [Client Component Browser]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Client Component Browser]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./OneDrive/Desktop/Sis/Code/SIS/src/App.tsx [Client Component SSR]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Client Component SSR]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+[00:25:47.619] Browser ERROR   ./OneDrive/Desktop/Sis/Code/SIS/src/App.tsx:21:9
+Module not found: Can't resolve './components/ClassesManagement'
+  19 |   | 'report-cards'
+  20 |   | 'attendance'
+> 21 |   | 'timetable'
+     |         ^^^^^^^
+> 22 |   | 'settings';
+     | ^^^^^^^^^^^^^^^
+> 23 |
+     | ^^^^^^^^^^^^^^^
+> 24 | export default function App() {
+     | ^^^^^^^^^^^^^^^
+> 25 |   const [currentPage, setCurrentPage] = useState<NavigationPage>('dashboard');
+     | ^^^^^^^
+  26 |
+  27 |   const renderPage = () => {
+  28 |     switch (currentPage) {
+
+Import traces:
+  Client Component Browser:
+    ./OneDrive/Desktop/Sis/Code/SIS/src/App.tsx [Client Component Browser]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Client Component Browser]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./OneDrive/Desktop/Sis/Code/SIS/src/App.tsx [Client Component SSR]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Client Component SSR]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+[00:25:47.619] Browser ERROR   ./OneDrive/Desktop/Sis/Code/SIS/src/App.tsx:8:18
+Module not found: Can't resolve './components/FinanceOverview'
+   6 | import { FeesManagement } from './components/FeesManagement';
+   7 | import { ExpensesManagement } from './components/ExpensesManagement';
+>  8 | import { ReportCards } from './components/ReportCards';
+     |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>  9 | import { Attendance } from './components/Attendance';
+     | ^^^^^^^^^^^^^^^^^^^^^^^^
+  10 | import { Timetable } from './components/Timetable';
+  11 | import { SchoolSettings } from './components/SchoolSettings';
+  12 |
+
+Import traces:
+  Client Component Browser:
+    ./OneDrive/Desktop/Sis/Code/SIS/src/App.tsx [Client Component Browser]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Client Component Browser]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./OneDrive/Desktop/Sis/Code/SIS/src/App.tsx [Client Component SSR]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Client Component SSR]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+[00:25:47.619] Browser ERROR   ./OneDrive/Desktop/Sis/Code/SIS/src/App.tsx:5:53
+Module not found: Can't resolve './components/StudentProfile'
+  3 | import { Dashboard } from './components/Dashboard';
+  4 | import { StudentsManagement } from './components/StudentsManagement';
+> 5 | import { StaffManagement } from './components/StaffManagement';
+    |                                                     ^^^^^^^^^^^
+> 6 | import { FeesManagement } from './components/FeesManagement';
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  7 | import { ExpensesManagement } from './components/ExpensesManagement';
+  8 | import { ReportCards } from './components/ReportCards';
+  9 | import { Attendance } from './components/Attendance';
+
+Import traces:
+  Client Component Browser:
+    ./OneDrive/Desktop/Sis/Code/SIS/src/App.tsx [Client Component Browser]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Client Component Browser]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./OneDrive/Desktop/Sis/Code/SIS/src/App.tsx [Client Component SSR]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Client Component SSR]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+[00:25:47.619] Browser ERROR   ./OneDrive/Desktop/Sis/Code/SIS/src/App.tsx:25:9
+Module not found: Can't resolve './components/SubjectsManagement'
+  23 |
+  24 | export default function App() {
+> 25 |   const [currentPage, setCurrentPage] = useState<NavigationPage>('dashboard');
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  26 |
+  27 |   const renderPage = () => {
+  28 |     switch (currentPage) {
+
+Import traces:
+  Client Component Browser:
+    ./OneDrive/Desktop/Sis/Code/SIS/src/App.tsx [Client Component Browser]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Client Component Browser]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./OneDrive/Desktop/Sis/Code/SIS/src/App.tsx [Client Component SSR]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Client Component SSR]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+[00:25:47.619] Browser ERROR   ./OneDrive/Desktop/Sis/Code/SIS/src/App.tsx:2:1
+Module not found: Can't resolve './lib/SisCache'
+  1 | import { useState } from 'react';
+> 2 | import { Sidebar } from './components/Sidebar';
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 3 | import { Dashboard } from './components/Dashboard';
+    | ^^
+  4 | import { StudentsManagement } from './components/StudentsManagement';
+  5 | import { StaffManagement } from './components/StaffManagement';
+  6 | import { FeesManagement } from './components/FeesManagement';
+
+Import traces:
+  Client Component Browser:
+    ./OneDrive/Desktop/Sis/Code/SIS/src/App.tsx [Client Component Browser]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Client Component Browser]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./OneDrive/Desktop/Sis/Code/SIS/src/App.tsx [Client Component SSR]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Client Component SSR]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+[00:25:47.619] Browser ERROR   ./OneDrive/Desktop/Sis/Code/SIS/src/App.tsx:21:9
+Module not found: Can't resolve './components/ClassesManagement'
+  19 |   | 'report-cards'
+  20 |   | 'attendance'
+> 21 |   | 'timetable'
+     |         ^^^^^^^
+> 22 |   | 'settings';
+     | ^^^^^^^^^^^^^^^
+> 23 |
+     | ^^^^^^^^^^^^^^^
+> 24 | export default function App() {
+     | ^^^^^^^^^^^^^^^
+> 25 |   const [currentPage, setCurrentPage] = useState<NavigationPage>('dashboard');
+     | ^^^^^^^
+  26 |
+  27 |   const renderPage = () => {
+  28 |     switch (currentPage) {
+
+Import traces:
+  Client Component Browser:
+    ./OneDrive/Desktop/Sis/Code/SIS/src/App.tsx [Client Component Browser]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Client Component Browser]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./OneDrive/Desktop/Sis/Code/SIS/src/App.tsx [Client Component SSR]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Client Component SSR]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+[00:25:47.619] Browser ERROR   ./OneDrive/Desktop/Sis/Code/SIS/src/App.tsx:8:18
+Module not found: Can't resolve './components/FinanceOverview'
+   6 | import { FeesManagement } from './components/FeesManagement';
+   7 | import { ExpensesManagement } from './components/ExpensesManagement';
+>  8 | import { ReportCards } from './components/ReportCards';
+     |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>  9 | import { Attendance } from './components/Attendance';
+     | ^^^^^^^^^^^^^^^^^^^^^^^^
+  10 | import { Timetable } from './components/Timetable';
+  11 | import { SchoolSettings } from './components/SchoolSettings';
+  12 |
+
+Import traces:
+  Client Component Browser:
+    ./OneDrive/Desktop/Sis/Code/SIS/src/App.tsx [Client Component Browser]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Client Component Browser]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./OneDrive/Desktop/Sis/Code/SIS/src/App.tsx [Client Component SSR]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Client Component SSR]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+[00:25:47.619] Browser ERROR   ./OneDrive/Desktop/Sis/Code/SIS/src/App.tsx:5:53
+Module not found: Can't resolve './components/StudentProfile'
+  3 | import { Dashboard } from './components/Dashboard';
+  4 | import { StudentsManagement } from './components/StudentsManagement';
+> 5 | import { StaffManagement } from './components/StaffManagement';
+    |                                                     ^^^^^^^^^^^
+> 6 | import { FeesManagement } from './components/FeesManagement';
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  7 | import { ExpensesManagement } from './components/ExpensesManagement';
+  8 | import { ReportCards } from './components/ReportCards';
+  9 | import { Attendance } from './components/Attendance';
+
+Import traces:
+  Client Component Browser:
+    ./OneDrive/Desktop/Sis/Code/SIS/src/App.tsx [Client Component Browser]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Client Component Browser]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./OneDrive/Desktop/Sis/Code/SIS/src/App.tsx [Client Component SSR]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Client Component SSR]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+[00:25:47.619] Browser ERROR   ./OneDrive/Desktop/Sis/Code/SIS/src/App.tsx:25:9
+Module not found: Can't resolve './components/SubjectsManagement'
+  23 |
+  24 | export default function App() {
+> 25 |   const [currentPage, setCurrentPage] = useState<NavigationPage>('dashboard');
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  26 |
+  27 |   const renderPage = () => {
+  28 |     switch (currentPage) {
+
+Import traces:
+  Client Component Browser:
+    ./OneDrive/Desktop/Sis/Code/SIS/src/App.tsx [Client Component Browser]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Client Component Browser]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./OneDrive/Desktop/Sis/Code/SIS/src/App.tsx [Client Component SSR]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Client Component SSR]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+[00:25:47.619] Browser ERROR   ./OneDrive/Desktop/Sis/Code/SIS/src/App.tsx:2:1
+Module not found: Can't resolve './lib/SisCache'
+  1 | import { useState } from 'react';
+> 2 | import { Sidebar } from './components/Sidebar';
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 3 | import { Dashboard } from './components/Dashboard';
+    | ^^
+  4 | import { StudentsManagement } from './components/StudentsManagement';
+  5 | import { StaffManagement } from './components/StaffManagement';
+  6 | import { FeesManagement } from './components/FeesManagement';
+
+Import traces:
+  Client Component Browser:
+    ./OneDrive/Desktop/Sis/Code/SIS/src/App.tsx [Client Component Browser]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Client Component Browser]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./OneDrive/Desktop/Sis/Code/SIS/src/App.tsx [Client Component SSR]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Client Component SSR]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+[00:26:05.613] Browser ERROR   ./OneDrive/Desktop/Sis/Code/SIS/src/App.tsx:21:9
+Module not found: Can't resolve './components/ClassesManagement'
+  19 |   | 'report-cards'
+  20 |   | 'attendance'
+> 21 |   | 'timetable'
+     |         ^^^^^^^
+> 22 |   | 'settings';
+     | ^^^^^^^^^^^^^^^
+> 23 |
+     | ^^^^^^^^^^^^^^^
+> 24 | export default function App() {
+     | ^^^^^^^^^^^^^^^
+> 25 |   const [currentPage, setCurrentPage] = useState<NavigationPage>('dashboard');
+     | ^^^^^^^
+  26 |
+  27 |   const renderPage = () => {
+  28 |     switch (currentPage) {
+
+Import traces:
+  Client Component Browser:
+    ./OneDrive/Desktop/Sis/Code/SIS/src/App.tsx [Client Component Browser]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Client Component Browser]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./OneDrive/Desktop/Sis/Code/SIS/src/App.tsx [Client Component SSR]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Client Component SSR]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+[00:26:05.613] Browser ERROR   ./OneDrive/Desktop/Sis/Code/SIS/src/App.tsx:8:18
+Module not found: Can't resolve './components/FinanceOverview'
+   6 | import { FeesManagement } from './components/FeesManagement';
+   7 | import { ExpensesManagement } from './components/ExpensesManagement';
+>  8 | import { ReportCards } from './components/ReportCards';
+     |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>  9 | import { Attendance } from './components/Attendance';
+     | ^^^^^^^^^^^^^^^^^^^^^^^^
+  10 | import { Timetable } from './components/Timetable';
+  11 | import { SchoolSettings } from './components/SchoolSettings';
+  12 |
+
+Import traces:
+  Client Component Browser:
+    ./OneDrive/Desktop/Sis/Code/SIS/src/App.tsx [Client Component Browser]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Client Component Browser]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./OneDrive/Desktop/Sis/Code/SIS/src/App.tsx [Client Component SSR]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Client Component SSR]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+[00:26:05.613] Browser ERROR   ./OneDrive/Desktop/Sis/Code/SIS/src/App.tsx:5:53
+Module not found: Can't resolve './components/StudentProfile'
+  3 | import { Dashboard } from './components/Dashboard';
+  4 | import { StudentsManagement } from './components/StudentsManagement';
+> 5 | import { StaffManagement } from './components/StaffManagement';
+    |                                                     ^^^^^^^^^^^
+> 6 | import { FeesManagement } from './components/FeesManagement';
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  7 | import { ExpensesManagement } from './components/ExpensesManagement';
+  8 | import { ReportCards } from './components/ReportCards';
+  9 | import { Attendance } from './components/Attendance';
+
+Import traces:
+  Client Component Browser:
+    ./OneDrive/Desktop/Sis/Code/SIS/src/App.tsx [Client Component Browser]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Client Component Browser]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./OneDrive/Desktop/Sis/Code/SIS/src/App.tsx [Client Component SSR]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Client Component SSR]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+[00:26:05.613] Browser ERROR   ./OneDrive/Desktop/Sis/Code/SIS/src/App.tsx:25:9
+Module not found: Can't resolve './components/SubjectsManagement'
+  23 |
+  24 | export default function App() {
+> 25 |   const [currentPage, setCurrentPage] = useState<NavigationPage>('dashboard');
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  26 |
+  27 |   const renderPage = () => {
+  28 |     switch (currentPage) {
+
+Import traces:
+  Client Component Browser:
+    ./OneDrive/Desktop/Sis/Code/SIS/src/App.tsx [Client Component Browser]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Client Component Browser]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./OneDrive/Desktop/Sis/Code/SIS/src/App.tsx [Client Component SSR]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Client Component SSR]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+[00:26:05.613] Browser ERROR   ./OneDrive/Desktop/Sis/Code/SIS/src/App.tsx:2:1
+Module not found: Can't resolve './lib/SisCache'
+  1 | import { useState } from 'react';
+> 2 | import { Sidebar } from './components/Sidebar';
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 3 | import { Dashboard } from './components/Dashboard';
+    | ^^
+  4 | import { StudentsManagement } from './components/StudentsManagement';
+  5 | import { StaffManagement } from './components/StaffManagement';
+  6 | import { FeesManagement } from './components/FeesManagement';
+
+Import traces:
+  Client Component Browser:
+    ./OneDrive/Desktop/Sis/Code/SIS/src/App.tsx [Client Component Browser]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Client Component Browser]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./OneDrive/Desktop/Sis/Code/SIS/src/App.tsx [Client Component SSR]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Client Component SSR]
+    ./OneDrive/Desktop/Sis/Code/SIS/app/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
