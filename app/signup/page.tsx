@@ -98,12 +98,9 @@ export default function SignupPage() {
         </div>
 
         {/* Right: form */}
-        <div
-          className="flex-1 bg-white flex flex-col justify-center"
-          style={{ padding: "2.5rem" }}
-        >
+        <div className="flex-1 bg-white flex flex-col justify-center p-6 md:p-8">
           {/* Heading */}
-          <div style={{ marginBottom: "1.75rem" }}>
+          <div className="text-center md:text-left" style={{ marginBottom: "1.75rem" }}>
             <h1
               className="text-3xl font-bold tracking-tight"
               style={{ color: "#0F172A" }}
