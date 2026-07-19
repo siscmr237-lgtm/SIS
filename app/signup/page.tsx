@@ -1,9 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { EyeIcon, EyeOffIcon, GraduationCap, PhoneIcon } from "lucide-react";
+import { EyeIcon, EyeOffIcon, PhoneIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { api } from "../../src/lib/api";
@@ -17,6 +15,7 @@ export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [focusedField, setFocusedField] = useState<string | null>(null);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,155 +47,282 @@ export default function SignupPage() {
     }
   };
 
-  return (
-    <div className="max-w-lg min-h-screen flex items-center justify-center p-4 overflow-hidden">
-      {/* Soft pastel gradient background (light blue → off-white) */}
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#ECF5FF] via-[#F8FBFF] to-white" />
+  const groupBlur = (e: React.FocusEvent) => {
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) setFocusedField(null);
+  };
 
-      <div className="relative w-full max-w-[400px]">
-        <div className="mb-6 text-center flex flex-col items-center">
-          <div className="bg-[#CFE5FF] p-3 rounded-full mb-3">
-            <GraduationCap className="text-[#007BFF]" size={40} />
-          </div>
-          <div
-            className="select-none text-[24px] font-medium leading-none mb-1"
-            style={{ color: "#007BFF" }}
-          >
-            sis
-          </div>
-          <h1 className="text-3xl font-bold" style={{ color: "#007BFF" }}>
-            Create an Account
-          </h1>
-          <p className="mt-1 text-sm" style={{ color: "#6B7280" }}>
-            Get started with your school information system
-          </p>
+  const fieldRing = (field: string): React.CSSProperties => ({
+    border: `1.5px solid ${focusedField === field ? "#2563EB" : "#D1D5DB"}`,
+    boxShadow:
+      focusedField === field ? "0 0 0 3px rgba(37,99,235,0.12)" : "none",
+    transition: "border-color 0.15s, box-shadow 0.15s",
+  });
+
+  const textInputStyle = (field: string): React.CSSProperties => ({
+    display: "block",
+    width: "100%",
+    height: 44,
+    padding: "0 0.875rem",
+    borderRadius: 12,
+    fontSize: "0.875rem",
+    color: "#111827",
+    backgroundColor: "white",
+    outline: "none",
+    ...fieldRing(field),
+  });
+
+  return (
+    <div
+      className="min-h-screen flex items-center justify-center p-4"
+      style={{ backgroundColor: "#f0f5f9" }}
+    >
+      <div
+        className="w-full rounded-2xl shadow-lg overflow-hidden flex flex-col md:flex-row"
+        style={{ maxWidth: 900 }}
+      >
+        {/* Left: illustration */}
+        <div
+          className="hidden md:flex flex-col items-center justify-center"
+          style={{
+            width: "55%",
+            background:
+              "linear-gradient(145deg, #EBF4FF 0%, #F0F9FF 50%, #F8FAFC 100%)",
+            padding: "3.5rem",
+          }}
+        >
+          <img
+            src="/illustration.svg"
+            alt=""
+            style={{ width: "100%", maxWidth: 340, height: "auto" }}
+          />
         </div>
 
-        <form
-          onSubmit={onSubmit}
-          className="w-full bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg p-8 space-y-5 border border-gray-100"
+        {/* Right: form */}
+        <div
+          className="flex-1 bg-white flex flex-col justify-center"
+          style={{ padding: "2.5rem" }}
         >
-          {/* Name */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium text-gray-700">
-              Full Name
-            </Label>
-            <Input
-              type="text"
-              placeholder="Enter your full name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-            />
-          </div>
-
-          {/* School Name */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium text-gray-700">
-              School Name
-            </Label>
-            <Input
-              type="text"
-              placeholder="Enter your school's name"
-              value={schoolName}
-              onChange={(e) => setSchoolName(e.target.value)}
-              required
-            />
-          </div>
-
-          {/* Phone Number */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium text-gray-700">
-              Phone Number
-            </Label>
-            <div
-              className="flex items-center gap-2 rounded-2xl border border-gray-200 bg-white pl-2 pr-2 py-1.5 shadow-sm focus-within:ring-2 focus-within:ring-[#CFE5FF]"
-              style={{ boxShadow: "0 6px 20px rgba(0,0,0,0.06)" }}
+          {/* Heading */}
+          <div style={{ marginBottom: "1.75rem" }}>
+            <h1
+              className="text-3xl font-bold tracking-tight"
+              style={{ color: "#0F172A" }}
             >
-              <select
-                className="w-[6.25rem] rounded-xl px-3 py-2 bg-white outline-none border border-gray-200"
-                defaultValue="CM +237"
-                aria-label="Country code"
+              Create Account
+            </h1>
+            <p
+              className="text-sm"
+              style={{ color: "#6B7280", marginTop: "0.375rem" }}
+            >
+              Get started — set up your school information system
+            </p>
+          </div>
+
+          <form onSubmit={onSubmit} className="space-y-5">
+            {/* Full Name */}
+            <div>
+              <label
+                className="text-sm font-medium"
+                style={{ display: "block", marginBottom: 6, color: "#374151" }}
               >
-                <option>CM +237</option>
-                <option>NG +234</option>
-                <option>GH +233</option>
-              </select>
-              <div className="h-6 w-px bg-gray-200" />
-              <div className="relative flex-1">
-                <PhoneIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
-                <Input
-                  type="tel"
-                  placeholder="Enter your phone number"
-                  value={phoneNumber}
-                  onChange={(e) => setPhoneNumber(e.target.value)}
-                  className="pl-10"
-                  required
-                />
+                Full Name
+              </label>
+              <input
+                type="text"
+                placeholder="Enter your full name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+                onFocus={() => setFocusedField("name")}
+                onBlur={() => setFocusedField(null)}
+                style={textInputStyle("name")}
+              />
+            </div>
+
+            {/* School Name */}
+            <div>
+              <label
+                className="text-sm font-medium"
+                style={{ display: "block", marginBottom: 6, color: "#374151" }}
+              >
+                School Name
+              </label>
+              <input
+                type="text"
+                placeholder="Enter your school's name"
+                value={schoolName}
+                onChange={(e) => setSchoolName(e.target.value)}
+                required
+                onFocus={() => setFocusedField("school")}
+                onBlur={() => setFocusedField(null)}
+                style={textInputStyle("school")}
+              />
+            </div>
+
+            {/* Phone Number */}
+            <div>
+              <label
+                className="text-sm font-medium"
+                style={{ display: "block", marginBottom: 6, color: "#374151" }}
+              >
+                Phone Number
+              </label>
+              <div
+                onFocus={() => setFocusedField("phone")}
+                onBlur={groupBlur}
+                style={{
+                  display: "flex",
+                  alignItems: "stretch",
+                  height: 44,
+                  borderRadius: 12,
+                  overflow: "hidden",
+                  backgroundColor: "white",
+                  ...fieldRing("phone"),
+                }}
+              >
+                <select
+                  defaultValue="CM +237"
+                  aria-label="Country code"
+                  style={{
+                    border: "none",
+                    borderRight: "1px solid #E5E7EB",
+                    padding: "0 8px 0 12px",
+                    backgroundColor: "#F9FAFB",
+                    fontSize: "0.875rem",
+                    color: "#374151",
+                    outline: "none",
+                    minWidth: 90,
+                  }}
+                >
+                  <option>CM +237</option>
+                  <option>NG +234</option>
+                  <option>GH +233</option>
+                </select>
+                <div
+                  className="relative flex-1"
+                  style={{ display: "flex", alignItems: "center" }}
+                >
+                  <PhoneIcon
+                    className="absolute"
+                    style={{ left: 12, color: "#9CA3AF", width: 16, height: 16 }}
+                  />
+                  <input
+                    type="tel"
+                    placeholder="Enter your phone number"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    required
+                    style={{
+                      flex: 1,
+                      height: "100%",
+                      paddingLeft: "2.5rem",
+                      paddingRight: "0.75rem",
+                      border: "none",
+                      outline: "none",
+                      fontSize: "0.875rem",
+                      color: "#111827",
+                      background: "transparent",
+                    }}
+                  />
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Password */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium text-gray-700">
-              Password
-            </Label>
-            <div
-              className="relative flex items-center rounded-2xl border border-gray-200 bg-white pr-2 pl-2 py-1.5 shadow-sm focus-within:ring-2 focus-within:ring-[#CFE5FF]"
-              style={{ boxShadow: "0 6px 20px rgba(0,0,0,0.06)" }}
+            {/* Password */}
+            <div>
+              <label
+                className="text-sm font-medium"
+                style={{ display: "block", marginBottom: 6, color: "#374151" }}
+              >
+                Password
+              </label>
+              <div
+                onFocus={() => setFocusedField("password")}
+                onBlur={groupBlur}
+                style={{
+                  position: "relative",
+                  display: "flex",
+                  alignItems: "center",
+                  height: 44,
+                  borderRadius: 12,
+                  overflow: "hidden",
+                  backgroundColor: "white",
+                  ...fieldRing("password"),
+                }}
+              >
+                <input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  style={{
+                    flex: 1,
+                    height: "100%",
+                    paddingLeft: "1rem",
+                    paddingRight: "3rem",
+                    border: "none",
+                    outline: "none",
+                    fontSize: "0.875rem",
+                    color: "#111827",
+                    background: "transparent",
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-2"
+                  style={{
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    color: "#9CA3AF",
+                    padding: 4,
+                    background: "transparent",
+                    border: "none",
+                    cursor: "pointer",
+                    lineHeight: 0,
+                  }}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? (
+                    <EyeOffIcon style={{ width: 16, height: 16 }} />
+                  ) : (
+                    <EyeIcon style={{ width: 16, height: 16 }} />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {error && <p className="text-sm text-red-600">{error}</p>}
+
+            <Button
+              type="submit"
+              disabled={loading}
+              className="w-full font-semibold"
+              style={{
+                height: 44,
+                borderRadius: 12,
+                backgroundColor: "#1e3a8a",
+                color: "white",
+                boxShadow: "0 1px 3px rgba(0,0,0,0.12)",
+                opacity: loading ? 0.6 : 1,
+              }}
             >
-              <Input
-                type={showPassword ? "text" : "password"}
-                placeholder="Enter your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="pr-10"
-                required
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword((v) => !v)}
-                className="absolute inset-y-0 right-2 px-2 text-gray-500 hover:text-gray-700 focus:outline-none"
-                aria-label={showPassword ? "Hide password" : "Show password"}
-              >
-                {showPassword ? (
-                  <EyeOffIcon className="size-4" />
-                ) : (
-                  <EyeIcon className="size-4" />
-                )}
-              </button>
-            </div>
-          </div>
+              {loading ? "Creating Account..." : "Sign Up"}
+            </Button>
 
-          {error && <p className="text-sm text-red-600">{error}</p>}
-
-          <Button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-full py-3 transition-all disabled:opacity-60 hover:shadow-lg"
-            style={{
-              backgroundColor: "#007BFF",
-              color: "white",
-              boxShadow: "0 8px 16px rgba(0,0,0,0.1)",
-            }}
-          >
-            {loading ? "Creating Account..." : "Sign Up"}
-          </Button>
-
-          <div className="text-center">
-            <div className="text-sm" style={{ color: "#6B7280" }}>
+            <p className="text-center text-sm text-gray-500">
               Already have an account?{" "}
-              <span
-                onClick={() => router.push("/login")}
-                className="font-medium cursor-pointer"
-                style={{ color: "#007BFF" }}
+              <a
+                href="/login"
+                className="font-medium"
+                style={{ color: "#2563EB" }}
               >
-                <a href="/login">Sign in</a>
-              </span>
-            </div>
-          </div>
-        </form>
+                Sign in
+              </a>
+            </p>
+          </form>
+        </div>
       </div>
     </div>
   );

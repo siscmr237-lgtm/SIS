@@ -2093,6 +2093,20 @@
     }
   }
 
+  .min-h-screen {
+    min-height: 100vh;
+  }
+
+  .tracking-tight {
+    letter-spacing: -0.025em;
+  }
+
+  :where(.space-y-5 > :not(:last-child)) {
+    --tw-space-y-reverse: 0;
+    margin-block-start: calc(calc(var(--spacing) * 5) * var(--tw-space-y-reverse));
+    margin-block-end: calc(calc(var(--spacing) * 5) * calc(1 - var(--tw-space-y-reverse)));
+  }
+
   .top-0 {
     top: calc(var(--spacing) * 0);
   }
@@ -2186,6 +2200,10 @@
 @media (width >= 48rem) {
   .md\:hidden {
     display: none;
+  }
+
+  .md\:flex {
+    display: flex;
   }
 
   .md\:static {
