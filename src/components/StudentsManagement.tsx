@@ -7,10 +7,9 @@ interface StudentsManagementProps {
   onViewStudent?: (student: Student) => void;
 }
 import { SCHOOL_CLASSES } from "@/lib/classes";
-import { FileText, Plus, Search } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Student } from "../types";
-import { generateFinancialSheet } from "../utils/pdfGenerator";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import {
@@ -106,25 +105,6 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
     const timer = setTimeout(load, delay);
     return () => { isMounted = false; clearTimeout(timer); };
   }, [searchTerm, selectedClass]);
-
-  const handleGenerateFinancialSheet = async (student: Student) => {
-    let schoolInfo: { name: string; logo?: string } | undefined;
-    try {
-      const userStr = window.localStorage.getItem('user');
-      if (userStr) {
-        const user = JSON.parse(userStr);
-        if (user?.School?.[0]) schoolInfo = user.School[0];
-      }
-    } catch {}
-
-    const empty = { entries: [], totalCharged: 0, totalPaid: 0, balance: 0 };
-    try {
-      const data = await api.get(`/ledger/student/${encodeURIComponent(student.id)}`);
-      await generateFinancialSheet(student, data || empty, schoolInfo);
-    } catch {
-      await generateFinancialSheet(student, empty, schoolInfo);
-    }
-  };
 
   return (
     <div className="p-4 md:p-8">
@@ -375,11 +355,9 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handleGenerateFinancialSheet(student)}
-                    className="flex items-center gap-2"
+                    onClick={() => onViewStudent?.(student)}
                   >
-                    <FileText size={16} />
-                    Financial Sheet
+                    Details
                   </Button>
                 </TableCell>
               </TableRow>
