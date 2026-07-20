@@ -32,7 +32,7 @@ async function request(path: string, init?: RequestInit) {
 }
 
 export const api = {
-  get: (path: string) => request(path),
+  get: (path: string, init?: RequestInit) => request(path, init),
   post: (path: string, body: any) => request(path, { method: 'POST', body: JSON.stringify(body) }),
   put: (path: string, body: any) => request(path, { method: 'PUT', body: JSON.stringify(body) }),
   delete: (path: string) => request(path, { method: 'DELETE' }),

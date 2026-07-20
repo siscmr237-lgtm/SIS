@@ -135,20 +135,20 @@ export function StaffProfile({ staff, onNavigate }: StaffProfileProps) {
 
   useEffect(() => {
     if (activeTab !== 'finance') return;
-    let cancelled = false;
+    const controller = new AbortController();
     setLedgerLoading(true);
     setLedgerError(null);
     Promise.allSettled([
-      api.get(`/ledger/staff/${encodeURIComponent(staff.code)}`),
-      api.get('/charge-categories?forStaff=true'),
+      api.get(`/ledger/staff/${encodeURIComponent(staff.code)}`, { signal: controller.signal }),
+      api.get('/charge-categories?forStaff=true', { signal: controller.signal }),
     ]).then(([ledgerRes, catsRes]) => {
-      if (cancelled) return;
+      if (controller.signal.aborted) return;
       if (ledgerRes.status === 'fulfilled') setLedgerData(ledgerRes.value);
       else setLedgerError(ledgerRes.reason?.message || 'Failed to load finance data');
       if (catsRes.status === 'fulfilled') setCategories(catsRes.value || []);
       setLedgerLoading(false);
     });
-    return () => { cancelled = true; };
+    return () => controller.abort();
   }, [activeTab, staff.code]);
 
   const handleChargeSubmit = async () => {
