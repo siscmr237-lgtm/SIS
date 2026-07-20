@@ -656,7 +656,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                 </DialogHeader>
               </div>
               <div className="flex-1 overflow-y-auto" style={{ padding: '0 1.5rem 1rem', minHeight: 0 }}>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>First Name</Label>
                   <Input
@@ -732,7 +732,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                     onChange={e => setEditForm(f => ({ ...f, enrollmentDate: e.target.value }))}
                   />
                 </div>
-                <div className="sm:col-span-2">
+                <div className="col-span-2">
                   <Label>Address</Label>
                   <Input
                     value={editForm.address}
@@ -742,7 +742,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                 </div>
 
                 {/* Medical History */}
-                <div className="sm:col-span-2 border-t pt-4 mt-1">
+                <div className="col-span-2 border-t pt-4 mt-1">
                   <div className="flex items-center justify-between mb-3">
                     <p className="text-sm font-medium text-gray-700">
                       Medical History{' '}
@@ -760,7 +760,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                   </div>
                 </div>
                 {!editShowMedicalHistory ? (
-                  <div className="sm:col-span-2">
+                  <div className="col-span-2">
                     <Button
                       type="button"
                       variant="outline"
@@ -772,7 +772,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                   </div>
                 ) : (
                   <>
-                    <div className="sm:col-span-2">
+                    <div className="col-span-2">
                       <Label>Allergies</Label>
                       <Textarea
                         value={editForm.allergies}
@@ -780,7 +780,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                         placeholder="e.g. Penicillin, peanuts, latex..."
                       />
                     </div>
-                    <div className="sm:col-span-2">
+                    <div className="col-span-2">
                       <Label>Existing Medical Conditions</Label>
                       <Textarea
                         value={editForm.medicalConditions}
@@ -788,7 +788,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                         placeholder="e.g. Asthma, sickle cell..."
                       />
                     </div>
-                    <div className="sm:col-span-2">
+                    <div className="col-span-2">
                       <Label>Current Medications</Label>
                       <Textarea
                         value={editForm.currentMedications}
@@ -796,7 +796,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                         placeholder="e.g. Salbutamol inhaler as needed..."
                       />
                     </div>
-                    <div className="sm:col-span-2">
+                    <div className="col-span-2">
                       <Label>Additional Notes</Label>
                       <Textarea
                         value={editForm.medicalNotes}
@@ -808,14 +808,14 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                 )}
 
                 {/* Pickup / Drop-off Contacts */}
-                <div className="sm:col-span-2 border-t pt-4 mt-1">
+                <div className="col-span-2 border-t pt-4 mt-1">
                   <p className="text-sm font-medium text-gray-700 mb-3">
                     Pickup / Drop-off Contacts{' '}
                     <span className="text-gray-400 font-normal">(optional)</span>
                   </p>
                 </div>
                 {editNewContacts.map((c, i) => (
-                  <div key={i} className="sm:col-span-2">
+                  <div key={i} className="col-span-2">
                     <div className="grid grid-cols-2 gap-3 p-3 border rounded-lg relative">
                       <button
                         type="button"
@@ -861,7 +861,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                     </div>
                   </div>
                 ))}
-                <div className="sm:col-span-2">
+                <div className="col-span-2">
                   <Button
                     type="button"
                     variant="outline"
