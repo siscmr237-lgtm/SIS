@@ -9,6 +9,10 @@ export interface Student {
   parentPhone: string;
   address: string;
   enrollmentDate: string;
+  allergies?: string | null;
+  medicalConditions?: string | null;
+  currentMedications?: string | null;
+  medicalNotes?: string | null;
 }
 
 export interface Staff {

@@ -26,7 +26,8 @@ export default function LoginPage() {
           window.localStorage.setItem("auth_token", (res as any).token);
           window.localStorage.setItem("user", JSON.stringify((res as any).user));
         }
-        router.replace("/");
+        const school = (res as any).user?.School?.[0];
+        router.replace(school?.onboardingCompleted === false ? "/onboarding" : "/");
       } else {
         setError("Invalid response");
       }

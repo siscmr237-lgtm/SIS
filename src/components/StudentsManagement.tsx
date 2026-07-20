@@ -7,7 +7,7 @@ interface StudentsManagementProps {
   onViewStudent?: (student: Student) => void;
 }
 import { SCHOOL_CLASSES } from "@/lib/classes";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Student } from "../types";
 import { Button } from "./ui/button";
@@ -23,6 +23,7 @@ import {
 } from "./ui/dialog";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
+import { Textarea } from "./ui/textarea";
 import {
   Select,
   SelectContent,
@@ -55,9 +56,32 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
     parentPhone: "",
     enrollmentDate: "",
     address: "",
+    allergies: "",
+    medicalConditions: "",
+    currentMedications: "",
+    medicalNotes: "",
   });
 
   const classes = SCHOOL_CLASSES;
+
+  // Pickup contacts collected during Add Student
+  const [showMedicalHistory, setShowMedicalHistory] = useState(false);
+
+  const [newContacts, setNewContacts] = useState<
+    Array<{ name: string; phone: string; relationship: string }>
+  >([]);
+  const addContactRow = () =>
+    setNewContacts((prev) => [...prev, { name: "", phone: "", relationship: "" }]);
+  const removeContactRow = (i: number) =>
+    setNewContacts((prev) => prev.filter((_, idx) => idx !== i));
+  const updateContactRow = (
+    i: number,
+    field: "name" | "phone" | "relationship",
+    value: string
+  ) =>
+    setNewContacts((prev) =>
+      prev.map((c, idx) => (idx === i ? { ...c, [field]: value } : c))
+    );
 
   const filteredStudents = students.filter((student) => {
     const matchesSearch =
@@ -122,14 +146,17 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
               Add Student
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Add New Student</DialogTitle>
-              <DialogDescription>
-                Enter the student's information below
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid grid-cols-2 gap-4 py-4">
+          <DialogContent className="max-w-2xl" style={{ display: 'flex', flexDirection: 'column', maxHeight: '90vh', overflow: 'hidden', padding: 0, gap: 0 }}>
+            <div style={{ padding: '1.5rem 1.5rem 1rem' }}>
+              <DialogHeader>
+                <DialogTitle>Add New Student</DialogTitle>
+                <DialogDescription>
+                  Enter the student's information below
+                </DialogDescription>
+              </DialogHeader>
+            </div>
+            <div className="flex-1 overflow-y-auto" style={{ padding: '0 1.5rem 1rem', minHeight: 0 }}>
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>First Name</Label>
                 <Input
@@ -237,15 +264,147 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
                   }
                 />
               </div>
+
+              {/* Medical History */}
+              <div className="col-span-2 border-t pt-4 mt-1">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-sm font-medium text-gray-700">
+                    Medical History{" "}
+                    <span className="text-gray-400 font-normal">(optional)</span>
+                  </p>
+                  {showMedicalHistory && (
+                    <button
+                      type="button"
+                      onClick={() => setShowMedicalHistory(false)}
+                      className="text-xs text-gray-400 hover:text-gray-600"
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+              </div>
+              {!showMedicalHistory ? (
+                <div className="col-span-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowMedicalHistory(true)}
+                  >
+                    <Plus size={15} className="mr-1" />
+                    Add medical history
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <div className="col-span-2">
+                    <Label>Allergies</Label>
+                    <Textarea
+                      placeholder="e.g. Penicillin, peanuts, latex..."
+                      value={form.allergies}
+                      onChange={(e) =>
+                        setForm((s) => ({ ...s, allergies: e.target.value }))
+                      }
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <Label>Existing Medical Conditions</Label>
+                    <Textarea
+                      placeholder="e.g. Asthma, sickle cell..."
+                      value={form.medicalConditions}
+                      onChange={(e) =>
+                        setForm((s) => ({ ...s, medicalConditions: e.target.value }))
+                      }
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <Label>Current Medications</Label>
+                    <Textarea
+                      placeholder="e.g. Salbutamol inhaler as needed..."
+                      value={form.currentMedications}
+                      onChange={(e) =>
+                        setForm((s) => ({ ...s, currentMedications: e.target.value }))
+                      }
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <Label>Additional Notes</Label>
+                    <Textarea
+                      placeholder="Any other information the school should know..."
+                      value={form.medicalNotes}
+                      onChange={(e) =>
+                        setForm((s) => ({ ...s, medicalNotes: e.target.value }))
+                      }
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* Pickup / Drop-off Contacts */}
+              <div className="col-span-2 border-t pt-4 mt-1">
+                <p className="text-sm font-medium text-gray-700 mb-3">
+                  Pickup / Drop-off Contacts{" "}
+                  <span className="text-gray-400 font-normal">(optional)</span>
+                </p>
+              </div>
+              {newContacts.map((c, i) => (
+                <div key={i} className="col-span-2">
+                  <div className="grid grid-cols-2 gap-3 p-3 border rounded-lg relative">
+                    <button
+                      type="button"
+                      onClick={() => removeContactRow(i)}
+                      className="absolute top-2 right-2 text-gray-400 hover:text-red-500"
+                      aria-label="Remove contact"
+                    >
+                      <X size={15} />
+                    </button>
+                    <div>
+                      <Label>Name</Label>
+                      <Input
+                        placeholder="Contact name"
+                        value={c.name}
+                        onChange={(e) => updateContactRow(i, "name", e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <Label>Phone</Label>
+                      <Input
+                        placeholder="+237 6XX XXX XXX"
+                        value={c.phone}
+                        onChange={(e) => updateContactRow(i, "phone", e.target.value)}
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <Label>
+                        Relationship{" "}
+                        <span className="text-gray-400 font-normal">(optional)</span>
+                      </Label>
+                      <Input
+                        placeholder="e.g. Driver, Grandmother, Uncle"
+                        value={c.relationship}
+                        onChange={(e) =>
+                          updateContactRow(i, "relationship", e.target.value)
+                        }
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+              <div className="col-span-2">
+                <Button type="button" variant="outline" onClick={addContactRow}>
+                  <Plus size={15} className="mr-1" />
+                  Add a pickup contact
+                </Button>
+              </div>
             </div>
-            <div className="flex justify-end gap-2">
+            </div>
+            <div className="border-t" style={{ padding: '1rem 1.5rem', display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
               <DialogClose asChild>
                 <Button variant="outline">Cancel</Button>
               </DialogClose>
               <Button
                 onClick={async () => {
                   try {
-                    await api.post("/students", {
+                    const created = await api.post("/students", {
                       firstName: form.firstName,
                       lastName: form.lastName,
                       dateOfBirth: form.dateOfBirth,
@@ -255,7 +414,24 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
                       parentPhone: form.parentPhone,
                       enrollmentDate: form.enrollmentDate,
                       address: form.address,
+                      allergies: form.allergies || null,
+                      medicalConditions: form.medicalConditions || null,
+                      currentMedications: form.currentMedications || null,
+                      medicalNotes: form.medicalNotes || null,
                     });
+                    // Post pickup contacts sequentially
+                    for (const c of newContacts) {
+                      if (c.name.trim()) {
+                        await api.post(
+                          `/students/${created.id}/pickup-contacts`,
+                          {
+                            name: c.name.trim(),
+                            phone: c.phone.trim(),
+                            relationship: c.relationship.trim() || null,
+                          }
+                        );
+                      }
+                    }
                     cache.invalidate('students', 'dashboard');
                     const params = new URLSearchParams();
                     if (searchTerm) params.set("q", searchTerm);
@@ -278,7 +454,13 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
                       parentPhone: "",
                       enrollmentDate: "",
                       address: "",
+                      allergies: "",
+                      medicalConditions: "",
+                      currentMedications: "",
+                      medicalNotes: "",
                     });
+                    setShowMedicalHistory(false);
+                    setNewContacts([]);
                   } catch (e) {
                     console.log(e);
                   }
