@@ -19,6 +19,14 @@ export default function Page() {
             ? window.localStorage.getItem("auth_token")
             : null;
         if (!token) throw new Error("no token");
+        const userStr = window.localStorage.getItem("user");
+        if (userStr) {
+          const user = JSON.parse(userStr);
+          if (user?.School?.[0]?.onboardingCompleted === false) {
+            if (alive) router.replace("/onboarding");
+            return;
+          }
+        }
         // await api.get("/auth/me");
         if (alive) setReady(true);
       } catch {

@@ -36,7 +36,8 @@ export default function SignupPage() {
             JSON.stringify((res as any).user)
           );
         }
-        router.replace("/");
+        const school = (res as any).user?.School?.[0];
+        router.replace(school?.onboardingCompleted === false ? "/onboarding" : "/");
       } else {
         setError("Invalid response from server");
       }
