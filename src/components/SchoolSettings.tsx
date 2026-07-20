@@ -5,10 +5,8 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Settings, Plus, Trash2, Edit, Save, X, Upload } from 'lucide-react';
 import { schoolSettings } from '../data/mockData';
-import { SubjectConfig } from '../types';
 import { toast } from 'sonner';
 import { api, BASE_URL } from '@/lib/api';
 
@@ -23,9 +21,6 @@ export function SchoolSettings() {
   const router = useRouter();
   const [settings, setSettings] = useState(schoolSettings);
   const [isEditingBasic, setIsEditingBasic] = useState(false);
-  const [isEditingSubjects, setIsEditingSubjects] = useState(false);
-  const [selectedClass, setSelectedClass] = useState<SubjectConfig | null>(null);
-  const [newSubject, setNewSubject] = useState('');
   const [logoUploading, setLogoUploading] = useState(false);
   const [logoError, setLogoError] = useState<string | null>(null);
   const [cats, setCats] = useState<ChargeCategory[]>([]);
@@ -104,72 +99,6 @@ export function SchoolSettings() {
     }
   };
 
-  const handleAddSubject = async () => {
-    if (!selectedClass || !newSubject.trim()) return;
-
-    const updatedSubjects = settings.subjectsPerClass.map(sc => {
-      if (sc.id === selectedClass.id) {
-        return {
-          ...sc,
-          subjects: [...sc.subjects, newSubject.trim()]
-        };
-      }
-      return sc;
-    });
-
-    const next = { ...settings, subjectsPerClass: updatedSubjects };
-    setSettings(next);
-
-    setNewSubject('');
-    try {
-      await api.put('/settings', { subjectsPerClass: updatedSubjects });
-      toast.success('Subject added successfully');
-    } catch {
-      toast.error('Failed to add subject');
-    }
-  };
-
-  const handleRemoveSubject = async (classId: string, subjectToRemove: string) => {
-    const updatedSubjects = settings.subjectsPerClass.map(sc => {
-      if (sc.id === classId) {
-        return {
-          ...sc,
-          subjects: sc.subjects.filter(s => s !== subjectToRemove)
-        };
-      }
-      return sc;
-    });
-
-    const next = { ...settings, subjectsPerClass: updatedSubjects };
-    setSettings(next);
-    try {
-      await api.put('/settings', { subjectsPerClass: updatedSubjects });
-      toast.success('Subject removed successfully');
-    } catch {
-      toast.error('Failed to remove subject');
-    }
-  };
-
-  const handleAddClass = async () => {
-    const newClassName = prompt('Enter new class name:');
-    if (!newClassName) return;
-
-    const newClass: SubjectConfig = {
-      id: `SC${String(settings.subjectsPerClass.length + 1).padStart(3, '0')}`,
-      className: newClassName,
-      subjects: []
-    };
-
-    const updated = [...settings.subjectsPerClass, newClass];
-    setSettings(prev => ({ ...prev, subjectsPerClass: updated }));
-    try {
-      await api.put('/settings', { subjectsPerClass: updated });
-      toast.success('Class added successfully');
-    } catch {
-      toast.error('Failed to add class');
-    }
-  };
-
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -224,19 +153,6 @@ export function SchoolSettings() {
       setLogoUploading(false);
       // Reset so the same file can be re-selected if needed
       e.target.value = '';
-    }
-  };
-
-  const handleRemoveClass = async (classId: string) => {
-    if (!confirm('Are you sure you want to remove this class?')) return;
-
-    const updated = settings.subjectsPerClass.filter(sc => sc.id !== classId);
-    setSettings(prev => ({ ...prev, subjectsPerClass: updated }));
-    try {
-      await api.put('/settings', { subjectsPerClass: updated });
-      toast.success('Class removed successfully');
-    } catch {
-      toast.error('Failed to remove class');
     }
   };
 
@@ -405,7 +321,7 @@ export function SchoolSettings() {
       <Card className="p-6 mt-6">
         <div className="flex justify-between items-center">
           <div>
-            <h2 className="text-xl">Charge Categories</h2>
+            <h2 className="text-xl">Fees Categories</h2>
             <p className="text-sm text-gray-500 mt-1">
               {cats.length} categor{cats.length === 1 ? 'y' : 'ies'} configured
             </p>
@@ -414,68 +330,6 @@ export function SchoolSettings() {
             <Settings className="mr-2" size={16} />
             Manage Categories
           </Button>
-        </div>
-      </Card>
-
-      {/* Subjects Per Class Card */}
-      <Card className="p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl">Subjects Per Class</h2>
-          <Button onClick={handleAddClass}>
-            <Plus className="mr-2" size={16} />
-            Add Class
-          </Button>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {settings.subjectsPerClass.map((classConfig) => (
-            <Card key={classConfig.id} className="p-4 border-2">
-              <div className="flex justify-between items-center mb-3">
-                <h3 className="font-medium">{classConfig.className}</h3>
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      setSelectedClass(classConfig);
-                      setIsEditingSubjects(true);
-                    }}
-                  >
-                    <Edit size={14} />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    onClick={() => handleRemoveClass(classConfig.id)}
-                  >
-                    <Trash2 size={14} />
-                  </Button>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                {classConfig.subjects.length > 0 ? (
-                  <Select>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder={`${classConfig.subjects.length} subjects configured`} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {classConfig.subjects.map((subject, idx) => (
-                        <SelectItem key={idx} value={subject}>
-                          {subject}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <p className="text-sm text-gray-500 italic">No subjects configured</p>
-                )}
-                <p className="text-xs text-gray-500 mt-2">
-                  Total: {classConfig.subjects.length} subjects
-                </p>
-              </div>
-            </Card>
-          ))}
         </div>
       </Card>
 
@@ -617,91 +471,6 @@ export function SchoolSettings() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Subjects Dialog */}
-      <Dialog open={isEditingSubjects} onOpenChange={setIsEditingSubjects}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Manage Subjects - {selectedClass?.className}</DialogTitle>
-            <DialogDescription>
-              Add or remove subjects for this class. Click on a subject to select it.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            {/* Add New Subject */}
-            <div>
-              <Label>Add New Subject</Label>
-              <div className="flex gap-2 mt-2">
-                <Input
-                  placeholder="Enter subject name"
-                  value={newSubject}
-                  onChange={(e) => setNewSubject(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      handleAddSubject();
-                    }
-                  }}
-                />
-                <Button onClick={handleAddSubject}>
-                  <Plus size={16} className="mr-2" />
-                  Add
-                </Button>
-              </div>
-            </div>
-
-            {/* Subjects Dropdown (View) */}
-            <div>
-              <Label>All Subjects ({selectedClass?.subjects.length || 0})</Label>
-              {selectedClass && selectedClass.subjects.length > 0 ? (
-                <Select>
-                  <SelectTrigger className="w-full mt-2">
-                    <SelectValue placeholder="Select a subject to view" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {selectedClass.subjects.map((subject, idx) => (
-                      <SelectItem key={idx} value={subject}>
-                        {subject}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <p className="text-sm text-gray-500 italic mt-2">No subjects configured yet</p>
-              )}
-            </div>
-
-            {/* Subject List with Remove Options */}
-            <div>
-              <Label>Edit Subjects</Label>
-              <div className="space-y-2 max-h-80 overflow-y-auto mt-2 border rounded-lg p-3 bg-gray-50">
-                {selectedClass && selectedClass.subjects.length > 0 ? (
-                  selectedClass.subjects.map((subject, idx) => (
-                    <div
-                      key={idx}
-                      className="flex justify-between items-center p-3 bg-white rounded border hover:border-blue-300 transition-colors"
-                    >
-                      <span>{subject}</span>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleRemoveSubject(selectedClass.id, subject)}
-                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                      >
-                        <X size={16} className="mr-1" />
-                        Remove
-                      </Button>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-sm text-gray-500 text-center py-4">
-                    No subjects yet. Add your first subject above.
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

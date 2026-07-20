@@ -1,4 +1,4 @@
-import { ArrowLeft, FileText, Plus } from 'lucide-react';
+import { ArrowLeft, Edit, FileText, Plus } from 'lucide-react';
 import { generateFinancialSheet } from '../utils/pdfGenerator';
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
@@ -53,6 +53,18 @@ const PAYMENT_METHODS = ['Cash', 'Bank Transfer', 'Mobile Money', 'Cheque'];
 export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
   const [activeTab, setActiveTab] = useState<Tab>('general');
   const cache = useSisCache();
+
+  // Editable name — kept in local state so it updates immediately after save
+  const [displayName, setDisplayName] = useState({
+    firstName: student.firstName,
+    lastName: student.lastName,
+  });
+  const [showEditName, setShowEditName] = useState(false);
+  const [editFirstName, setEditFirstName] = useState('');
+  const [editLastName, setEditLastName] = useState('');
+  const [nameSubmitting, setNameSubmitting] = useState(false);
+  const [nameError, setNameError] = useState<string | null>(null);
+
   const [ledgerData, setLedgerData] = useState<LedgerData | null>(null);
   const [ledgerLoading, setLedgerLoading] = useState(false);
   const [ledgerError, setLedgerError] = useState<string | null>(null);
@@ -171,6 +183,24 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
     }
   };
 
+  const handleNameSave = async () => {
+    setNameSubmitting(true);
+    setNameError(null);
+    try {
+      await api.put(`/students/${student.id}`, {
+        firstName: editFirstName.trim(),
+        lastName: editLastName.trim(),
+      });
+      setDisplayName({ firstName: editFirstName.trim(), lastName: editLastName.trim() });
+      cache.invalidate('students', 'dashboard');
+      setShowEditName(false);
+    } catch (e: any) {
+      setNameError(e.message || 'Failed to save');
+    } finally {
+      setNameSubmitting(false);
+    }
+  };
+
   const handleDownloadStatement = async () => {
     if (!ledgerData) return;
     let schoolInfo: { name: string; logo?: string } | undefined;
@@ -195,7 +225,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
       </button>
 
       <div className="mb-6">
-        <h1 className="text-3xl">{student.firstName} {student.lastName}</h1>
+        <h1 className="text-3xl">{displayName.firstName} {displayName.lastName}</h1>
         <p className="text-gray-500 mt-1">{student.id} · {student.class}</p>
       </div>
 
@@ -216,21 +246,82 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
       </div>
 
       {activeTab === 'general' && (
-        <Card className="p-6">
-          <h2 className="text-base font-medium mb-5">Student Information</h2>
-          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-5">
-            <Field label="Student ID" value={student.id} />
-            <Field label="Class" value={student.class} />
-            <Field label="First Name" value={student.firstName} />
-            <Field label="Last Name" value={student.lastName} />
-            <Field label="Gender" value={student.gender} capitalize />
-            <Field label="Date of Birth" value={formatDate(student.dateOfBirth)} />
-            <Field label="Enrollment Date" value={formatDate(student.enrollmentDate)} />
-            <Field label="Address" value={student.address} />
-            <Field label="Parent / Guardian" value={student.parentName} />
-            <Field label="Parent Phone" value={student.parentPhone} />
-          </dl>
-        </Card>
+        <>
+          <Card className="p-6">
+            <div className="flex justify-between items-center mb-5">
+              <h2 className="text-base font-medium">Student Information</h2>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setEditFirstName(displayName.firstName);
+                  setEditLastName(displayName.lastName);
+                  setNameError(null);
+                  setShowEditName(true);
+                }}
+              >
+                <Edit size={14} className="mr-1" />
+                Edit
+              </Button>
+            </div>
+            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-5">
+              <Field label="Student ID" value={student.id} />
+              <Field label="Class" value={student.class} />
+              <Field label="First Name" value={displayName.firstName} />
+              <Field label="Last Name" value={displayName.lastName} />
+              <Field label="Gender" value={student.gender} capitalize />
+              <Field label="Date of Birth" value={formatDate(student.dateOfBirth)} />
+              <Field label="Enrollment Date" value={formatDate(student.enrollmentDate)} />
+              <Field label="Address" value={student.address} />
+              <Field label="Parent / Guardian" value={student.parentName} />
+              <Field label="Parent Phone" value={student.parentPhone} />
+            </dl>
+          </Card>
+
+          {/* Edit name dialog */}
+          <Dialog
+            open={showEditName}
+            onOpenChange={(open) => { setShowEditName(open); if (!open) setNameError(null); }}
+          >
+            <DialogContent className="max-w-sm">
+              <DialogHeader>
+                <DialogTitle>Edit Name</DialogTitle>
+                <DialogDescription>Update the student's first and last name.</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-2">
+                <div>
+                  <Label>First Name</Label>
+                  <Input
+                    value={editFirstName}
+                    onChange={e => setEditFirstName(e.target.value)}
+                    placeholder="First name"
+                  />
+                </div>
+                <div>
+                  <Label>Last Name</Label>
+                  <Input
+                    value={editLastName}
+                    onChange={e => setEditLastName(e.target.value)}
+                    placeholder="Last name"
+                    onKeyDown={e => { if (e.key === 'Enter') handleNameSave(); }}
+                  />
+                </div>
+                {nameError && <p className="text-sm text-red-600">{nameError}</p>}
+              </div>
+              <div className="flex justify-end gap-2">
+                <DialogClose asChild>
+                  <Button variant="outline" disabled={nameSubmitting}>Cancel</Button>
+                </DialogClose>
+                <Button
+                  onClick={handleNameSave}
+                  disabled={nameSubmitting || !editFirstName.trim() || !editLastName.trim()}
+                >
+                  {nameSubmitting ? 'Saving...' : 'Save'}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </>
       )}
 
       {activeTab === 'finance' && (
@@ -239,7 +330,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
           <div className="flex gap-2 justify-end flex-wrap">
             <Button variant="outline" onClick={handleDownloadStatement} disabled={!ledgerData}>
               <FileText size={16} className="mr-1" />
-              Download Statement
+              Financial Sheet
             </Button>
             <Button variant="outline" onClick={() => { setSubmitError(null); setShowCharge(true); }}>
               <Plus size={16} className="mr-1" />
