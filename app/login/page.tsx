@@ -248,7 +248,13 @@ export default function LoginPage() {
               </button>
             </div>
 
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && (
+              <p className="text-sm text-red-600">
+                {/reach database|connect|ECONNREFUSED|ETIMEDOUT/i.test(error)
+                  ? 'Unable to connect to the server. Please try again in a moment.'
+                  : error}
+              </p>
+            )}
 
             <Button
               type="submit"

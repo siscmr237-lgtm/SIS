@@ -1,6 +1,6 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { Expense, Student, ReportCard, WorkRecord, TimetableEntry, AttendanceRecord } from '../types';
+import { Expense, Student, Staff, ReportCard, WorkRecord, TimetableEntry, AttendanceRecord } from '../types';
 import { BASE_URL } from '../lib/api';
 
 const SCHOOL_INFO = {
@@ -244,6 +244,105 @@ export async function generateFinancialSheet(
     doc.setFontSize(11);
     doc.setTextColor(150, 150, 150);
     doc.text('No financial records found for this student.', 105, 107, { align: 'center' });
+  } else {
+    const tableData = entries.map(entry => [
+      new Date(entry.entryDate).toLocaleDateString('en-GB'),
+      entry.type === 'CHARGE' ? 'Charge' : 'Payment',
+      entry.category?.name ?? '—',
+      entry.description,
+      `${entry.amount.toLocaleString()} FCFA`,
+    ]);
+
+    autoTable(doc, {
+      startY: 95,
+      head: [['Date', 'Type', 'Category', 'Description', 'Amount (FCFA)']],
+      body: tableData,
+      theme: 'striped',
+      headStyles: { fillColor: [37, 99, 235] },
+      styles: { fontSize: 9 },
+      columnStyles: {
+        0: { cellWidth: 28 },
+        1: { cellWidth: 22 },
+        2: { cellWidth: 32 },
+        4: { cellWidth: 30, halign: 'right' },
+      },
+    });
+
+    autoTable(doc, {
+      startY: (doc as any).lastAutoTable.finalY + 8,
+      body: [
+        ['Total Charged', `${totalCharged.toLocaleString()} FCFA`],
+        ['Total Paid',    `${totalPaid.toLocaleString()} FCFA`],
+        ['Balance Owed',  `${balance.toLocaleString()} FCFA`],
+      ],
+      theme: 'plain',
+      styles: { fontSize: 10 },
+      columnStyles: {
+        0: { cellWidth: 60, fontStyle: 'bold' },
+        1: { cellWidth: 60, halign: 'right' },
+      },
+      margin: { left: 110 },
+    });
+  }
+
+  const url = doc.output('bloburl');
+  window.open(url, '_blank');
+}
+
+export async function generateStaffFinancialSheet(
+  staff: Staff,
+  ledgerData: { entries: LedgerPdfEntry[]; totalCharged: number; totalPaid: number; balance: number },
+  schoolInfo?: { name: string; logo?: string; motto?: string; academicYear?: string }
+) {
+  const doc = new jsPDF();
+
+  doc.setFillColor(37, 99, 235);
+  doc.rect(0, 0, 210, 52, 'F');
+
+  if (schoolInfo?.logo) {
+    const dataUrl = await getLogoDataUrl(schoolInfo.logo);
+    if (dataUrl) {
+      try {
+        const fmt = dataUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG';
+        doc.addImage(dataUrl, fmt, 8, 6, 30, 30);
+      } catch {}
+    }
+  }
+
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(18);
+  doc.text(schoolInfo?.name ?? SCHOOL_INFO.name, 105, 15, { align: 'center' });
+
+  const motto = schoolInfo?.motto?.trim();
+  if (motto) {
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'italic');
+    doc.text(motto, 105, 23, { align: 'center' });
+    doc.setFont('helvetica', 'normal');
+  }
+
+  if (schoolInfo?.academicYear) {
+    doc.setFontSize(9);
+    doc.text(`Academic Year: ${schoolInfo.academicYear}`, 195, 33, { align: 'right' });
+  }
+
+  doc.setFontSize(13);
+  doc.text('Staff Financial Sheet', 105, 44, { align: 'center' });
+
+  doc.setTextColor(0, 0, 0);
+  doc.setFontSize(12);
+  doc.text('Staff Information', 20, 62);
+  doc.setFontSize(10);
+  doc.text(`Name: ${staff.firstName} ${staff.lastName}`, 20, 70);
+  doc.text(`Staff ID: ${staff.code}`, 20, 77);
+  doc.text(`Role: ${staff.isTeacher ? 'Teacher' : staff.role}`, 20, 84);
+
+  const { entries, totalCharged, totalPaid, balance } = ledgerData;
+
+  if (entries.length === 0) {
+    doc.setFontSize(11);
+    doc.setTextColor(150, 150, 150);
+    doc.text('No financial records found for this staff member.', 105, 107, { align: 'center' });
   } else {
     const tableData = entries.map(entry => [
       new Date(entry.entryDate).toLocaleDateString('en-GB'),

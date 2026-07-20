@@ -8,14 +8,20 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Textarea } from './ui/textarea';
 import { Plus, FileText, Search } from 'lucide-react';
-import { Badge } from './ui/badge';
 import { Checkbox } from './ui/checkbox';
+import { NavigationPage } from '../App';
+import { Staff } from '../types';
 import { generateWorkRecord } from '../utils/pdfGenerator';
 import { api } from '@/lib/api';
 import { useSisCache } from '@/lib/SisCache';
 
-export function StaffManagement() {
-  const [staff, setStaff] = useState<any[]>([]);
+interface StaffManagementProps {
+  onNavigate?: (page: NavigationPage) => void;
+  onViewStaff?: (staff: Staff) => void;
+}
+
+export function StaffManagement({ onNavigate, onViewStaff }: StaffManagementProps) {
+  const [staff, setStaff] = useState<Staff[]>([]);
   const [workRecords, setWorkRecords] = useState<any[]>([]);
   const cache = useSisCache();
   const [searchTerm, setSearchTerm] = useState('');
@@ -202,8 +208,7 @@ export function StaffManagement() {
                   <TableHead>Role</TableHead>
                   <TableHead>Phone</TableHead>
                   <TableHead>Email</TableHead>
-                  <TableHead>Salary (FCFA)</TableHead>
-                  <TableHead>Hire Date</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -211,16 +216,21 @@ export function StaffManagement() {
                   <TableRow key={member.id}>
                     <TableCell>{member.code}</TableCell>
                     <TableCell>
-                      <span className="flex items-center gap-2">
+                      <button
+                        onClick={() => onViewStaff?.(member)}
+                        className="text-blue-600 hover:underline text-left font-medium"
+                      >
                         {member.firstName} {member.lastName}
-                        {member.isTeacher && <Badge className="bg-blue-500 text-white text-xs">Teacher</Badge>}
-                      </span>
+                      </button>
                     </TableCell>
-                    <TableCell>{member.role}</TableCell>
+                    <TableCell>{member.isTeacher ? 'Teacher' : member.role}</TableCell>
                     <TableCell>{member.phone}</TableCell>
                     <TableCell>{member.email}</TableCell>
-                    <TableCell>{member.salary.toLocaleString()}</TableCell>
-                    <TableCell>{new Date(member.hireDate).toLocaleDateString()}</TableCell>
+                    <TableCell>
+                      <Button variant="outline" size="sm" onClick={() => onViewStaff?.(member)}>
+                        Details
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

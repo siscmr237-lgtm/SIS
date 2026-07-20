@@ -7,6 +7,8 @@ import { StudentsManagement } from './components/StudentsManagement';
 import { StudentProfile } from './components/StudentProfile';
 import { Student } from './types';
 import { StaffManagement } from './components/StaffManagement';
+import { StaffProfile } from './components/StaffProfile';
+import { Staff } from './types';
 import { FinanceOverview } from './components/FinanceOverview';
 import { ExpensesManagement } from './components/ExpensesManagement';
 import { ReportCards } from './components/ReportCards';
@@ -16,11 +18,12 @@ import { SchoolSettings } from './components/SchoolSettings';
 import { ClassesManagement } from './components/ClassesManagement';
 import { SubjectsManagement } from './components/SubjectsManagement';
 
-export type NavigationPage = 
+export type NavigationPage =
   | 'dashboard'
   | 'students'
   | 'student-profile'
   | 'staff'
+  | 'staff-profile'
   | 'finance'
   | 'expenses'
   | 'report-cards'
@@ -33,6 +36,7 @@ export type NavigationPage =
 export default function App() {
   const [currentPage, setCurrentPage] = useState<NavigationPage>('dashboard');
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const navigate = (page: NavigationPage) => {
@@ -43,6 +47,11 @@ export default function App() {
   const viewStudent = (s: Student) => {
     setSelectedStudent(s);
     navigate('student-profile');
+  };
+
+  const viewStaff = (s: Staff) => {
+    setSelectedStaff(s);
+    navigate('staff-profile');
   };
 
   const renderPage = () => {
@@ -58,7 +67,13 @@ export default function App() {
           <StudentsManagement onNavigate={navigate} onViewStudent={viewStudent} />
         );
       case 'staff':
-        return <StaffManagement />;
+        return <StaffManagement onNavigate={navigate} onViewStaff={viewStaff} />;
+      case 'staff-profile':
+        return selectedStaff ? (
+          <StaffProfile staff={selectedStaff} onNavigate={navigate} />
+        ) : (
+          <StaffManagement onNavigate={navigate} onViewStaff={viewStaff} />
+        );
       case 'finance':
         return <FinanceOverview onNavigate={navigate} onViewStudent={viewStudent} />;
       case 'expenses':
