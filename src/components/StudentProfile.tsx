@@ -1,4 +1,4 @@
-import { ArrowLeft, Edit, FileText, MoreHorizontal, Plus } from 'lucide-react';
+import { ArrowLeft, Edit, FileText, MoreHorizontal, Plus, X } from 'lucide-react';
 import { generateFinancialSheet } from '../utils/pdfGenerator';
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../lib/api';
@@ -90,6 +90,10 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
   });
   const [editSubmitting, setEditSubmitting] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
+  const [editShowMedicalHistory, setEditShowMedicalHistory] = useState(false);
+  const [editNewContacts, setEditNewContacts] = useState<
+    Array<{ name: string; phone: string; relationship: string }>
+  >([]);
 
   // Pickup contacts
   const [pickupContacts, setPickupContacts] = useState<PickupContact[]>([]);
@@ -330,6 +334,17 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
         currentMedications: editForm.currentMedications.trim(),
         medicalNotes: editForm.medicalNotes.trim(),
       });
+      for (const c of editNewContacts) {
+        if (c.name.trim()) {
+          const created = await api.post(`/students/${student.id}/pickup-contacts`, {
+            name: c.name.trim(),
+            phone: c.phone.trim(),
+            relationship: c.relationship.trim() || null,
+          });
+          setPickupContacts(prev => [...prev, created]);
+        }
+      }
+      setEditNewContacts([]);
       cache.invalidate('students', 'dashboard');
       setShowEdit(false);
     } catch (e: any) {
@@ -407,6 +422,11 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                     currentMedications: displayInfo.currentMedications,
                     medicalNotes: displayInfo.medicalNotes,
                   });
+                  setEditShowMedicalHistory(
+                    !!(displayInfo.allergies || displayInfo.medicalConditions ||
+                       displayInfo.currentMedications || displayInfo.medicalNotes)
+                  );
+                  setEditNewContacts([]);
                   setEditError(null);
                   setShowEdit(true);
                 }}
@@ -654,6 +674,14 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                   />
                 </div>
                 <div>
+                  <Label>Date of Birth</Label>
+                  <Input
+                    type="date"
+                    value={editForm.dateOfBirth}
+                    onChange={e => setEditForm(f => ({ ...f, dateOfBirth: e.target.value }))}
+                  />
+                </div>
+                <div>
                   <Label>Gender</Label>
                   <Select
                     value={editForm.gender}
@@ -681,22 +709,6 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                   </Select>
                 </div>
                 <div>
-                  <Label>Date of Birth</Label>
-                  <Input
-                    type="date"
-                    value={editForm.dateOfBirth}
-                    onChange={e => setEditForm(f => ({ ...f, dateOfBirth: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <Label>Enrollment Date</Label>
-                  <Input
-                    type="date"
-                    value={editForm.enrollmentDate}
-                    onChange={e => setEditForm(f => ({ ...f, enrollmentDate: e.target.value }))}
-                  />
-                </div>
-                <div>
                   <Label>Parent / Guardian Name</Label>
                   <Input
                     value={editForm.parentName}
@@ -712,6 +724,14 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                     placeholder="+237 6XX XXX XXX"
                   />
                 </div>
+                <div>
+                  <Label>Enrollment Date</Label>
+                  <Input
+                    type="date"
+                    value={editForm.enrollmentDate}
+                    onChange={e => setEditForm(f => ({ ...f, enrollmentDate: e.target.value }))}
+                  />
+                </div>
                 <div className="sm:col-span-2">
                   <Label>Address</Label>
                   <Input
@@ -723,42 +743,133 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
 
                 {/* Medical History */}
                 <div className="sm:col-span-2 border-t pt-4 mt-1">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-sm font-medium text-gray-700">
+                      Medical History{' '}
+                      <span className="text-gray-400 font-normal">(optional)</span>
+                    </p>
+                    {editShowMedicalHistory && (
+                      <button
+                        type="button"
+                        onClick={() => setEditShowMedicalHistory(false)}
+                        className="text-xs text-gray-400 hover:text-gray-600"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                </div>
+                {!editShowMedicalHistory ? (
+                  <div className="sm:col-span-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setEditShowMedicalHistory(true)}
+                    >
+                      <Plus size={15} className="mr-1" />
+                      Add medical history
+                    </Button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="sm:col-span-2">
+                      <Label>Allergies</Label>
+                      <Textarea
+                        value={editForm.allergies}
+                        onChange={e => setEditForm(f => ({ ...f, allergies: e.target.value }))}
+                        placeholder="e.g. Penicillin, peanuts, latex..."
+                      />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <Label>Existing Medical Conditions</Label>
+                      <Textarea
+                        value={editForm.medicalConditions}
+                        onChange={e => setEditForm(f => ({ ...f, medicalConditions: e.target.value }))}
+                        placeholder="e.g. Asthma, sickle cell..."
+                      />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <Label>Current Medications</Label>
+                      <Textarea
+                        value={editForm.currentMedications}
+                        onChange={e => setEditForm(f => ({ ...f, currentMedications: e.target.value }))}
+                        placeholder="e.g. Salbutamol inhaler as needed..."
+                      />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <Label>Additional Notes</Label>
+                      <Textarea
+                        value={editForm.medicalNotes}
+                        onChange={e => setEditForm(f => ({ ...f, medicalNotes: e.target.value }))}
+                        placeholder="Any other information the school should know..."
+                      />
+                    </div>
+                  </>
+                )}
+
+                {/* Pickup / Drop-off Contacts */}
+                <div className="sm:col-span-2 border-t pt-4 mt-1">
                   <p className="text-sm font-medium text-gray-700 mb-3">
-                    Medical History{' '}
+                    Pickup / Drop-off Contacts{' '}
                     <span className="text-gray-400 font-normal">(optional)</span>
                   </p>
                 </div>
+                {editNewContacts.map((c, i) => (
+                  <div key={i} className="sm:col-span-2">
+                    <div className="grid grid-cols-2 gap-3 p-3 border rounded-lg relative">
+                      <button
+                        type="button"
+                        onClick={() => setEditNewContacts(prev => prev.filter((_, idx) => idx !== i))}
+                        className="absolute top-2 right-2 text-gray-400 hover:text-red-500"
+                        aria-label="Remove contact"
+                      >
+                        <X size={15} />
+                      </button>
+                      <div>
+                        <Label>Name</Label>
+                        <Input
+                          placeholder="Contact name"
+                          value={c.name}
+                          onChange={e => setEditNewContacts(prev =>
+                            prev.map((row, idx) => idx === i ? { ...row, name: e.target.value } : row)
+                          )}
+                        />
+                      </div>
+                      <div>
+                        <Label>Phone</Label>
+                        <Input
+                          placeholder="+237 6XX XXX XXX"
+                          value={c.phone}
+                          onChange={e => setEditNewContacts(prev =>
+                            prev.map((row, idx) => idx === i ? { ...row, phone: e.target.value } : row)
+                          )}
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <Label>
+                          Relationship{' '}
+                          <span className="text-gray-400 font-normal">(optional)</span>
+                        </Label>
+                        <Input
+                          placeholder="e.g. Driver, Grandmother, Uncle"
+                          value={c.relationship}
+                          onChange={e => setEditNewContacts(prev =>
+                            prev.map((row, idx) => idx === i ? { ...row, relationship: e.target.value } : row)
+                          )}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
                 <div className="sm:col-span-2">
-                  <Label>Allergies</Label>
-                  <Textarea
-                    value={editForm.allergies}
-                    onChange={e => setEditForm(f => ({ ...f, allergies: e.target.value }))}
-                    placeholder="e.g. Penicillin, peanuts, latex..."
-                  />
-                </div>
-                <div className="sm:col-span-2">
-                  <Label>Existing Medical Conditions</Label>
-                  <Textarea
-                    value={editForm.medicalConditions}
-                    onChange={e => setEditForm(f => ({ ...f, medicalConditions: e.target.value }))}
-                    placeholder="e.g. Asthma, sickle cell..."
-                  />
-                </div>
-                <div className="sm:col-span-2">
-                  <Label>Current Medications</Label>
-                  <Textarea
-                    value={editForm.currentMedications}
-                    onChange={e => setEditForm(f => ({ ...f, currentMedications: e.target.value }))}
-                    placeholder="e.g. Salbutamol inhaler as needed..."
-                  />
-                </div>
-                <div className="sm:col-span-2">
-                  <Label>Additional Notes</Label>
-                  <Textarea
-                    value={editForm.medicalNotes}
-                    onChange={e => setEditForm(f => ({ ...f, medicalNotes: e.target.value }))}
-                    placeholder="Any other information the school should know..."
-                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setEditNewContacts(prev => [...prev, { name: '', phone: '', relationship: '' }])}
+                  >
+                    <Plus size={15} className="mr-1" />
+                    Add a pickup contact
+                  </Button>
                 </div>
               </div>
               </div>
