@@ -1,6 +1,6 @@
-import { ArrowLeft, Edit, FileText, Plus } from 'lucide-react';
+import { ArrowLeft, Edit, FileText, MoreHorizontal, Plus } from 'lucide-react';
 import { generateFinancialSheet } from '../utils/pdfGenerator';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api } from '../lib/api';
 import { useSisCache } from '../lib/SisCache';
 import { SCHOOL_CLASSES } from '../lib/classes';
@@ -83,6 +83,19 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
   const [showPayment, setShowPayment] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [showActionsMenu, setShowActionsMenu] = useState(false);
+  const actionsMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showActionsMenu) return;
+    const handle = (e: MouseEvent) => {
+      if (actionsMenuRef.current && !actionsMenuRef.current.contains(e.target as Node)) {
+        setShowActionsMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handle);
+    return () => document.removeEventListener('mousedown', handle);
+  }, [showActionsMenu]);
 
   const today = new Date().toISOString().split('T')[0];
   const [chargeForm, setChargeForm] = useState({
@@ -433,8 +446,40 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
 
       {activeTab === 'finance' && (
         <div className="space-y-4">
-          {/* Action buttons */}
-          <div className="flex gap-2 justify-end flex-wrap">
+          {/* Mobile: ⋯ action menu */}
+          <div className="flex justify-end md:hidden">
+            <div className="relative" ref={actionsMenuRef}>
+              <Button variant="outline" size="sm" onClick={() => setShowActionsMenu(v => !v)}>
+                <MoreHorizontal size={16} />
+              </Button>
+              {showActionsMenu && (
+                <div className="absolute top-full right-0 mt-1 z-10 bg-white border rounded-md shadow-lg py-1 w-48">
+                  <button
+                    className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 disabled:opacity-50"
+                    disabled={!ledgerData}
+                    onClick={() => { handleDownloadStatement(); setShowActionsMenu(false); }}
+                  >
+                    Download Financial Sheet
+                  </button>
+                  <button
+                    className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
+                    onClick={() => { setSubmitError(null); setShowCharge(true); setShowActionsMenu(false); }}
+                  >
+                    Record Charge
+                  </button>
+                  <button
+                    className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
+                    onClick={() => { setSubmitError(null); setShowPayment(true); setShowActionsMenu(false); }}
+                  >
+                    Record Payment
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Desktop: three-button row */}
+          <div className="hidden md:flex gap-2 justify-end flex-wrap">
             <Button variant="outline" onClick={handleDownloadStatement} disabled={!ledgerData}>
               <FileText size={16} className="mr-1" />
               Financial Sheet
@@ -450,27 +495,33 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
           </div>
 
           {ledgerLoading && <Card className="p-6 text-gray-500">Loading...</Card>}
-          {ledgerError && <Card className="p-6 text-red-600">{ledgerError}</Card>}
+          {ledgerError && (
+            <Card className="p-6 text-red-600">
+              {/reach database|connect|ECONNREFUSED|ETIMEDOUT/i.test(ledgerError)
+                ? 'Unable to connect to the database. Please try again in a moment.'
+                : 'Failed to load finance data. Please try again.'}
+            </Card>
+          )}
 
           {!ledgerLoading && !ledgerError && ledgerData && (
             <>
               {/* Summary */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <Card className="p-4">
+              <div className="grid grid-cols-3 gap-2 md:gap-4">
+                <Card className="p-2 md:p-4">
                   <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Total Charged</p>
-                  <p className="text-xl font-medium text-gray-900">
+                  <p className="text-xs md:text-xl font-medium text-gray-900">
                     {ledgerData.totalCharged.toLocaleString()} FCFA
                   </p>
                 </Card>
-                <Card className="p-4">
+                <Card className="p-2 md:p-4">
                   <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Total Paid</p>
-                  <p className="text-xl font-medium text-green-600">
+                  <p className="text-xs md:text-xl font-medium text-green-600">
                     {ledgerData.totalPaid.toLocaleString()} FCFA
                   </p>
                 </Card>
-                <Card className={`p-4 ${ledgerData.balance > 0 ? 'bg-red-50 border-red-200' : ''}`}>
+                <Card className={`p-2 md:p-4 ${ledgerData.balance > 0 ? 'bg-red-50 border-red-200' : ''}`}>
                   <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Balance Owed</p>
-                  <p className={`text-xl font-medium ${ledgerData.balance > 0 ? 'text-red-600' : 'text-gray-900'}`}>
+                  <p className={`text-xs md:text-xl font-medium ${ledgerData.balance > 0 ? 'text-red-600' : 'text-gray-900'}`}>
                     {ledgerData.balance.toLocaleString()} FCFA
                   </p>
                 </Card>

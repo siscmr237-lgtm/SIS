@@ -19,7 +19,12 @@ async function request(path: string, init?: RequestInit) {
   });
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(text || `Request failed: ${res.status}`);
+    let message = text || `Request failed: ${res.status}`;
+    try {
+      const parsed = JSON.parse(text);
+      if (parsed.error) message = String(parsed.error);
+    } catch {}
+    throw new Error(message);
   }
   const ct = res.headers.get('content-type');
   if (ct && ct.includes('application/json')) return res.json();
