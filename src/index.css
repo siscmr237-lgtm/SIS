@@ -2636,3 +2636,10 @@ html {
     line-height: var(--tw-leading, var(--text-xl--line-height));
   }
 }
+
+.border-red-200 { border-color: #fecaca; }
+.bg-orange-100 { background-color: #ffedd5; }
+.text-orange-700 { color: #c2410c; }
+.border-b-2 { border-bottom-width: 2px; }
+.-mb-px { margin-bottom: -1px; }
+.last\:border-0:last-child { border-width: 0; }
