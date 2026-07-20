@@ -3,6 +3,7 @@ import { generateFinancialSheet } from '../utils/pdfGenerator';
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
 import { useSisCache } from '../lib/SisCache';
+import { SCHOOL_CLASSES } from '../lib/classes';
 import { NavigationPage } from '../App';
 import { Student } from '../types';
 import { Card } from './ui/card';
@@ -54,16 +55,25 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
   const [activeTab, setActiveTab] = useState<Tab>('general');
   const cache = useSisCache();
 
-  // Editable name — kept in local state so it updates immediately after save
-  const [displayName, setDisplayName] = useState({
+  // Editable info — local state so updates appear immediately after save
+  const [displayInfo, setDisplayInfo] = useState({
     firstName: student.firstName,
     lastName: student.lastName,
+    gender: student.gender as string,
+    dateOfBirth: student.dateOfBirth || '',
+    enrollmentDate: student.enrollmentDate || '',
+    address: student.address || '',
+    parentName: student.parentName || '',
+    parentPhone: student.parentPhone || '',
+    class: student.class || '',
   });
-  const [showEditName, setShowEditName] = useState(false);
-  const [editFirstName, setEditFirstName] = useState('');
-  const [editLastName, setEditLastName] = useState('');
-  const [nameSubmitting, setNameSubmitting] = useState(false);
-  const [nameError, setNameError] = useState<string | null>(null);
+  const [showEdit, setShowEdit] = useState(false);
+  const [editForm, setEditForm] = useState({
+    firstName: '', lastName: '', gender: '', dateOfBirth: '',
+    enrollmentDate: '', address: '', parentName: '', parentPhone: '', class: '',
+  });
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
 
   const [ledgerData, setLedgerData] = useState<LedgerData | null>(null);
   const [ledgerLoading, setLedgerLoading] = useState(false);
@@ -183,21 +193,38 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
     }
   };
 
-  const handleNameSave = async () => {
-    setNameSubmitting(true);
-    setNameError(null);
+  const handleEditSave = async () => {
+    setEditSubmitting(true);
+    setEditError(null);
     try {
       await api.put(`/students/${student.id}`, {
-        firstName: editFirstName.trim(),
-        lastName: editLastName.trim(),
+        firstName: editForm.firstName.trim(),
+        lastName: editForm.lastName.trim(),
+        gender: editForm.gender,
+        dateOfBirth: editForm.dateOfBirth || undefined,
+        enrollmentDate: editForm.enrollmentDate || undefined,
+        address: editForm.address.trim(),
+        parentName: editForm.parentName.trim(),
+        parentPhone: editForm.parentPhone.trim(),
+        class: editForm.class,
       });
-      setDisplayName({ firstName: editFirstName.trim(), lastName: editLastName.trim() });
+      setDisplayInfo({
+        firstName: editForm.firstName.trim(),
+        lastName: editForm.lastName.trim(),
+        gender: editForm.gender,
+        dateOfBirth: editForm.dateOfBirth,
+        enrollmentDate: editForm.enrollmentDate,
+        address: editForm.address.trim(),
+        parentName: editForm.parentName.trim(),
+        parentPhone: editForm.parentPhone.trim(),
+        class: editForm.class,
+      });
       cache.invalidate('students', 'dashboard');
-      setShowEditName(false);
+      setShowEdit(false);
     } catch (e: any) {
-      setNameError(e.message || 'Failed to save');
+      setEditError(e.message || 'Failed to save');
     } finally {
-      setNameSubmitting(false);
+      setEditSubmitting(false);
     }
   };
 
@@ -225,8 +252,8 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
       </button>
 
       <div className="mb-6">
-        <h1 className="text-3xl">{displayName.firstName} {displayName.lastName}</h1>
-        <p className="text-gray-500 mt-1">{student.id} · {student.class}</p>
+        <h1 className="text-3xl">{displayInfo.firstName} {displayInfo.lastName}</h1>
+        <p className="text-gray-500 mt-1">{student.id} · {displayInfo.class}</p>
       </div>
 
       <div className="flex gap-1 border-b mb-6">
@@ -254,10 +281,19 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                  setEditFirstName(displayName.firstName);
-                  setEditLastName(displayName.lastName);
-                  setNameError(null);
-                  setShowEditName(true);
+                  setEditForm({
+                    firstName: displayInfo.firstName,
+                    lastName: displayInfo.lastName,
+                    gender: displayInfo.gender,
+                    dateOfBirth: displayInfo.dateOfBirth ? displayInfo.dateOfBirth.split('T')[0] : '',
+                    enrollmentDate: displayInfo.enrollmentDate ? displayInfo.enrollmentDate.split('T')[0] : '',
+                    address: displayInfo.address,
+                    parentName: displayInfo.parentName,
+                    parentPhone: displayInfo.parentPhone,
+                    class: displayInfo.class,
+                  });
+                  setEditError(null);
+                  setShowEdit(true);
                 }}
               >
                 <Edit size={14} className="mr-1" />
@@ -266,57 +302,128 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
             </div>
             <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-5">
               <Field label="Student ID" value={student.id} />
-              <Field label="Class" value={student.class} />
-              <Field label="First Name" value={displayName.firstName} />
-              <Field label="Last Name" value={displayName.lastName} />
-              <Field label="Gender" value={student.gender} capitalize />
-              <Field label="Date of Birth" value={formatDate(student.dateOfBirth)} />
-              <Field label="Enrollment Date" value={formatDate(student.enrollmentDate)} />
-              <Field label="Address" value={student.address} />
-              <Field label="Parent / Guardian" value={student.parentName} />
-              <Field label="Parent Phone" value={student.parentPhone} />
+              <Field label="Class" value={displayInfo.class} />
+              <Field label="First Name" value={displayInfo.firstName} />
+              <Field label="Last Name" value={displayInfo.lastName} />
+              <Field label="Gender" value={displayInfo.gender} capitalize />
+              <Field label="Date of Birth" value={formatDate(displayInfo.dateOfBirth)} />
+              <Field label="Enrollment Date" value={formatDate(displayInfo.enrollmentDate)} />
+              <Field label="Address" value={displayInfo.address} />
+              <Field label="Parent / Guardian" value={displayInfo.parentName} />
+              <Field label="Parent Phone" value={displayInfo.parentPhone} />
             </dl>
           </Card>
 
-          {/* Edit name dialog */}
+          {/* Edit student dialog */}
           <Dialog
-            open={showEditName}
-            onOpenChange={(open) => { setShowEditName(open); if (!open) setNameError(null); }}
+            open={showEdit}
+            onOpenChange={(open) => { setShowEdit(open); if (!open) setEditError(null); }}
           >
-            <DialogContent className="max-w-sm">
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Edit Name</DialogTitle>
-                <DialogDescription>Update the student's first and last name.</DialogDescription>
+                <DialogTitle>Edit Student</DialogTitle>
+                <DialogDescription>
+                  Student ID {student.id} — update general information below.
+                </DialogDescription>
               </DialogHeader>
-              <div className="space-y-4 py-2">
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-2">
                 <div>
                   <Label>First Name</Label>
                   <Input
-                    value={editFirstName}
-                    onChange={e => setEditFirstName(e.target.value)}
+                    value={editForm.firstName}
+                    onChange={e => setEditForm(f => ({ ...f, firstName: e.target.value }))}
                     placeholder="First name"
                   />
                 </div>
                 <div>
                   <Label>Last Name</Label>
                   <Input
-                    value={editLastName}
-                    onChange={e => setEditLastName(e.target.value)}
+                    value={editForm.lastName}
+                    onChange={e => setEditForm(f => ({ ...f, lastName: e.target.value }))}
                     placeholder="Last name"
-                    onKeyDown={e => { if (e.key === 'Enter') handleNameSave(); }}
                   />
                 </div>
-                {nameError && <p className="text-sm text-red-600">{nameError}</p>}
+                <div>
+                  <Label>Gender</Label>
+                  <Select
+                    value={editForm.gender}
+                    onValueChange={v => setEditForm(f => ({ ...f, gender: v }))}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Select gender" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="male">Male</SelectItem>
+                      <SelectItem value="female">Female</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Class</Label>
+                  <Select
+                    value={editForm.class}
+                    onValueChange={v => setEditForm(f => ({ ...f, class: v }))}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Select class" /></SelectTrigger>
+                    <SelectContent>
+                      {SCHOOL_CLASSES.map(cls => (
+                        <SelectItem key={cls} value={cls}>{cls}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Date of Birth</Label>
+                  <Input
+                    type="date"
+                    value={editForm.dateOfBirth}
+                    onChange={e => setEditForm(f => ({ ...f, dateOfBirth: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <Label>Enrollment Date</Label>
+                  <Input
+                    type="date"
+                    value={editForm.enrollmentDate}
+                    onChange={e => setEditForm(f => ({ ...f, enrollmentDate: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <Label>Parent / Guardian Name</Label>
+                  <Input
+                    value={editForm.parentName}
+                    onChange={e => setEditForm(f => ({ ...f, parentName: e.target.value }))}
+                    placeholder="Parent or guardian name"
+                  />
+                </div>
+                <div>
+                  <Label>Parent Phone</Label>
+                  <Input
+                    value={editForm.parentPhone}
+                    onChange={e => setEditForm(f => ({ ...f, parentPhone: e.target.value }))}
+                    placeholder="+237 6XX XXX XXX"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <Label>Address</Label>
+                  <Input
+                    value={editForm.address}
+                    onChange={e => setEditForm(f => ({ ...f, address: e.target.value }))}
+                    placeholder="Home address"
+                  />
+                </div>
               </div>
+
+              {editError && <p className="text-sm text-red-600">{editError}</p>}
+
               <div className="flex justify-end gap-2">
                 <DialogClose asChild>
-                  <Button variant="outline" disabled={nameSubmitting}>Cancel</Button>
+                  <Button variant="outline" disabled={editSubmitting}>Cancel</Button>
                 </DialogClose>
                 <Button
-                  onClick={handleNameSave}
-                  disabled={nameSubmitting || !editFirstName.trim() || !editLastName.trim()}
+                  onClick={handleEditSave}
+                  disabled={editSubmitting || !editForm.firstName.trim() || !editForm.lastName.trim()}
                 >
-                  {nameSubmitting ? 'Saving...' : 'Save'}
+                  {editSubmitting ? 'Saving...' : 'Save Changes'}
                 </Button>
               </div>
             </DialogContent>
