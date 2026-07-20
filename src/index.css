@@ -2097,6 +2097,10 @@
     min-height: 100vh;
   }
 
+  .hidden {
+    display: none;
+  }
+
   .tracking-tight {
     letter-spacing: -0.025em;
   }
@@ -2241,6 +2245,10 @@
 
   .md\:items-end {
     align-items: flex-end;
+  }
+
+  .md\:text-left {
+    text-align: left;
   }
 }
 
