@@ -432,7 +432,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
       )}
 
       {activeTab === 'finance' && (
-        <div className="space-y-6">
+        <div className="space-y-4">
           {/* Action buttons */}
           <div className="flex gap-2 justify-end">
             <Button variant="outline" onClick={handleDownloadStatement} disabled={!ledgerData}>
