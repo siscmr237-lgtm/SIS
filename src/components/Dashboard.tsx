@@ -24,8 +24,9 @@ export function Dashboard() {
     if (!userStr) return;
     try {
       const user = JSON.parse(userStr);
-      if (!user?.School) return;
+      if (!user?.School?.length) return;
       const school = user.School[0];
+      if (!school) return;
       setSchoolSettings(school);
       const logo = school?.logo;
       if (!logo) return;
@@ -64,7 +65,9 @@ export function Dashboard() {
           cache.set('dashboard', data);
           setDashboardData(data);
         }
-      } catch {}
+      } catch {
+        // 401s are handled globally in api.ts (clears session + redirects)
+      }
       if (mounted) setLoading(false);
     })();
     return () => { mounted = false; };

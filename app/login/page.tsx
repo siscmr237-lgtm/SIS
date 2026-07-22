@@ -3,8 +3,24 @@
 import { Button } from "@/components/ui/button";
 import { EyeIcon, EyeOffIcon, PhoneIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "../../src/lib/api";
+
+function mapLoginError(err: any): string {
+  if (err?.status === 0 || err?.code === 'NETWORK_ERROR') {
+    return 'Unable to connect to the server. Please try again in a moment.';
+  }
+  switch (err?.code) {
+    case 'PHONE_NOT_FOUND': return 'No account linked to this number.';
+    case 'INVALID_CREDENTIALS': return 'Invalid phone number or password.';
+    case 'ACCOUNT_CLOSED': return 'This account has been closed. Contact support if this was a mistake.';
+    case 'MISSING_FIELDS': return 'Please enter your phone number and password.';
+    case 'SERVER_ERROR': return 'Something went wrong on our end. Please try again shortly.';
+    default:
+      if (err?.status >= 500) return 'Something went wrong on our end. Please try again shortly.';
+      return 'Something went wrong on our end. Please try again shortly.';
+  }
+}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -13,11 +29,30 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sessionMessage, setSessionMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [focusedField, setFocusedField] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('reason') === 'expired') {
+      setSessionMessage('Your session has expired. Please sign in again.');
+    }
+    if (params.get('message') === 'password_updated') {
+      setSuccessMessage('Password updated — please sign in with your new password.');
+    }
+  }, []);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    if (!phoneNumber.trim() || !password.trim()) {
+      setError('Please enter your phone number and password.');
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await api.post("/auth/login", { phoneNumber, password });
@@ -29,10 +64,10 @@ export default function LoginPage() {
         const school = (res as any).user?.School?.[0];
         router.replace(school?.onboardingCompleted === false ? "/onboarding" : "/");
       } else {
-        setError("Invalid response");
+        setError("Something went wrong on our end. Please try again shortly.");
       }
     } catch (err: any) {
-      setError(err?.message || "Login failed");
+      setError(mapLoginError(err));
     } finally {
       setLoading(false);
     }
@@ -93,6 +128,38 @@ export default function LoginPage() {
             </p>
           </div>
 
+          {successMessage && (
+            <div
+              style={{
+                marginBottom: "1.25rem",
+                padding: "0.75rem 1rem",
+                borderRadius: 10,
+                backgroundColor: "#F0FDF4",
+                border: "1px solid #86EFAC",
+                color: "#15803D",
+                fontSize: "0.875rem",
+              }}
+            >
+              {successMessage}
+            </div>
+          )}
+
+          {sessionMessage && (
+            <div
+              style={{
+                marginBottom: "1.25rem",
+                padding: "0.75rem 1rem",
+                borderRadius: 10,
+                backgroundColor: "#FEF3C7",
+                border: "1px solid #FCD34D",
+                color: "#92400E",
+                fontSize: "0.875rem",
+              }}
+            >
+              {sessionMessage}
+            </div>
+          )}
+
           <form onSubmit={onSubmit} className="space-y-5">
             {/* Phone Number */}
             <div>
@@ -146,7 +213,6 @@ export default function LoginPage() {
                     placeholder="Enter your phone number"
                     value={phoneNumber}
                     onChange={(e) => setPhoneNumber(e.target.value)}
-                    required
                     style={{
                       flex: 1,
                       height: "100%",
@@ -190,7 +256,6 @@ export default function LoginPage() {
                   placeholder="Enter your password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  required
                   style={{
                     flex: 1,
                     height: "100%",
@@ -230,31 +295,17 @@ export default function LoginPage() {
 
             {/* Forgot password — right-aligned */}
             <div className="flex justify-end">
-              <button
-                type="button"
-                onClick={() =>
-                  alert(
-                    "Please contact the administrator to reset your password."
-                  )
-                }
+              <a
+                href="/password-reset"
                 className="text-sm font-medium"
-                style={{
-                  color: "#2563EB",
-                  background: "transparent",
-                  border: "none",
-                  cursor: "pointer",
-                }}
+                style={{ color: "#2563EB" }}
               >
                 Forgot your password?
-              </button>
+              </a>
             </div>
 
             {error && (
-              <p className="text-sm text-red-600">
-                {/reach database|connect|ECONNREFUSED|ETIMEDOUT/i.test(error)
-                  ? 'Unable to connect to the server. Please try again in a moment.'
-                  : error}
-              </p>
+              <p className="text-sm text-red-600">{error}</p>
             )}
 
             <Button
