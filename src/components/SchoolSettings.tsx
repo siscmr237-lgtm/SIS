@@ -4,11 +4,12 @@ import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
-import { Settings, Plus, Trash2, Edit, Save, X, Upload } from 'lucide-react';
+import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
+import { Settings, Plus, Trash2, Edit, Save, X, Upload, KeyRound, EyeIcon, EyeOffIcon } from 'lucide-react';
 import { schoolSettings } from '../data/mockData';
 import { toast } from 'sonner';
 import { api, BASE_URL } from '@/lib/api';
+import { PasswordHints } from './PasswordHints';
 
 interface ChargeCategory {
   id: number;
@@ -33,6 +34,17 @@ export function SchoolSettings() {
   const [addError, setAddError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [showCatsDialog, setShowCatsDialog] = useState(false);
+
+  // Change Password dialog state
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSubmitting, setPasswordSubmitting] = useState(false);
 
   // Basic Settings Form State
   const [formData, setFormData] = useState({
@@ -199,6 +211,35 @@ export function SchoolSettings() {
     }
   };
 
+  const resetPasswordDialog = () => {
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmNewPassword('');
+    setShowCurrentPassword(false);
+    setShowNewPassword(false);
+    setShowConfirmNewPassword(false);
+    setPasswordError(null);
+  };
+
+  const handleChangePassword = async () => {
+    setPasswordError(null);
+    if (newPassword !== confirmNewPassword) {
+      setPasswordError('Passwords do not match.');
+      return;
+    }
+    setPasswordSubmitting(true);
+    try {
+      await api.put('/settings/password', { currentPassword, newPassword, confirmPassword: confirmNewPassword });
+      setShowPasswordDialog(false);
+      resetPasswordDialog();
+      toast.success('Password updated successfully');
+    } catch (e: any) {
+      setPasswordError(e?.message || 'Failed to update password');
+    } finally {
+      setPasswordSubmitting(false);
+    }
+  };
+
   return (
     <div className="p-8 school-settings">
       <div className="mb-8">
@@ -314,6 +355,20 @@ export function SchoolSettings() {
               )}
             </div>
           </div>
+        </div>
+      </Card>
+
+      {/* Change Password */}
+      <Card className="p-6 mt-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-xl">Change Password</h2>
+            <p className="text-sm text-gray-500 mt-1">Update the password used to sign in to this account.</p>
+          </div>
+          <Button variant="outline" onClick={() => setShowPasswordDialog(true)}>
+            <KeyRound className="mr-2" size={16} />
+            Change Password
+          </Button>
         </div>
       </Card>
 
@@ -467,6 +522,101 @@ export function SchoolSettings() {
               </Button>
             </div>
             {addError && <p className="text-sm text-red-600 mt-2">{addError}</p>}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Change Password Dialog */}
+      <Dialog
+        open={showPasswordDialog}
+        onOpenChange={(open) => { setShowPasswordDialog(open); if (!open) resetPasswordDialog(); }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Change Password</DialogTitle>
+            <DialogDescription>
+              Enter your current password and choose a new one.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div>
+              <Label>Current Password</Label>
+              <div className="relative">
+                <Input
+                  type={showCurrentPassword ? 'text' : 'password'}
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder="Enter current password"
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowCurrentPassword((v) => !v)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  {showCurrentPassword ? <EyeOffIcon size={16} /> : <EyeIcon size={16} />}
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <Label>New Password</Label>
+              <div className="relative">
+                <Input
+                  type={showNewPassword ? 'text' : 'password'}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Enter new password"
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowNewPassword((v) => !v)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  {showNewPassword ? <EyeOffIcon size={16} /> : <EyeIcon size={16} />}
+                </button>
+              </div>
+              <PasswordHints password={newPassword} />
+            </div>
+
+            <div>
+              <Label>Confirm New Password</Label>
+              <div className="relative">
+                <Input
+                  type={showConfirmNewPassword ? 'text' : 'password'}
+                  value={confirmNewPassword}
+                  onChange={(e) => setConfirmNewPassword(e.target.value)}
+                  placeholder="Re-enter new password"
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmNewPassword((v) => !v)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  {showConfirmNewPassword ? <EyeOffIcon size={16} /> : <EyeIcon size={16} />}
+                </button>
+              </div>
+              {confirmNewPassword && newPassword !== confirmNewPassword && (
+                <p className="text-xs text-red-600 mt-1">Passwords do not match.</p>
+              )}
+            </div>
+
+            {passwordError && <p className="text-sm text-red-600">{passwordError}</p>}
+          </div>
+
+          <div className="flex justify-end gap-2">
+            <DialogClose asChild>
+              <Button variant="outline" disabled={passwordSubmitting}>Cancel</Button>
+            </DialogClose>
+            <Button
+              onClick={handleChangePassword}
+              disabled={passwordSubmitting || !currentPassword || !newPassword || !confirmNewPassword}
+            >
+              {passwordSubmitting ? 'Updating…' : 'Update Password'}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
