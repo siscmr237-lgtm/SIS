@@ -4,6 +4,7 @@ import { Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { api, BASE_URL } from "../../src/lib/api";
+import { compressImageForUpload } from "../../src/lib/imageResize";
 
 type SchoolType = "DAYCARE_NURSERY" | "DAYCARE_NURSERY_PRIMARY";
 
@@ -151,12 +152,22 @@ export default function OnboardingPage() {
       prev.includes(label) ? prev.filter((c) => c !== label) : [...prev, label]
     );
 
-  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.target;
+    const file = input.files?.[0];
     if (!file) return;
-    setLogoFile(file);
-    setLogoPreview(URL.createObjectURL(file));
-    e.target.value = "";
+    input.value = "";
+
+    let toStore: File = file;
+    try {
+      toStore = await compressImageForUpload(file);
+    } catch (err) {
+      // Fall back to the original file — the backend has its own resize
+      // safety net if it turns out to be too large.
+      console.error("Client-side image compression failed, using original file", err);
+    }
+    setLogoFile(toStore);
+    setLogoPreview(URL.createObjectURL(toStore));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -500,7 +511,7 @@ export default function OnboardingPage() {
                 />
               </label>
               <span style={{ fontSize: "0.78rem", color: "#9CA3AF" }}>
-                JPG, PNG or WebP · max 5 MB
+                JPG, PNG or WebP
               </span>
             </div>
           </Section>
