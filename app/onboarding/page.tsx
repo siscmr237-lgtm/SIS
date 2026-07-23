@@ -235,6 +235,14 @@ export default function OnboardingPage() {
     }
   };
 
+  const handleBackToLogin = () => {
+    try {
+      window.localStorage.removeItem("auth_token");
+      window.localStorage.removeItem("user");
+    } catch {}
+    router.replace("/login");
+  };
+
   return (
     <div
       style={{
@@ -258,26 +266,53 @@ export default function OnboardingPage() {
         }}
       >
         {/* Header */}
-        <div style={{ marginBottom: "2rem" }}>
-          <h1
+        <div
+          style={{
+            marginBottom: "2rem",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            gap: "1rem",
+          }}
+        >
+          <div>
+            <h1
+              style={{
+                fontSize: "1.75rem",
+                fontWeight: 700,
+                color: "#0F172A",
+                margin: 0,
+              }}
+            >
+              Set Up Your School
+            </h1>
+            <p
+              style={{
+                fontSize: "0.875rem",
+                color: "#6B7280",
+                marginTop: "0.375rem",
+              }}
+            >
+              Tell us a bit about your school before we get started
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleBackToLogin}
             style={{
-              fontSize: "1.75rem",
-              fontWeight: 700,
-              color: "#0F172A",
-              margin: 0,
+              fontSize: "0.8125rem",
+              fontWeight: 500,
+              color: "#2563EB",
+              background: "transparent",
+              border: "none",
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+              marginTop: 4,
+              flexShrink: 0,
             }}
           >
-            Set Up Your School
-          </h1>
-          <p
-            style={{
-              fontSize: "0.875rem",
-              color: "#6B7280",
-              marginTop: "0.375rem",
-            }}
-          >
-            Tell us a bit about your school before we get started
-          </p>
+            ← Back to Login
+          </button>
         </div>
 
         <form onSubmit={handleSubmit}>

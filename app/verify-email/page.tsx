@@ -67,10 +67,12 @@ function ConfirmEmailStep({
   email,
   startEditing,
   onCodeSent,
+  onBackToLogin,
 }: {
   email: string;
   startEditing: boolean;
   onCodeSent: (email: string) => void;
+  onBackToLogin: () => void;
 }) {
   const [editing, setEditing] = useState(startEditing);
   const [draftEmail, setDraftEmail] = useState(email);
@@ -218,6 +220,23 @@ function ConfirmEmailStep({
             {sending ? "Sending…" : "Looks good, send code"}
           </Button>
         )}
+
+        <div style={{ textAlign: "center", marginTop: "0.25rem" }}>
+          <button
+            type="button"
+            onClick={onBackToLogin}
+            style={{
+              fontSize: "0.8125rem",
+              fontWeight: 500,
+              color: "#2563EB",
+              background: "transparent",
+              border: "none",
+              cursor: "pointer",
+            }}
+          >
+            ← Back to Login
+          </button>
+        </div>
       </div>
     </>
   );
@@ -283,6 +302,14 @@ export default function VerifyEmailPage() {
     await api.post("/auth/otp/send-code", {});
   };
 
+  const handleBackToLogin = () => {
+    try {
+      window.localStorage.removeItem("auth_token");
+      window.localStorage.removeItem("user");
+    } catch {}
+    router.replace("/login");
+  };
+
   if (!ready) {
     return <div className="p-6 text-sm text-gray-600">Loading...</div>;
   }
@@ -298,28 +325,47 @@ export default function VerifyEmailPage() {
             setEditEmailOnReturn(false);
             setStep("code");
           }}
+          onBackToLogin={handleBackToLogin}
         />
       ) : (
-        <OtpVerifyScreen
-          emoji="📧"
-          heading="Check your email"
-          subtext={
-            <>
-              We sent a 6-digit code to
-              <br />
-              <strong style={{ color: "#374151" }}>{email}</strong>
-            </>
-          }
-          onVerify={handleVerify}
-          onResend={handleResend}
-          onBack={{
-            label: "Wrong email? Edit it",
-            onClick: () => {
-              setEditEmailOnReturn(true);
-              setStep("confirm");
-            },
-          }}
-        />
+        <>
+          <OtpVerifyScreen
+            emoji="📧"
+            heading="Check your email"
+            subtext={
+              <>
+                We sent a 6-digit code to
+                <br />
+                <strong style={{ color: "#374151" }}>{email}</strong>
+              </>
+            }
+            onVerify={handleVerify}
+            onResend={handleResend}
+            onBack={{
+              label: "Wrong email? Edit it",
+              onClick: () => {
+                setEditEmailOnReturn(true);
+                setStep("confirm");
+              },
+            }}
+          />
+          <div style={{ textAlign: "center", marginTop: "1.25rem" }}>
+            <button
+              type="button"
+              onClick={handleBackToLogin}
+              style={{
+                fontSize: "0.8125rem",
+                fontWeight: 500,
+                color: "#2563EB",
+                background: "transparent",
+                border: "none",
+                cursor: "pointer",
+              }}
+            >
+              ← Back to Login
+            </button>
+          </div>
+        </>
       )}
     </Shell>
   );
