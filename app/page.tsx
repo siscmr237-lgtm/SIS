@@ -22,6 +22,10 @@ export default function Page() {
         const userStr = window.localStorage.getItem("user");
         if (userStr) {
           const user = JSON.parse(userStr);
+          if (user?.emailVerified === false) {
+            if (alive) router.replace("/verify-email");
+            return;
+          }
           if (user?.School?.[0]?.onboardingCompleted === false) {
             if (alive) router.replace("/onboarding");
             return;

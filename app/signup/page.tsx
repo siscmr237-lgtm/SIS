@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { EyeIcon, EyeOffIcon, PhoneIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { OtpVerifyScreen } from "../../src/components/OtpVerifyScreen";
 import { PasswordHints } from "../../src/components/PasswordHints";
 import { api } from "../../src/lib/api";
 
@@ -68,7 +67,7 @@ function Shell({ children }: { children: React.ReactNode }) {
 // ---------------------------------------------------------------------------
 // Step 1 — registration form
 // ---------------------------------------------------------------------------
-function SignupForm({ onSuccess }: { onSuccess: (email: string) => void }) {
+function SignupForm({ onSuccess }: { onSuccess: () => void }) {
   const [name, setName] = useState("");
   const [schoolName, setSchoolName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -88,8 +87,12 @@ function SignupForm({ onSuccess }: { onSuccess: (email: string) => void }) {
     setError(null);
     setLoading(true);
     try {
-      await api.post("/auth/signup", { name, schoolName, phoneNumber, email, password });
-      onSuccess(email);
+      const res = (await api.post("/auth/signup", { name, schoolName, phoneNumber, email, password })) as any;
+      if (res?.token) {
+        window.localStorage.setItem("auth_token", res.token);
+        window.localStorage.setItem("user", JSON.stringify(res.user));
+      }
+      onSuccess();
     } catch (err: any) {
       setError(err?.message || "Something went wrong. Please try again.");
     } finally {
@@ -233,7 +236,7 @@ function SignupForm({ onSuccess }: { onSuccess: (email: string) => void }) {
             style={textInputStyle(focused === "email")}
           />
           <p style={{ fontSize: "0.75rem", color: "#9CA3AF", marginTop: 4 }}>
-            A verification code will be sent here.
+            You'll confirm this email on the next step.
           </p>
         </div>
 
@@ -319,7 +322,7 @@ function SignupForm({ onSuccess }: { onSuccess: (email: string) => void }) {
             opacity: loading ? 0.6 : 1,
           }}
         >
-          {loading ? "Sending code…" : "Continue"}
+          {loading ? "Creating account…" : "Continue"}
         </Button>
 
         <p className="text-center text-sm text-gray-500">
@@ -338,51 +341,10 @@ function SignupForm({ onSuccess }: { onSuccess: (email: string) => void }) {
 // ---------------------------------------------------------------------------
 export default function SignupPage() {
   const router = useRouter();
-  const [step, setStep] = useState<"form" | "otp">("form");
-  const [pendingEmail, setPendingEmail] = useState("");
-
-  const handleVerify = async (code: string) => {
-    const res = (await api.post("/auth/signup/verify", {
-      email: pendingEmail,
-      code,
-    })) as any;
-    if (res?.token) {
-      window.localStorage.setItem("auth_token", res.token);
-      window.localStorage.setItem("user", JSON.stringify(res.user));
-      const school = res.user?.School?.[0];
-      router.replace(school?.onboardingCompleted === false ? "/onboarding" : "/");
-    }
-  };
-
-  const handleResend = async () => {
-    await api.post("/auth/signup/resend", { email: pendingEmail });
-  };
 
   return (
     <Shell>
-      {step === "form" ? (
-        <SignupForm
-          onSuccess={(email) => {
-            setPendingEmail(email);
-            setStep("otp");
-          }}
-        />
-      ) : (
-        <OtpVerifyScreen
-          emoji="📧"
-          heading="Check your email"
-          subtext={
-            <>
-              We sent a 6-digit code to
-              <br />
-              <strong style={{ color: "#374151" }}>{pendingEmail}</strong>
-            </>
-          }
-          onVerify={handleVerify}
-          onResend={handleResend}
-          onBack={{ label: "Use a different email", onClick: () => setStep("form") }}
-        />
-      )}
+      <SignupForm onSuccess={() => router.replace("/verify-email")} />
     </Shell>
   );
 }
