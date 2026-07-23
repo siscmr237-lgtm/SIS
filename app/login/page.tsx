@@ -36,11 +36,19 @@ export default function LoginPage() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
+    let shouldCleanUrl = false;
     if (params.get('reason') === 'expired') {
       setSessionMessage('Your session has expired. Please sign in again.');
+      shouldCleanUrl = true;
     }
     if (params.get('message') === 'password_updated') {
       setSuccessMessage('Password updated — please sign in with your new password.');
+      shouldCleanUrl = true;
+    }
+    // Strip the query param once read so a refresh or renewed navigation to /login
+    // can't get stuck re-showing a banner from a one-time event.
+    if (shouldCleanUrl) {
+      window.history.replaceState(null, '', window.location.pathname);
     }
   }, []);
 
@@ -57,12 +65,17 @@ export default function LoginPage() {
     try {
       const res = await api.post("/auth/login", { phoneNumber, password });
       if ((res as any)?.token) {
+        const user = (res as any).user;
         if (typeof window !== "undefined") {
           window.localStorage.setItem("auth_token", (res as any).token);
-          window.localStorage.setItem("user", JSON.stringify((res as any).user));
+          window.localStorage.setItem("user", JSON.stringify(user));
         }
-        const school = (res as any).user?.School?.[0];
-        router.replace(school?.onboardingCompleted === false ? "/onboarding" : "/");
+        if (user?.emailVerified === false) {
+          router.replace("/verify-email");
+        } else {
+          const school = user?.School?.[0];
+          router.replace(school?.onboardingCompleted === false ? "/onboarding" : "/");
+        }
       } else {
         setError("Something went wrong on our end. Please try again shortly.");
       }

@@ -9,6 +9,7 @@ import { Settings, Plus, Trash2, Edit, Save, X, Upload, KeyRound, EyeIcon, EyeOf
 import { schoolSettings } from '../data/mockData';
 import { toast } from 'sonner';
 import { api, BASE_URL } from '@/lib/api';
+import { compressImageForUpload } from '@/lib/imageResize';
 import { PasswordHints } from './PasswordHints';
 
 interface ChargeCategory {
@@ -119,9 +120,18 @@ export function SchoolSettings() {
     setLogoError(null);
 
     try {
+      let uploadFile: File = file;
+      try {
+        uploadFile = await compressImageForUpload(file);
+      } catch (compressErr) {
+        // Fall back to the original file — the backend has its own resize
+        // safety net if it turns out to be too large.
+        console.error('Client-side image compression failed, uploading original', compressErr);
+      }
+
       const token = typeof window !== 'undefined' ? window.localStorage.getItem('auth_token') : null;
       const body = new FormData();
-      body.append('file', file);
+      body.append('file', uploadFile);
       body.append('type', 'logo');
 
       const res = await fetch(`${BASE_URL}/upload`, {
@@ -345,7 +355,7 @@ export function SchoolSettings() {
                     disabled={logoUploading}
                   />
                 </label>
-                <span className="text-xs text-gray-400">JPG, PNG or WebP · max 5 MB</span>
+                <span className="text-xs text-gray-400">JPG, PNG or WebP</span>
               </div>
               {logoError && (
                 <p className="text-sm text-red-600">{logoError}</p>
