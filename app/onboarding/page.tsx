@@ -310,6 +310,7 @@ export default function OnboardingPage() {
           <button
             type="button"
             onClick={handleBackToLogin}
+            className="hidden md:flex"
             style={{
               fontSize: "0.8125rem",
               fontWeight: 500,
@@ -599,6 +600,23 @@ export default function OnboardingPage() {
               : "Get Started"}
           </button>
         </form>
+
+        <div className="md:hidden" style={{ textAlign: "center", marginTop: "1.25rem" }}>
+          <button
+            type="button"
+            onClick={handleBackToLogin}
+            style={{
+              fontSize: "0.8125rem",
+              fontWeight: 500,
+              color: "#2563EB",
+              background: "transparent",
+              border: "none",
+              cursor: "pointer",
+            }}
+          >
+            ← Back to Login
+          </button>
+        </div>
       </div>
     </div>
   );
