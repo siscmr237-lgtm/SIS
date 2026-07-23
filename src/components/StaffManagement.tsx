@@ -8,12 +8,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Textarea } from './ui/textarea';
 import { Plus, FileText, Search } from 'lucide-react';
-import { Checkbox } from './ui/checkbox';
 import { NavigationPage } from '../App';
 import { Staff } from '../types';
 import { generateWorkRecord } from '../utils/pdfGenerator';
 import { api } from '@/lib/api';
 import { useSisCache } from '@/lib/SisCache';
+import { StaffForm, StaffFormPayload } from './StaffForm';
 
 interface StaffManagementProps {
   onNavigate?: (page: NavigationPage) => void;
@@ -26,16 +26,6 @@ export function StaffManagement({ onNavigate, onViewStaff }: StaffManagementProp
   const cache = useSisCache();
   const [searchTerm, setSearchTerm] = useState('');
   const [openAddStaff, setOpenAddStaff] = useState(false);
-  const [newStaff, setNewStaff] = useState({
-    firstName: '',
-    lastName: '',
-    role: '',
-    phone: '',
-    email: '',
-    hireDate: '',
-    salary: '' as any,
-    isTeacher: false,
-  });
   const [openWork, setOpenWork] = useState(false);
   const [workForm, setWorkForm] = useState({
     date: '',
@@ -98,85 +88,23 @@ export function StaffManagement({ onNavigate, onViewStaff }: StaffManagementProp
           <h1 className="text-3xl mb-2">Staff Management</h1>
           <p className="text-gray-600">Manage staff records and work documentation</p>
         </div>
-        <Dialog open={openAddStaff} onOpenChange={setOpenAddStaff}>
-          <DialogTrigger asChild>
-            <Button className="flex items-center gap-2">
-              <Plus size={20} />
-              Add Staff
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Add New Staff Member</DialogTitle>
-              <DialogDescription>Enter the staff member's details below</DialogDescription>
-            </DialogHeader>
-            <div className="grid grid-cols-2 gap-4 py-4">
-              <div>
-                <Label>First Name</Label>
-                <Input placeholder="Enter first name" value={newStaff.firstName} onChange={e=>setNewStaff(s=>({...s, firstName:e.target.value}))} />
-              </div>
-              <div>
-                <Label>Last Name</Label>
-                <Input placeholder="Enter last name" value={newStaff.lastName} onChange={e=>setNewStaff(s=>({...s, lastName:e.target.value}))} />
-              </div>
-              <div>
-                <Label>Role</Label>
-                <Input placeholder="e.g., Mathematics Teacher" value={newStaff.role} onChange={e=>setNewStaff(s=>({...s, role:e.target.value}))} />
-              </div>
-              <div>
-                <Label>Phone</Label>
-                <Input placeholder="+237 6XX XXX XXX" value={newStaff.phone} onChange={e=>setNewStaff(s=>({...s, phone:e.target.value}))} />
-              </div>
-              <div>
-                <Label>Email</Label>
-                <Input type="email" placeholder="email@school.cm" value={newStaff.email} onChange={e=>setNewStaff(s=>({...s, email:e.target.value}))} />
-              </div>
-              <div>
-                <Label>Hire Date</Label>
-                <Input type="date" value={newStaff.hireDate} onChange={e=>setNewStaff(s=>({...s, hireDate:e.target.value}))} />
-              </div>
-              <div>
-                <Label>Salary (FCFA)</Label>
-                <Input type="number" placeholder="150000" value={newStaff.salary} onChange={e=>setNewStaff(s=>({...s, salary:e.target.value}))} />
-              </div>
-              <div className="col-span-2 flex items-center gap-3 pt-2">
-                <Checkbox
-                  id="isTeacher"
-                  checked={newStaff.isTeacher}
-                  onCheckedChange={(checked) => setNewStaff(s => ({ ...s, isTeacher: !!checked }))}
-                />
-                <Label htmlFor="isTeacher">This staff member is a teacher</Label>
-              </div>
-            </div>
-            <div className="flex justify-end gap-2">
-              <DialogClose asChild>
-                <Button variant="outline">Cancel</Button>
-              </DialogClose>
-              <Button
-                onClick={async ()=>{
-                  try {
-                    await api.post('/staff', {
-                      firstName: newStaff.firstName,
-                      lastName: newStaff.lastName,
-                      role: newStaff.role,
-                      phone: newStaff.phone,
-                      email: newStaff.email,
-                      hireDate: newStaff.hireDate,
-                      salary: Number(newStaff.salary)||0,
-                      isTeacher: newStaff.isTeacher,
-                    });
-                    const list = await api.get('/staff');
-                    if (Array.isArray(list) && list.length > 0) cache.set('staff', list);
-                    cache.invalidate('dashboard');
-                    setStaff(list||[]);
-                    setOpenAddStaff(false);
-                    setNewStaff({ firstName:'', lastName:'', role:'', phone:'', email:'', hireDate:'', salary:'', isTeacher: false });
-                  } catch {}
-                }}
-              >Save Staff</Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <Button className="flex items-center gap-2" onClick={() => setOpenAddStaff(true)}>
+          <Plus size={20} />
+          Add Staff
+        </Button>
+        <StaffForm
+          mode="add"
+          open={openAddStaff}
+          onOpenChange={setOpenAddStaff}
+          onSubmit={async (payload: StaffFormPayload) => {
+            await api.post('/staff', payload);
+            const list = await api.get('/staff');
+            if (Array.isArray(list) && list.length > 0) cache.set('staff', list);
+            cache.invalidate('dashboard');
+            setStaff(list || []);
+            setOpenAddStaff(false);
+          }}
+        />
       </div>
 
       <Tabs defaultValue="staff" className="w-full">

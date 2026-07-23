@@ -1,4 +1,4 @@
-import { ArrowLeft, FileText, MoreHorizontal, Plus } from 'lucide-react';
+import { ArrowLeft, Edit, FileText, MoreHorizontal, Plus } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { NavigationPage } from '../App';
 import { api } from '../lib/api';
@@ -24,6 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from './ui/select';
+import { StaffForm, StaffFormPayload } from './StaffForm';
 
 interface LedgerEntry {
   id: string;
@@ -87,6 +88,20 @@ function Field({ label, value }: { label: string; value: string | undefined }) {
 export function StaffProfile({ staff, onNavigate }: StaffProfileProps) {
   const cache = useSisCache();
   const [activeTab, setActiveTab] = useState<Tab>('general');
+
+  // Editable info — local state so updates appear immediately after save
+  const [displayInfo, setDisplayInfo] = useState({
+    firstName: staff.firstName,
+    lastName: staff.lastName,
+    idNumber: staff.idNumber,
+    role: staff.role,
+    phone: staff.phone,
+    email: staff.email,
+    hireDate: staff.hireDate,
+    salary: staff.salary,
+    isTeacher: staff.isTeacher,
+  });
+  const [showEdit, setShowEdit] = useState(false);
 
   const [ledgerData, setLedgerData] = useState<LedgerData | null>(null);
   const [ledgerLoading, setLedgerLoading] = useState(false);
@@ -220,8 +235,8 @@ export function StaffProfile({ staff, onNavigate }: StaffProfileProps) {
       </button>
 
       <div className="mb-6">
-        <h1 className="text-3xl">{staff.firstName} {staff.lastName}</h1>
-        <p className="text-gray-500 mt-1">{staff.code} · {staff.isTeacher ? 'Teacher' : staff.role}</p>
+        <h1 className="text-3xl">{displayInfo.firstName} {displayInfo.lastName}</h1>
+        <p className="text-gray-500 mt-1">{staff.code} · {displayInfo.isTeacher ? 'Teacher' : displayInfo.role}</p>
       </div>
 
       <div className="flex gap-1 border-b mb-6">
@@ -242,18 +257,38 @@ export function StaffProfile({ staff, onNavigate }: StaffProfileProps) {
 
       {activeTab === 'general' && (
         <Card className="p-6">
-          <h2 className="text-base font-medium mb-5">Staff Information</h2>
+          <div className="flex justify-between items-center mb-5">
+            <h2 className="text-base font-medium">Staff Information</h2>
+            <Button variant="outline" size="sm" onClick={() => setShowEdit(true)}>
+              <Edit size={14} className="mr-1" />
+              Edit
+            </Button>
+          </div>
           <dl className="grid grid-cols-2 gap-4">
             <Field label="Staff ID" value={staff.code} />
-            <Field label="Role" value={staff.isTeacher ? 'Teacher' : staff.role} />
-            <Field label="First Name" value={staff.firstName} />
-            <Field label="Last Name" value={staff.lastName} />
-            <Field label="Phone" value={staff.phone} />
-            <Field label="Email" value={staff.email} />
-            <Field label="Hire Date" value={formatDate(staff.hireDate)} />
-            <Field label="Salary" value={staff.salary ? `${staff.salary.toLocaleString()} FCFA` : '—'} />
-            <Field label="Type" value={staff.isTeacher ? 'Teaching Staff' : 'Non-Teaching Staff'} />
+            <Field label="ID Number" value={displayInfo.idNumber} />
+            <Field label="Role" value={displayInfo.isTeacher ? 'Teacher' : displayInfo.role} />
+            <Field label="First Name" value={displayInfo.firstName} />
+            <Field label="Last Name" value={displayInfo.lastName} />
+            <Field label="Phone" value={displayInfo.phone} />
+            <Field label="Email" value={displayInfo.email} />
+            <Field label="Hire Date" value={formatDate(displayInfo.hireDate)} />
+            <Field label="Salary" value={displayInfo.salary ? `${displayInfo.salary.toLocaleString()} FCFA` : '—'} />
+            <Field label="Type" value={displayInfo.isTeacher ? 'Teaching Staff' : 'Non-Teaching Staff'} />
           </dl>
+
+          <StaffForm
+            mode="edit"
+            open={showEdit}
+            onOpenChange={setShowEdit}
+            initialValues={displayInfo}
+            onSubmit={async (payload: StaffFormPayload) => {
+              await api.put(`/staff/${staff.code}`, payload);
+              setDisplayInfo(payload);
+              cache.invalidate('staff', 'dashboard');
+              setShowEdit(false);
+            }}
+          />
         </Card>
       )}
 

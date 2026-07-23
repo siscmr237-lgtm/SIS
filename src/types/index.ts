@@ -20,6 +20,7 @@ export interface Staff {
   code: string;
   firstName: string;
   lastName: string;
+  idNumber: string;
   role: string;
   phone: string;
   email: string;
