@@ -89,6 +89,7 @@ export default function OnboardingPage() {
   const [schoolType, setSchoolType] = useState<SchoolType | "">("");
   const [catalog, setCatalog] = useState<CatalogEntry[]>([]);
   const [selectedClasses, setSelectedClasses] = useState<string[]>([]);
+  const [sectionsByClass, setSectionsByClass] = useState<Record<string, number>>({});
   const [motto, setMotto] = useState("");
   const [address, setAddress] = useState("");
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -127,6 +128,7 @@ export default function OnboardingPage() {
       .then((data) => {
         setCatalog(data || []);
         setSelectedClasses([]); // Reset selections when type changes
+        setSectionsByClass({});
       })
       .catch(() => setCatalog([]));
   }, [schoolType]);
@@ -135,6 +137,20 @@ export default function OnboardingPage() {
     setSelectedClasses((prev) =>
       prev.includes(name) ? prev.filter((c) => c !== name) : [...prev, name]
     );
+
+  const setSectionsForClass = (name: string, raw: string) => {
+    const parsed = parseInt(raw, 10);
+    const sections = Math.max(1, Math.min(26, Number.isFinite(parsed) ? parsed : 1));
+    setSectionsByClass((prev) => ({ ...prev, [name]: sections }));
+  };
+
+  // Expand each selected class into its sections (e.g. 2 sections of "Class 1"
+  // becomes "Class 1A"/"Class 1B"); a single section stays as the plain name.
+  const expandedClassNames = selectedClasses.flatMap((name) => {
+    const sections = sectionsByClass[name] ?? 1;
+    if (sections <= 1) return [name];
+    return Array.from({ length: sections }, (_, i) => `${name}${String.fromCharCode(65 + i)}`);
+  });
 
   const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const input = e.target;
@@ -198,7 +214,7 @@ export default function OnboardingPage() {
 
       await api.post("/onboarding", {
         schoolType,
-        classNames: selectedClasses,
+        classNames: expandedClassNames,
         ...(motto && { motto }),
         ...(address && { address }),
         ...(logoPath !== undefined && { logo: logoPath }),
@@ -388,45 +404,96 @@ export default function OnboardingPage() {
                 Loading…
               </p>
             ) : (
+              <>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
                 {catalog.map((cls) => {
                   const checked = selectedClasses.includes(cls.name);
+                  const sections = sectionsByClass[cls.name] ?? 1;
                   return (
-                    <label
+                    <div
                       key={cls.name}
                       style={{
                         display: "flex",
                         alignItems: "center",
-                        gap: 8,
+                        gap: 12,
                         padding: "8px 14px",
                         borderRadius: 8,
                         border: `1.5px solid ${
                           checked ? "#1e3a8a" : "#E5E7EB"
                         }`,
                         background: checked ? "#EFF6FF" : "white",
-                        cursor: "pointer",
-                        fontSize: "0.875rem",
-                        fontWeight: checked ? 600 : 400,
-                        color: checked ? "#1e3a8a" : "#374151",
                         transition: "border-color 0.15s, background 0.15s",
-                        userSelect: "none",
                       }}
                     >
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => toggleClass(cls.name)}
+                      <label
                         style={{
-                          accentColor: "#1e3a8a",
-                          width: 15,
-                          height: 15,
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                          cursor: "pointer",
+                          fontSize: "0.875rem",
+                          fontWeight: checked ? 600 : 400,
+                          color: checked ? "#1e3a8a" : "#374151",
+                          userSelect: "none",
                         }}
-                      />
-                      {cls.name}
-                    </label>
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleClass(cls.name)}
+                          style={{
+                            accentColor: "#1e3a8a",
+                            width: 15,
+                            height: 15,
+                          }}
+                        />
+                        {cls.name}
+                      </label>
+                      {checked && (
+                        <label
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 6,
+                            fontSize: "0.78rem",
+                            color: "#6B7280",
+                            whiteSpace: "nowrap",
+                            paddingLeft: 10,
+                            borderLeft: "1px solid #DBEAFE",
+                          }}
+                        >
+                          Sections
+                          <input
+                            type="number"
+                            min={1}
+                            max={26}
+                            value={sections}
+                            onChange={(e) => setSectionsForClass(cls.name, e.target.value)}
+                            onClick={(e) => e.stopPropagation()}
+                            style={{
+                              width: 48,
+                              height: 26,
+                              borderRadius: 6,
+                              border: "1px solid #D1D5DB",
+                              padding: "0 6px",
+                              fontSize: "0.8rem",
+                              textAlign: "center",
+                              color: "#111827",
+                            }}
+                          />
+                        </label>
+                      )}
+                    </div>
                   );
                 })}
               </div>
+              {selectedClasses.some((name) => (sectionsByClass[name] ?? 1) > 1) && (
+                <p style={{ fontSize: "0.78rem", color: "#9CA3AF", marginTop: 10 }}>
+                  Classes with more than 1 section will be created as separate classes
+                  (e.g. 2 sections of "Class 1" becomes "Class 1A" and "Class 1B").
+                </p>
+              )}
+              </>
             )}
           </Section>
 

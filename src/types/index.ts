@@ -5,6 +5,7 @@ export interface Student {
   dateOfBirth: string;
   gender: 'male' | 'female';
   class: string;
+  parentId: number;
   parentName: string;
   parentPhone: string;
   address: string;

@@ -18,6 +18,8 @@ import { Textarea } from './ui/textarea';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from './ui/select';
+import { ParentTypeahead, ParentMatch } from './ParentTypeahead';
+import { buildParentPayload, ParentBaseline } from '../utils/parentPayload';
 
 interface LedgerEntry {
   id: string;
@@ -74,6 +76,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
     dateOfBirth: student.dateOfBirth || '',
     enrollmentDate: student.enrollmentDate || '',
     address: student.address || '',
+    parentId: student.parentId,
     parentName: student.parentName || '',
     parentPhone: student.parentPhone || '',
     class: student.class || '',
@@ -87,6 +90,13 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
     firstName: '', lastName: '', gender: '', dateOfBirth: '',
     enrollmentDate: '', address: '', parentName: '', parentPhone: '', class: '',
     allergies: '', medicalConditions: '', currentMedications: '', medicalNotes: '',
+  });
+  // Tracks the parent last confirmed for this edit session — the student's
+  // existing link when the dialog opens, or whatever was picked via the
+  // typeahead since. See buildParentPayload for how this decides between
+  // relinking, editing that parent's own record in place, or creating a new one.
+  const [parentBaseline, setParentBaseline] = useState<ParentBaseline>({
+    id: displayInfo.parentId, name: displayInfo.parentName, phone: displayInfo.parentPhone,
   });
   const [editSubmitting, setEditSubmitting] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
@@ -304,15 +314,14 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
     setEditSubmitting(true);
     setEditError(null);
     try {
-      await api.put(`/students/${student.id}`, {
+      const updated = await api.put(`/students/${student.id}`, {
         firstName: editForm.firstName.trim(),
         lastName: editForm.lastName.trim(),
         gender: editForm.gender,
         dateOfBirth: editForm.dateOfBirth || undefined,
         enrollmentDate: editForm.enrollmentDate || undefined,
         address: editForm.address.trim(),
-        parentName: editForm.parentName.trim(),
-        parentPhone: editForm.parentPhone.trim(),
+        ...buildParentPayload(parentBaseline, editForm.parentName, editForm.parentPhone),
         class: editForm.class,
         allergies: editForm.allergies.trim() || null,
         medicalConditions: editForm.medicalConditions.trim() || null,
@@ -326,14 +335,16 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
         dateOfBirth: editForm.dateOfBirth,
         enrollmentDate: editForm.enrollmentDate,
         address: editForm.address.trim(),
-        parentName: editForm.parentName.trim(),
-        parentPhone: editForm.parentPhone.trim(),
+        parentId: updated.parentId,
+        parentName: updated.parentName,
+        parentPhone: updated.parentPhone,
         class: editForm.class,
         allergies: editForm.allergies.trim(),
         medicalConditions: editForm.medicalConditions.trim(),
         currentMedications: editForm.currentMedications.trim(),
         medicalNotes: editForm.medicalNotes.trim(),
       });
+      setParentBaseline({ id: updated.parentId, name: updated.parentName, phone: updated.parentPhone });
       for (const c of editNewContacts) {
         if (c.name.trim()) {
           const created = await api.post(`/students/${student.id}/pickup-contacts`, {
@@ -422,6 +433,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                     currentMedications: displayInfo.currentMedications,
                     medicalNotes: displayInfo.medicalNotes,
                   });
+                  setParentBaseline({ id: displayInfo.parentId, name: displayInfo.parentName, phone: displayInfo.parentPhone });
                   setEditShowMedicalHistory(
                     !!(displayInfo.allergies || displayInfo.medicalConditions ||
                        displayInfo.currentMedications || displayInfo.medicalNotes)
@@ -710,9 +722,13 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                 </div>
                 <div>
                   <Label>Parent / Guardian Name</Label>
-                  <Input
+                  <ParentTypeahead
                     value={editForm.parentName}
-                    onChange={e => setEditForm(f => ({ ...f, parentName: e.target.value }))}
+                    onChange={(name) => setEditForm(f => ({ ...f, parentName: name }))}
+                    onSelect={(parent: ParentMatch) => {
+                      setEditForm(f => ({ ...f, parentName: parent.name, parentPhone: parent.phone }));
+                      setParentBaseline({ id: parent.id, name: parent.name, phone: parent.phone });
+                    }}
                     placeholder="Parent or guardian name"
                   />
                 </div>

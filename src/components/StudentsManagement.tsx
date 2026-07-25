@@ -24,6 +24,8 @@ import {
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
+import { ParentTypeahead, ParentMatch } from "./ParentTypeahead";
+import { buildParentPayload, ParentBaseline } from "@/utils/parentPayload";
 import {
   Select,
   SelectContent,
@@ -63,6 +65,11 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
   });
 
   const classes = SCHOOL_CLASSES;
+
+  // Tracks the parent last confirmed via the typeahead (or null if the admin
+  // is still free-typing) — see buildParentPayload for how this decides
+  // whether to relink, edit-in-place, or create a new Parent on submit.
+  const [parentBaseline, setParentBaseline] = useState<ParentBaseline>({ id: null, name: '', phone: '' });
 
   // Pickup contacts collected during Add Student
   const [showMedicalHistory, setShowMedicalHistory] = useState(false);
@@ -226,12 +233,14 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
               </div>
               <div>
                 <Label>Parent Name</Label>
-                <Input
-                  placeholder="Enter parent name"
+                <ParentTypeahead
                   value={form.parentName}
-                  onChange={(e) =>
-                    setForm((s) => ({ ...s, parentName: e.target.value }))
-                  }
+                  onChange={(name) => setForm((s) => ({ ...s, parentName: name }))}
+                  onSelect={(parent: ParentMatch) => {
+                    setForm((s) => ({ ...s, parentName: parent.name, parentPhone: parent.phone }));
+                    setParentBaseline({ id: parent.id, name: parent.name, phone: parent.phone });
+                  }}
+                  placeholder="Enter parent name"
                 />
               </div>
               <div>
@@ -410,8 +419,7 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
                       dateOfBirth: form.dateOfBirth,
                       gender: form.gender,
                       class: form.class,
-                      parentName: form.parentName,
-                      parentPhone: form.parentPhone,
+                      ...buildParentPayload(parentBaseline, form.parentName, form.parentPhone),
                       enrollmentDate: form.enrollmentDate,
                       address: form.address,
                       allergies: form.allergies || null,
@@ -459,6 +467,7 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
                       currentMedications: "",
                       medicalNotes: "",
                     });
+                    setParentBaseline({ id: null, name: '', phone: '' });
                     setShowMedicalHistory(false);
                     setNewContacts([]);
                   } catch (e) {
