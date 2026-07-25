@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { api, BASE_URL } from "../../src/lib/api";
 import { compressImageForUpload } from "../../src/lib/imageResize";
+import { EMPTY_UNIFORM_COLORS, UniformColors } from "../../src/lib/uniformColors";
+import { UniformColorPicker } from "../../src/components/onboarding/UniformColorPicker";
 
 type SchoolType = "DAYCARE_NURSERY" | "DAYCARE_NURSERY_PRIMARY";
 
@@ -12,19 +14,6 @@ interface CatalogEntry {
   name: string;
   schoolTypes: string[];
 }
-
-const UNIFORM_COLORS = [
-  { label: "White",        hex: "#FFFFFF",  border: true  },
-  { label: "Sky Blue",     hex: "#87CEEB",  border: false },
-  { label: "Navy",         hex: "#001f5b",  border: false },
-  { label: "Khaki",        hex: "#C3B091",  border: false },
-  { label: "Maroon",       hex: "#800000",  border: false },
-  { label: "Forest Green", hex: "#228B22",  border: false },
-  { label: "Grey",         hex: "#808080",  border: false },
-  { label: "Black",        hex: "#000000",  border: false },
-  { label: "Yellow",       hex: "#FFD700",  border: false },
-  { label: "Red",          hex: "#DC143C",  border: false },
-];
 
 const SCHOOL_TYPE_OPTIONS = [
   {
@@ -105,7 +94,7 @@ export default function OnboardingPage() {
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [logoUploading, setLogoUploading] = useState(false);
-  const [selectedColors, setSelectedColors] = useState<string[]>([]);
+  const [uniformColors, setUniformColors] = useState<UniformColors>(EMPTY_UNIFORM_COLORS);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -145,11 +134,6 @@ export default function OnboardingPage() {
   const toggleClass = (name: string) =>
     setSelectedClasses((prev) =>
       prev.includes(name) ? prev.filter((c) => c !== name) : [...prev, name]
-    );
-
-  const toggleColor = (label: string) =>
-    setSelectedColors((prev) =>
-      prev.includes(label) ? prev.filter((c) => c !== label) : [...prev, label]
     );
 
   const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -218,7 +202,7 @@ export default function OnboardingPage() {
         ...(motto && { motto }),
         ...(address && { address }),
         ...(logoPath !== undefined && { logo: logoPath }),
-        uniformColors: selectedColors,
+        uniformColors,
       });
 
       // Update localStorage so subsequent checks see onboardingCompleted=true
@@ -519,47 +503,7 @@ export default function OnboardingPage() {
 
           {/* ── 6. Uniform Colours ───────────────────────────────────── */}
           <Section title="Uniform Colours" optional>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-              {UNIFORM_COLORS.map((color) => {
-                const selected = selectedColors.includes(color.label);
-                return (
-                  <button
-                    key={color.label}
-                    type="button"
-                    onClick={() => toggleColor(color.label)}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 7,
-                      padding: "6px 12px",
-                      borderRadius: 8,
-                      border: `2px solid ${
-                        selected ? "#1e3a8a" : "#E5E7EB"
-                      }`,
-                      cursor: "pointer",
-                      background: selected ? "#EFF6FF" : "white",
-                      fontSize: "0.8rem",
-                      fontWeight: selected ? 600 : 400,
-                      color: selected ? "#1e3a8a" : "#374151",
-                      transition: "border-color 0.15s, background 0.15s",
-                    }}
-                  >
-                    <span
-                      style={{
-                        display: "inline-block",
-                        width: 16,
-                        height: 16,
-                        borderRadius: 3,
-                        backgroundColor: color.hex,
-                        border: color.border ? "1px solid #D1D5DB" : "none",
-                        flexShrink: 0,
-                      }}
-                    />
-                    {color.label}
-                  </button>
-                );
-              })}
-            </div>
+            <UniformColorPicker value={uniformColors} onChange={setUniformColors} />
           </Section>
 
           {/* ── Error ────────────────────────────────────────────────── */}

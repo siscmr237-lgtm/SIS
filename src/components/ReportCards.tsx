@@ -10,23 +10,37 @@ import { Textarea } from './ui/textarea';
 import { Plus, FileText, Search } from 'lucide-react';
 import { generateReportCard } from '../utils/pdfGenerator';
 import { api } from '@/lib/api';
+import { resolveEffectiveSchoolTerm } from '../utils/academicTerm';
+
+// Reads the school's current academic year/term (auto-resolved if the school
+// has auto-detect on, exactly as stored otherwise) to default a new report
+// card's fields — the admin can still freely override either before saving.
+function getDefaultTermFields() {
+  try {
+    const userStr = typeof window !== 'undefined' ? window.localStorage.getItem('user') : null;
+    const school = userStr ? JSON.parse(userStr)?.School?.[0] : null;
+    const { academicYear, term } = resolveEffectiveSchoolTerm(school);
+    return { academicYear, term };
+  } catch {
+    return { academicYear: '', term: '' };
+  }
+}
 
 export function ReportCards() {
   const [reportCards, setReportCards] = useState<any[]>([]);
   const [students, setStudents] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [openCreate, setOpenCreate] = useState(false);
-  const [form, setForm] = useState({
+  const [form, setForm] = useState(() => ({
     studentId: '',
-    academicYear: '',
-    term: '',
+    ...getDefaultTermFields(),
     attendance: '',
     position: '',
     totalStudents: '',
     averageScore: '',
     headTeacherComment: '',
     subjects: [] as { name: string; score: string; grade: string; teacherComment: string }[],
-  });
+  }));
 
   useEffect(() => {
     let mounted = true;
@@ -187,7 +201,7 @@ export function ReportCards() {
                   const rc = await api.get('/report-cards');
                   setReportCards(rc||[]);
                   setOpenCreate(false);
-                  setForm({ studentId:'', academicYear:'', term:'', attendance:'', position:'', totalStudents:'', averageScore:'', headTeacherComment:'', subjects:[] });
+                  setForm({ studentId:'', ...getDefaultTermFields(), attendance:'', position:'', totalStudents:'', averageScore:'', headTeacherComment:'', subjects:[] });
                 } catch {}
               }}>Create Report Card</Button>
             </div>

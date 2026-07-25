@@ -104,5 +104,6 @@ export interface SchoolSettings {
   logo: string;
   academicYear: string;
   currentTerm: string;
+  autoTermEnabled: boolean;
   subjectsPerClass: SubjectConfig[];
 }
