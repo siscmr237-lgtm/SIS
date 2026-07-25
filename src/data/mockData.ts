@@ -219,6 +219,7 @@ export let schoolSettings: SchoolSettings = {
   logo: 'https://img.freepik.com/premium-vector/school-building-illustration_638438-385.jpg',
   academicYear: '2025/2026',
   currentTerm: 'Term 1',
+  autoTermEnabled: true,
   subjectsPerClass: [
     {
       id: 'SC001',

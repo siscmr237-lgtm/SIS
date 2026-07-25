@@ -4,6 +4,7 @@ import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
+import { Switch } from './ui/switch';
 import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { Settings, Plus, Trash2, Edit, Save, X, Upload, KeyRound, EyeIcon, EyeOffIcon } from 'lucide-react';
 import { schoolSettings } from '../data/mockData';
@@ -11,6 +12,7 @@ import { toast } from 'sonner';
 import { api, BASE_URL } from '@/lib/api';
 import { compressImageForUpload } from '@/lib/imageResize';
 import { PasswordHints } from './PasswordHints';
+import { resolveSchoolTerm, resolveEffectiveSchoolTerm } from '@/utils/academicTerm';
 
 interface ChargeCategory {
   id: number;
@@ -55,6 +57,14 @@ export function SchoolSettings() {
     currentTerm: settings.currentTerm,
     motto: ''
   });
+  // Tracks whether the admin actually typed into the Academic Year / Current
+  // Term fields (as opposed to just re-saving the auto-resolved value that
+  // was pre-filled) — only a real edit should switch autoTermEnabled off.
+  const [termFieldsDirty, setTermFieldsDirty] = useState(false);
+
+  // What to actually display: live-computed when autoTermEnabled is on,
+  // otherwise exactly the manually stored values.
+  const displayedTerm = resolveSchoolTerm(settings);
 
   useEffect(() => {
     const load = async () => {
@@ -66,13 +76,18 @@ export function SchoolSettings() {
         const data = sRes.status === 'fulfilled' ? sRes.value : null;
         if (data) {
           setSettings(prev => ({ ...prev, ...data }));
+          // Pre-fill the editable fields with the effective (never-blank)
+          // current value so opening the edit form always starts from
+          // something sensible, whether auto or manual.
+          const effective = resolveEffectiveSchoolTerm(data);
           setFormData({
             name: data.name || '',
             logo: data.logo || '',
-            academicYear: data.academicYear || '',
-            currentTerm: data.currentTerm || '',
+            academicYear: effective.academicYear,
+            currentTerm: effective.term,
             motto: data.motto || '',
           });
+          setTermFieldsDirty(false);
         }
         if (cRes.status === 'fulfilled') setCats(cRes.value || []);
       } catch {}
@@ -80,35 +95,75 @@ export function SchoolSettings() {
     load();
   }, []);
 
+  const syncLocalStorageSchool = (fields: Record<string, unknown>) => {
+    try {
+      const userStr = window.localStorage.getItem('user');
+      if (!userStr) return;
+      const user = JSON.parse(userStr);
+      if (user?.School?.[0]) {
+        Object.assign(user.School[0], fields);
+        window.localStorage.setItem('user', JSON.stringify(user));
+      }
+    } catch {}
+  };
+
   const handleBasicInfoSave = async () => {
-    const next = { ...settings, ...formData };
+    const payload: Record<string, unknown> = {
+      name: formData.name,
+      logo: formData.logo,
+      motto: formData.motto,
+    };
+    if (termFieldsDirty) {
+      payload.academicYear = formData.academicYear;
+      payload.currentTerm = formData.currentTerm;
+      if (settings.autoTermEnabled) payload.autoTermEnabled = false;
+    }
+
+    const next = { ...settings, name: formData.name, logo: formData.logo, motto: formData.motto };
+    if (termFieldsDirty) {
+      next.academicYear = formData.academicYear;
+      next.currentTerm = formData.currentTerm;
+      if (settings.autoTermEnabled) next.autoTermEnabled = false;
+    }
     setSettings(next);
     setIsEditingBasic(false);
     try {
-      await api.put('/settings', {
-        name: formData.name,
-        logo: formData.logo,
-        academicYear: formData.academicYear,
-        currentTerm: formData.currentTerm,
-        motto: formData.motto,
-      });
-      try {
-        const userStr = window.localStorage.getItem('user');
-        if (userStr) {
-          const user = JSON.parse(userStr);
-          if (user?.School?.[0]) {
-            user.School[0].name = formData.name;
-            user.School[0].logo = formData.logo;
-            user.School[0].academicYear = formData.academicYear;
-            user.School[0].currentTerm = formData.currentTerm;
-            user.School[0].motto = formData.motto;
-            window.localStorage.setItem('user', JSON.stringify(user));
-          }
-        }
-      } catch {}
+      await api.put('/settings', payload);
+      syncLocalStorageSchool(payload);
+      setTermFieldsDirty(false);
       toast.success('School information updated successfully');
     } catch {
       toast.error('Failed to save school information');
+    }
+  };
+
+  const handleAutoTermToggle = async (checked: boolean) => {
+    if (checked) {
+      setSettings(prev => ({ ...prev, autoTermEnabled: true }));
+      try {
+        await api.put('/settings', { autoTermEnabled: true });
+        syncLocalStorageSchool({ autoTermEnabled: true });
+        toast.success('Auto-detect enabled — now showing the live term and year.');
+      } catch {
+        setSettings(prev => ({ ...prev, autoTermEnabled: false }));
+        toast.error('Failed to enable auto-detect');
+      }
+      return;
+    }
+
+    // Turning auto off freezes whatever is currently being displayed (the
+    // live value) into the manual fields, rather than reverting to a
+    // possibly stale value that predates auto being turned on.
+    const frozen = resolveEffectiveSchoolTerm(settings);
+    setSettings(prev => ({ ...prev, autoTermEnabled: false, academicYear: frozen.academicYear, currentTerm: frozen.term }));
+    setFormData(prev => ({ ...prev, academicYear: frozen.academicYear, currentTerm: frozen.term }));
+    setTermFieldsDirty(false);
+    try {
+      await api.put('/settings', { autoTermEnabled: false, academicYear: frozen.academicYear, currentTerm: frozen.term });
+      syncLocalStorageSchool({ autoTermEnabled: false, academicYear: frozen.academicYear, currentTerm: frozen.term });
+      toast.success('Auto-detect disabled — term and year are now set manually.');
+    } catch {
+      toast.error('Failed to disable auto-detect');
     }
   };
 
@@ -312,16 +367,28 @@ export function SchoolSettings() {
             )}
           </div>
 
+          <div className="md:col-span-2 flex items-center justify-between gap-4 p-3 bg-gray-50 rounded-lg border">
+            <div>
+              <Label className="mb-0.5 block">Auto-detect term and year</Label>
+              <p className="text-xs text-gray-500">
+                {settings.autoTermEnabled
+                  ? 'Following the school calendar automatically. Editing the fields below switches this off.'
+                  : 'Off — Academic Year and Current Term are set manually below.'}
+              </p>
+            </div>
+            <Switch checked={settings.autoTermEnabled} onCheckedChange={handleAutoTermToggle} />
+          </div>
+
           <div>
             <Label>Academic Year</Label>
             {isEditingBasic ? (
               <Input
                 value={formData.academicYear}
-                onChange={(e) => setFormData(prev => ({ ...prev, academicYear: e.target.value }))}
+                onChange={(e) => { setFormData(prev => ({ ...prev, academicYear: e.target.value })); setTermFieldsDirty(true); }}
                 placeholder="e.g., 2024/2025"
               />
             ) : (
-              <p className="mt-2 p-2 bg-gray-50 rounded">{settings.academicYear}</p>
+              <p className="mt-2 p-2 bg-gray-50 rounded">{displayedTerm.academicYear}</p>
             )}
           </div>
 
@@ -330,11 +397,11 @@ export function SchoolSettings() {
             {isEditingBasic ? (
               <Input
                 value={formData.currentTerm}
-                onChange={(e) => setFormData(prev => ({ ...prev, currentTerm: e.target.value }))}
+                onChange={(e) => { setFormData(prev => ({ ...prev, currentTerm: e.target.value })); setTermFieldsDirty(true); }}
                 placeholder="e.g., Term 1"
               />
             ) : (
-              <p className="mt-2 p-2 bg-gray-50 rounded">{settings.currentTerm}</p>
+              <p className="mt-2 p-2 bg-gray-50 rounded">{displayedTerm.term ?? 'Holiday — no active term'}</p>
             )}
           </div>
 

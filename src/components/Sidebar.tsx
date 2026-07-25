@@ -7,7 +7,6 @@ import {
   FileText,
   Home,
   LayoutGrid,
-  Receipt,
   Settings,
   UserCheck,
   Users,
@@ -15,6 +14,7 @@ import {
 import { useEffect, useState } from "react";
 import { BASE_URL } from '../lib/api';
 import { useSisCache } from '../lib/SisCache';
+import { resolveSchoolTerm } from '../utils/academicTerm';
 import { NavigationPage } from "../App";
 
 interface SidebarProps {
@@ -32,7 +32,6 @@ export function Sidebar({ currentPage, onNavigate, open = false, onClose }: Side
     { id: "staff" as NavigationPage, label: "Staff", icon: UserCheck },
     { id: "classes" as NavigationPage, label: "Classes", icon: LayoutGrid },
     { id: "finance" as NavigationPage, label: "Finance", icon: DollarSign },
-    { id: "expenses" as NavigationPage, label: "Expenses", icon: Receipt },
     {
       id: "report-cards" as NavigationPage,
       label: "Report Cards",
@@ -46,8 +45,10 @@ export function Sidebar({ currentPage, onNavigate, open = false, onClose }: Side
     logo: "https://images.unsplash.com/photo-1599305445671-ac291c95aaa9?w=200&h=200&fit=crop",
     academicYear: "2024/2025",
     currentTerm: "Term 1",
+    autoTermEnabled: true,
   });
   const [logoSrc, setLogoSrc] = useState<string | null>(null);
+  const { academicYear, term } = resolveSchoolTerm(schoolSettings);
 
   const handleNavigate = (page: NavigationPage) => {
     onNavigate(page);
@@ -141,9 +142,9 @@ export function Sidebar({ currentPage, onNavigate, open = false, onClose }: Side
       </div>
 
       <div className="p-4 border-t border-blue-800">
-        <p className="text-sm text-blue-300">{schoolSettings.academicYear}</p>
+        <p className="text-sm text-blue-300">{academicYear}</p>
         <p className="text-xs text-blue-400 mt-1">
-          {schoolSettings.currentTerm}
+          {term ?? 'Holiday (no active term)'}
         </p>
       </div>
     </aside>

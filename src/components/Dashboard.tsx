@@ -4,6 +4,7 @@ import { DollarSign, TrendingUp, UserCheck, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api, BASE_URL } from "../../src/lib/api";
 import { useSisCache } from "../../src/lib/SisCache";
+import { resolveSchoolTerm } from "../../src/utils/academicTerm";
 import { Card } from "./ui/card";
 
 export function Dashboard() {
@@ -15,8 +16,10 @@ export function Dashboard() {
     logo: "https://images.unsplash.com/photo-1599305445671-ac291c95aaa9?w=200&h=200&fit=crop",
     academicYear: "2024/2025",
     currentTerm: "Term 1",
+    autoTermEnabled: true,
   });
   const [logoSrc, setLogoSrc] = useState<string | null>(null);
+  const { academicYear, term } = resolveSchoolTerm(schoolSettings);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -119,9 +122,9 @@ export function Dashboard() {
           <div className="flex-1">
             <h1 className="text-3xl mb-1 truncate">{schoolSettings.name}</h1>
             <div className="flex gap-4 text-gray-600">
-              <span>Academic Year: {schoolSettings.academicYear}</span>
+              <span>Academic Year: {academicYear}</span>
               <span>•</span>
-              <span>{schoolSettings.currentTerm}</span>
+              <span>{term ?? 'Holiday (no active term)'}</span>
             </div>
           </div>
         </div>
