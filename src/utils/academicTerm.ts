@@ -86,3 +86,19 @@ export function resolveEffectiveSchoolTerm(
   if (resolved.term) return { term: resolved.term, academicYear: resolved.academicYear };
   return { term: 'Term 3', academicYear: resolved.academicYear };
 }
+
+/**
+ * Reads the school's current academic year/term straight out of the locally
+ * stored session (auto-resolved if the school has auto-detect on, exactly as
+ * stored otherwise) — for defaulting a form's term/year fields. Callers can
+ * still freely override either afterward.
+ */
+export function getDefaultTermFields(): { academicYear: string; term: string } {
+  try {
+    const userStr = typeof window !== 'undefined' ? window.localStorage.getItem('user') : null;
+    const school = userStr ? JSON.parse(userStr)?.School?.[0] : null;
+    return resolveEffectiveSchoolTerm(school);
+  } catch {
+    return { academicYear: '', term: '' };
+  }
+}

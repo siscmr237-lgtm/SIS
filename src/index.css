@@ -2643,3 +2643,6 @@ html {
 .border-b-2 { border-bottom-width: 2px; }
 .-mb-px { margin-bottom: -1px; }
 .last\:border-0:last-child { border-width: 0; }
+.flex-wrap { flex-wrap: wrap; }
+.hover\:text-gray-600:hover { color: var(--color-gray-600); }
+.w-24 { width: calc(var(--spacing) * 24); }

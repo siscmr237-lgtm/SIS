@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { NavigationPage } from '../App';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -7,28 +8,19 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Textarea } from './ui/textarea';
-import { Plus, FileText, Search } from 'lucide-react';
+import { Plus, FileText, Search, ClipboardList, PenLine, Trophy } from 'lucide-react';
 import { generateReportCard } from '../utils/pdfGenerator';
 import { api } from '@/lib/api';
-import { resolveEffectiveSchoolTerm } from '../utils/academicTerm';
+import { getDefaultTermFields } from '../utils/academicTerm';
 
-// Reads the school's current academic year/term (auto-resolved if the school
-// has auto-detect on, exactly as stored otherwise) to default a new report
-// card's fields — the admin can still freely override either before saving.
-function getDefaultTermFields() {
-  try {
-    const userStr = typeof window !== 'undefined' ? window.localStorage.getItem('user') : null;
-    const school = userStr ? JSON.parse(userStr)?.School?.[0] : null;
-    const { academicYear, term } = resolveEffectiveSchoolTerm(school);
-    return { academicYear, term };
-  } catch {
-    return { academicYear: '', term: '' };
-  }
+interface ReportCardsProps {
+  onNavigate?: (page: NavigationPage) => void;
 }
 
-export function ReportCards() {
+export function ReportCards({ onNavigate }: ReportCardsProps) {
   const [reportCards, setReportCards] = useState<any[]>([]);
   const [students, setStudents] = useState<any[]>([]);
+  const [classes, setClasses] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [openCreate, setOpenCreate] = useState(false);
   const [form, setForm] = useState(() => ({
@@ -46,13 +38,15 @@ export function ReportCards() {
     let mounted = true;
     const load = async () => {
       try {
-        const [rc, st] = await Promise.all([
+        const [rc, st, cls] = await Promise.all([
           api.get('/report-cards'),
           api.get('/students'),
+          api.get('/classes'),
         ]);
         if (mounted) {
           setReportCards(rc || []);
           setStudents(st || []);
+          setClasses(cls || []);
         }
       } catch {}
     };
@@ -78,6 +72,31 @@ export function ReportCards() {
           <h1 className="text-3xl mb-2">Report Cards</h1>
           <p className="text-gray-600">Manage and generate student report cards</p>
         </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            className="flex items-center gap-2"
+            onClick={() => onNavigate?.('tests-exams')}
+          >
+            <ClipboardList size={20} />
+            Manage Tests &amp; Exams
+          </Button>
+          <Button
+            variant="outline"
+            className="flex items-center gap-2"
+            onClick={() => onNavigate?.('enter-marks')}
+          >
+            <PenLine size={20} />
+            Enter Marks
+          </Button>
+          <Button
+            variant="outline"
+            className="flex items-center gap-2"
+            onClick={() => onNavigate?.('class-ranking')}
+          >
+            <Trophy size={20} />
+            Class Ranking
+          </Button>
         <Dialog open={openCreate} onOpenChange={setOpenCreate}>
           <DialogTrigger asChild>
             <Button className="flex items-center gap-2">
@@ -207,6 +226,7 @@ export function ReportCards() {
             </div>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <Card className="p-6 mb-6">
@@ -255,7 +275,32 @@ export function ReportCards() {
                     onClick={async () => {
                       try {
                         const full = await api.get(`/report-cards/${report.id}`);
-                        generateReportCard(full);
+
+                        // Tests & Exams data is optional/best-effort here — an
+                        // older report card (or one with no Tests & Exams set
+                        // up yet) should still produce a PDF, just without
+                        // this section.
+                        let breakdown: any[] | undefined;
+                        try {
+                          const data = await api.get(
+                            `/test-exams/student-breakdown?studentId=${full.studentId}&term=${encodeURIComponent(full.term)}&academicYear=${encodeURIComponent(full.academicYear)}`
+                          );
+                          breakdown = data?.subjects;
+                        } catch {}
+
+                        let rank: { rank: number; totalStudents: number } | undefined;
+                        try {
+                          const cls = classes.find((c: any) => c.name === full.class);
+                          if (cls) {
+                            const rankingData = await api.get(
+                              `/test-exams/class-ranking?classId=${cls.id}&term=${encodeURIComponent(full.term)}&academicYear=${encodeURIComponent(full.academicYear)}`
+                            );
+                            const row = rankingData?.rankings?.find((r: any) => r.studentId === full.studentId);
+                            if (row) rank = { rank: row.rank, totalStudents: rankingData.totalStudents };
+                          }
+                        } catch {}
+
+                        generateReportCard(full, { breakdown, rank });
                       } catch {}
                     }}
                     className="flex items-center gap-2"

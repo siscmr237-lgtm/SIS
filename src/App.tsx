@@ -17,6 +17,9 @@ import { Timetable } from './components/Timetable';
 import { SchoolSettings } from './components/SchoolSettings';
 import { ClassesManagement } from './components/ClassesManagement';
 import { SubjectsManagement } from './components/SubjectsManagement';
+import { TestsExamsManagement } from './components/TestsExamsManagement';
+import { EnterMarks } from './components/EnterMarks';
+import { ClassRanking } from './components/ClassRanking';
 
 export type NavigationPage =
   | 'dashboard'
@@ -31,6 +34,9 @@ export type NavigationPage =
   | 'timetable'
   | 'classes'
   | 'subjects'
+  | 'tests-exams'
+  | 'enter-marks'
+  | 'class-ranking'
   | 'settings';
 
 export default function App() {
@@ -79,7 +85,13 @@ export default function App() {
       case 'expenses':
         return <ExpensesManagement />;
       case 'report-cards':
-        return <ReportCards />;
+        return <ReportCards onNavigate={navigate} />;
+      case 'tests-exams':
+        return <TestsExamsManagement onNavigate={navigate} />;
+      case 'enter-marks':
+        return <EnterMarks onNavigate={navigate} />;
+      case 'class-ranking':
+        return <ClassRanking onNavigate={navigate} />;
       case 'attendance':
         return <Attendance />;
       case 'timetable':
