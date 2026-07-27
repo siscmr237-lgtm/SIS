@@ -23,6 +23,7 @@ export function ReportCards({ onNavigate }: ReportCardsProps) {
   const [classes, setClasses] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [openCreate, setOpenCreate] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState(() => ({
     studentId: '',
     ...getDefaultTermFields(),
@@ -199,9 +200,11 @@ export function ReportCards({ onNavigate }: ReportCardsProps) {
             </div>
             <div className="flex justify-end gap-2">
               <DialogClose asChild>
-                <Button variant="outline">Cancel</Button>
+                <Button variant="outline" disabled={submitting}>Cancel</Button>
               </DialogClose>
-              <Button onClick={async ()=>{
+              <Button disabled={submitting} onClick={async ()=>{
+                if (submitting) return;
+                setSubmitting(true);
                 try {
                   const st = students.find((s:any)=>s.id===form.studentId);
                   await api.post('/report-cards', {
@@ -221,8 +224,10 @@ export function ReportCards({ onNavigate }: ReportCardsProps) {
                   setReportCards(rc||[]);
                   setOpenCreate(false);
                   setForm({ studentId:'', ...getDefaultTermFields(), attendance:'', position:'', totalStudents:'', averageScore:'', headTeacherComment:'', subjects:[] });
-                } catch {}
-              }}>Create Report Card</Button>
+                } catch {} finally {
+                  setSubmitting(false);
+                }
+              }}>{submitting ? 'Saving...' : 'Create Report Card'}</Button>
             </div>
           </DialogContent>
         </Dialog>

@@ -20,6 +20,8 @@ export function Attendance() {
   const [selectedClass, setSelectedClass] = useState<string>('Class 3');
   const [studentStatus, setStudentStatus] = useState<Record<string, string>>({});
   const [staffStatus, setStaffStatus] = useState<Record<string, string>>({});
+  const [savingStudentAttendance, setSavingStudentAttendance] = useState(false);
+  const [savingStaffAttendance, setSavingStaffAttendance] = useState(false);
 
   const classes = SCHOOL_CLASSES;
 
@@ -81,36 +83,46 @@ export function Attendance() {
   };
 
   const saveStudentAttendance = async () => {
-    const classStudents = students.filter((s: any) => s.class === selectedClass);
-    const records = classStudents.map((s: any) => {
-      const existing = attendance.find(
-        a => a.type === 'student' && a.personId === s.id && a.date?.startsWith(selectedDate)
-      );
-      return existing
-        ? { existingCode: existing.id, status: studentStatus[s.id] || 'present' }
-        : { date: selectedDate, type: 'student', personId: s.id, personName: `${s.firstName} ${s.lastName}`, status: studentStatus[s.id] || 'present' };
-    });
+    if (savingStudentAttendance) return;
+    setSavingStudentAttendance(true);
     try {
+      const classStudents = students.filter((s: any) => s.class === selectedClass);
+      const records = classStudents.map((s: any) => {
+        const existing = attendance.find(
+          a => a.type === 'student' && a.personId === s.id && a.date?.startsWith(selectedDate)
+        );
+        return existing
+          ? { existingCode: existing.id, status: studentStatus[s.id] || 'present' }
+          : { date: selectedDate, type: 'student', personId: s.id, personName: `${s.firstName} ${s.lastName}`, status: studentStatus[s.id] || 'present' };
+      });
       await api.post('/attendance/bulk', { records });
       const att = await api.get(`/attendance?date=${encodeURIComponent(selectedDate)}`);
       setAttendance(att || []);
-    } catch {}
+    } catch {
+    } finally {
+      setSavingStudentAttendance(false);
+    }
   };
 
   const saveStaffAttendance = async () => {
-    const records = staff.map((t: any) => {
-      const existing = attendance.find(
-        a => a.type === 'staff' && a.personId === String(t.id) && a.date?.startsWith(selectedDate)
-      );
-      return existing
-        ? { existingCode: existing.id, status: staffStatus[t.id] || 'present' }
-        : { date: selectedDate, type: 'staff', personId: String(t.id), personName: `${t.firstName} ${t.lastName}`, status: staffStatus[t.id] || 'present' };
-    });
+    if (savingStaffAttendance) return;
+    setSavingStaffAttendance(true);
     try {
+      const records = staff.map((t: any) => {
+        const existing = attendance.find(
+          a => a.type === 'staff' && a.personId === String(t.id) && a.date?.startsWith(selectedDate)
+        );
+        return existing
+          ? { existingCode: existing.id, status: staffStatus[t.id] || 'present' }
+          : { date: selectedDate, type: 'staff', personId: String(t.id), personName: `${t.firstName} ${t.lastName}`, status: staffStatus[t.id] || 'present' };
+      });
       await api.post('/attendance/bulk', { records });
       const att = await api.get(`/attendance?date=${encodeURIComponent(selectedDate)}`);
       setAttendance(att || []);
-    } catch {}
+    } catch {
+    } finally {
+      setSavingStaffAttendance(false);
+    }
   };
 
   return (
@@ -164,9 +176,9 @@ export function Attendance() {
           <Card className="mb-4 p-4">
             <div className="flex gap-4 items-center">
               <p className="text-sm text-gray-600">Mark attendance for {selectedClass} on {selectedDate}</p>
-              <Button size="sm" variant="outline" className="ml-auto flex items-center gap-2" onClick={saveStudentAttendance}>
+              <Button size="sm" variant="outline" className="ml-auto flex items-center gap-2" onClick={saveStudentAttendance} disabled={savingStudentAttendance}>
                 <Save size={16} />
-                Save Attendance
+                {savingStudentAttendance ? 'Saving...' : 'Save Attendance'}
               </Button>
             </div>
           </Card>
@@ -222,9 +234,9 @@ export function Attendance() {
           <Card className="mb-4 p-4">
             <div className="flex gap-4 items-center">
               <p className="text-sm text-gray-600">Mark staff attendance for {selectedDate}</p>
-              <Button size="sm" variant="outline" className="ml-auto flex items-center gap-2" onClick={saveStaffAttendance}>
+              <Button size="sm" variant="outline" className="ml-auto flex items-center gap-2" onClick={saveStaffAttendance} disabled={savingStaffAttendance}>
                 <Save size={16} />
-                Save Attendance
+                {savingStaffAttendance ? 'Saving...' : 'Save Attendance'}
               </Button>
             </div>
           </Card>

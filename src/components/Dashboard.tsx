@@ -13,6 +13,7 @@ export function Dashboard() {
   const cache = useSisCache();
   const [schoolSettings, setSchoolSettings] = useState({
     name: "School",
+    abbreviation: "",
     logo: "https://images.unsplash.com/photo-1599305445671-ac291c95aaa9?w=200&h=200&fit=crop",
     academicYear: "2024/2025",
     currentTerm: "Term 1",
@@ -120,7 +121,7 @@ export function Dashboard() {
             />
           )}
           <div className="flex-1">
-            <h1 className="text-3xl mb-1 truncate">{schoolSettings.name}</h1>
+            <h1 className="text-3xl mb-1 truncate">{schoolSettings.abbreviation || schoolSettings.name}</h1>
             <div className="flex gap-4 text-gray-600">
               <span>Academic Year: {academicYear}</span>
               <span>•</span>

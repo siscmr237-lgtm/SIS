@@ -25,6 +25,8 @@ export function SubjectsManagement({ onNavigate }: SubjectsManagementProps) {
   const [seedResult, setSeedResult] = useState<string | null>(null);
   const [openAdd, setOpenAdd] = useState(false);
   const [newSubjectName, setNewSubjectName] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -62,20 +64,28 @@ export function SubjectsManagement({ onNavigate }: SubjectsManagementProps) {
   const handleAdd = async () => {
     const name = newSubjectName.trim();
     if (!name) return;
+    if (submitting) return;
+    setSubmitting(true);
     try {
       await api.post('/subjects', { name });
       await refresh();
       setNewSubjectName('');
       setOpenAdd(false);
-    } catch {}
+    } catch {} finally {
+      setSubmitting(false);
+    }
   };
 
   const handleDelete = async (subject: any) => {
     if (!confirm(`Delete subject "${subject.name}"? This cannot be undone.`)) return;
+    if (deletingId) return;
+    setDeletingId(subject.id);
     try {
       await api.delete(`/subjects/${subject.id}`);
       await refresh();
-    } catch {}
+    } catch {} finally {
+      setDeletingId(null);
+    }
   };
 
   return (
@@ -115,9 +125,11 @@ export function SubjectsManagement({ onNavigate }: SubjectsManagementProps) {
             </div>
             <div className="flex justify-end gap-2">
               <DialogClose asChild>
-                <Button variant="outline">Cancel</Button>
+                <Button variant="outline" disabled={submitting}>Cancel</Button>
               </DialogClose>
-              <Button onClick={handleAdd}>Save Subject</Button>
+              <Button onClick={handleAdd} disabled={submitting}>
+                {submitting ? 'Saving...' : 'Save Subject'}
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
@@ -158,10 +170,11 @@ export function SubjectsManagement({ onNavigate }: SubjectsManagementProps) {
                         variant="destructive"
                         size="sm"
                         onClick={() => handleDelete(subject)}
+                        disabled={deletingId === subject.id}
                         className="flex items-center gap-2"
                       >
                         <Trash2 size={16} />
-                        Delete
+                        {deletingId === subject.id ? 'Deleting...' : 'Delete'}
                       </Button>
                     </TableCell>
                   </TableRow>

@@ -77,6 +77,8 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
   const [newContacts, setNewContacts] = useState<
     Array<{ name: string; phone: string; relationship: string }>
   >([]);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const addContactRow = () =>
     setNewContacts((prev) => [...prev, { name: "", phone: "", relationship: "" }]);
   const removeContactRow = (i: number) =>
@@ -406,12 +408,19 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
               </div>
             </div>
             </div>
+            <div style={{ padding: '0 1.5rem' }}>
+              {submitError && <p className="text-sm text-red-600 mb-3">{submitError}</p>}
+            </div>
             <div className="border-t" style={{ padding: '1rem 1.5rem', display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
               <DialogClose asChild>
-                <Button variant="outline">Cancel</Button>
+                <Button variant="outline" disabled={submitting}>Cancel</Button>
               </DialogClose>
               <Button
+                disabled={submitting}
                 onClick={async () => {
+                  if (submitting) return;
+                  setSubmitting(true);
+                  setSubmitError(null);
                   try {
                     const created = await api.post("/students", {
                       firstName: form.firstName,
@@ -470,12 +479,14 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
                     setParentBaseline({ id: null, name: '', phone: '' });
                     setShowMedicalHistory(false);
                     setNewContacts([]);
-                  } catch (e) {
-                    console.log(e);
+                  } catch (e: any) {
+                    setSubmitError(e.message || 'Failed to save student');
+                  } finally {
+                    setSubmitting(false);
                   }
                 }}
               >
-                Save Student
+                {submitting ? 'Saving...' : 'Save Student'}
               </Button>
             </div>
           </DialogContent>

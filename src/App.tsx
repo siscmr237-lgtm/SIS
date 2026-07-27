@@ -119,7 +119,7 @@ export default function App() {
         {sidebarOpen && (
           <div className="fixed inset-0 bg-black/50 z-40 md:hidden" onClick={() => setSidebarOpen(false)} />
         )}
-        <Sidebar currentPage={currentPage} onNavigate={navigate} open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
         <main className="flex-1 overflow-y-auto pt-14 md:pt-0">
           {renderPage()}
         </main>

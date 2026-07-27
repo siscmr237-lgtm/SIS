@@ -37,6 +37,7 @@ export function Timetable() {
   const [selectedClass, setSelectedClass] =
     useState<string>("Class 3");
   const [openAdd, setOpenAdd] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({
     cls: '',
     day: '',
@@ -192,9 +193,11 @@ export function Timetable() {
               </div>
               <div className="flex justify-end gap-2">
                 <DialogClose asChild>
-                  <Button variant="outline">Cancel</Button>
+                  <Button variant="outline" disabled={submitting}>Cancel</Button>
                 </DialogClose>
-                <Button onClick={async ()=>{
+                <Button disabled={submitting} onClick={async ()=>{
+                  if (submitting) return;
+                  setSubmitting(true);
                   try {
                     await api.post('/timetable', {
                       day: form.day,
@@ -207,8 +210,10 @@ export function Timetable() {
                     setTimetable(tt||[]);
                     setOpenAdd(false);
                     setForm({ cls:'', day:'', time:'', subject:'', teacher:'' });
-                  } catch {}
-                }}>Add Period</Button>
+                  } catch {} finally {
+                    setSubmitting(false);
+                  }
+                }}>{submitting ? 'Adding...' : 'Add Period'}</Button>
               </div>
             </DialogContent>
           </Dialog>

@@ -1,6 +1,7 @@
-import { ArrowLeft, Edit, FileText, MoreHorizontal, Plus, X } from 'lucide-react';
+import { ArrowLeft, Edit, FileText, MoreHorizontal, Plus, Trash2, X } from 'lucide-react';
 import { generateFinancialSheet } from '../utils/pdfGenerator';
 import { useEffect, useRef, useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { api } from '../lib/api';
 import { useSisCache } from '../lib/SisCache';
 import { SCHOOL_CLASSES } from '../lib/classes';
@@ -64,8 +65,21 @@ type Tab = 'general' | 'finance' | 'attendance';
 
 const PAYMENT_METHODS = ['Cash', 'Bank Transfer', 'Mobile Money', 'Cheque'];
 
+const VALID_TABS: Tab[] = ['general', 'finance', 'attendance'];
+
 export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
-  const [activeTab, setActiveTab] = useState<Tab>('general');
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  const initialTab: Tab = (VALID_TABS as string[]).includes(tabParam || '') ? (tabParam as Tab) : 'general';
+  const [activeTab, setActiveTabState] = useState<Tab>(initialTab);
+  // Keeps the active tab in the URL (?tab=) so reloading mid-tab restores it,
+  // instead of only living in component state.
+  const setActiveTab = (tab: Tab) => {
+    setActiveTabState(tab);
+    router.replace(`${pathname}?tab=${tab}`, { scroll: false });
+  };
   const cache = useSisCache();
 
   // Editable info — local state so updates appear immediately after save
@@ -115,6 +129,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
   const [editContactForm, setEditContactForm] = useState({ name: '', phone: '', relationship: '' });
   const [editContactSubmitting, setEditContactSubmitting] = useState(false);
   const [contactError, setContactError] = useState<string | null>(null);
+  const [deletingContactId, setDeletingContactId] = useState<number | null>(null);
 
   const [ledgerData, setLedgerData] = useState<LedgerData | null>(null);
   const [ledgerLoading, setLedgerLoading] = useState(false);
@@ -126,6 +141,10 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [showActionsMenu, setShowActionsMenu] = useState(false);
   const actionsMenuRef = useRef<HTMLDivElement>(null);
+
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!showActionsMenu) return;
@@ -220,11 +239,15 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
   };
 
   const handleDeleteContact = async (contactId: number) => {
+    if (deletingContactId !== null) return;
+    setDeletingContactId(contactId);
     try {
       await api.delete(`/students/${student.id}/pickup-contacts/${contactId}`);
       setPickupContacts((prev) => prev.filter((c) => c.id !== contactId));
     } catch {
       // silently ignore — stale item stays in list; page reload will correct it
+    } finally {
+      setDeletingContactId(null);
     }
   };
 
@@ -365,6 +388,21 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
     }
   };
 
+  const handleDeleteStudent = async () => {
+    if (deleteSubmitting) return;
+    setDeleteSubmitting(true);
+    setDeleteError(null);
+    try {
+      await api.delete(`/students/${student.id}`);
+      cache.invalidate('students', 'dashboard');
+      onNavigate('students');
+    } catch (e: any) {
+      setDeleteError(e.message || 'Failed to delete student');
+    } finally {
+      setDeleteSubmitting(false);
+    }
+  };
+
   const handleDownloadStatement = async () => {
     if (!ledgerData) return;
     let schoolInfo: { name: string; logo?: string } | undefined;
@@ -414,6 +452,16 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
           <Card className="p-6">
             <div className="flex justify-between items-center mb-5">
               <h2 className="text-base font-medium">Student Information</h2>
+              <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-red-600 hover:text-red-700"
+                onClick={() => { setDeleteError(null); setShowDeleteConfirm(true); }}
+              >
+                <Trash2 size={14} className="mr-1" />
+                Delete
+              </Button>
               <Button
                 variant="outline"
                 size="sm"
@@ -446,6 +494,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                 <Edit size={14} className="mr-1" />
                 Edit
               </Button>
+              </div>
             </div>
             <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-5">
               <Field label="Student ID" value={student.id} />
@@ -526,8 +575,9 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                         size="sm"
                         className="text-red-600 hover:text-red-700"
                         onClick={() => handleDeleteContact(contact.id)}
+                        disabled={deletingContactId === contact.id}
                       >
-                        Delete
+                        {deletingContactId === contact.id ? 'Deleting...' : 'Delete'}
                       </Button>
                     </div>
                   </div>
@@ -902,6 +952,36 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                   {editSubmitting ? 'Saving...' : 'Save Changes'}
                 </Button>
               </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Delete student confirmation */}
+          <Dialog
+            open={showDeleteConfirm}
+            onOpenChange={(open) => { setShowDeleteConfirm(open); if (!open) setDeleteError(null); }}
+          >
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Delete {displayInfo.firstName} {displayInfo.lastName}?</DialogTitle>
+                <DialogDescription>
+                  This permanently deletes {displayInfo.firstName} {displayInfo.lastName} ({student.id}) and all of
+                  their records — ledger entries, test/exam marks, pickup contacts, attendance records, and report
+                  cards. This cannot be undone.
+                </DialogDescription>
+              </DialogHeader>
+              {deleteError && <p className="text-sm text-red-600">{deleteError}</p>}
+              <div className="flex justify-end gap-2">
+                <DialogClose asChild>
+                  <Button variant="outline" disabled={deleteSubmitting}>Cancel</Button>
+                </DialogClose>
+                <Button
+                  variant="destructive"
+                  onClick={handleDeleteStudent}
+                  disabled={deleteSubmitting}
+                >
+                  {deleteSubmitting ? 'Deleting...' : 'Delete Student'}
+                </Button>
               </div>
             </DialogContent>
           </Dialog>

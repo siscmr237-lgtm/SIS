@@ -44,6 +44,7 @@ export function TestsExamsManagement({ onNavigate }: TestsExamsManagementProps) 
   const [totalsRows, setTotalsRows] = useState<{ subjectId: number; name: string; value: string }[]>([]);
   const [savingTotals, setSavingTotals] = useState(false);
   const [totalsMessage, setTotalsMessage] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -93,6 +94,7 @@ export function TestsExamsManagement({ onNavigate }: TestsExamsManagementProps) 
 
   const handleSaveForm = async () => {
     if (!form.name.trim()) { setFormError('Name is required'); return; }
+    if (saving) return;
     setSaving(true);
     setFormError(null);
     try {
@@ -122,10 +124,14 @@ export function TestsExamsManagement({ onNavigate }: TestsExamsManagementProps) 
 
   const handleDelete = async (row: any) => {
     if (!confirm(`Delete "${row.name}"? This also removes its configured totals and any marks entered against it.`)) return;
+    if (deletingId) return;
+    setDeletingId(row.id);
     try {
       await api.delete(`/test-exams/${row.id}`);
       await refresh();
-    } catch {}
+    } catch {} finally {
+      setDeletingId(null);
+    }
   };
 
   const openTotalsDialog = async (row: any) => {
@@ -149,6 +155,7 @@ export function TestsExamsManagement({ onNavigate }: TestsExamsManagementProps) 
 
   const handleSaveTotals = async () => {
     if (!totalsTestExam) return;
+    if (savingTotals) return;
     setSavingTotals(true);
     setTotalsMessage(null);
     const failures: string[] = [];
@@ -233,7 +240,7 @@ export function TestsExamsManagement({ onNavigate }: TestsExamsManagementProps) 
             </div>
             <div className="flex justify-end gap-2">
               <DialogClose asChild>
-                <Button variant="outline">Cancel</Button>
+                <Button variant="outline" disabled={saving}>Cancel</Button>
               </DialogClose>
               <Button onClick={handleSaveForm} disabled={saving}>
                 {saving ? 'Saving...' : 'Save'}
@@ -320,9 +327,15 @@ export function TestsExamsManagement({ onNavigate }: TestsExamsManagementProps) 
                           <Pencil size={16} />
                           Edit
                         </Button>
-                        <Button variant="destructive" size="sm" className="flex items-center gap-2" onClick={() => handleDelete(row)}>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          className="flex items-center gap-2"
+                          onClick={() => handleDelete(row)}
+                          disabled={deletingId === row.id}
+                        >
                           <Trash2 size={16} />
-                          Delete
+                          {deletingId === row.id ? 'Deleting...' : 'Delete'}
                         </Button>
                       </div>
                     </TableCell>
@@ -376,7 +389,7 @@ export function TestsExamsManagement({ onNavigate }: TestsExamsManagementProps) 
           </div>
           <div className="flex justify-end gap-2">
             <DialogClose asChild>
-              <Button variant="outline">Close</Button>
+              <Button variant="outline" disabled={savingTotals}>Close</Button>
             </DialogClose>
             <Button onClick={handleSaveTotals} disabled={savingTotals || classSubjects.length === 0}>
               {savingTotals ? 'Saving...' : 'Save Totals'}

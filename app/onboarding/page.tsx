@@ -172,6 +172,7 @@ export default function OnboardingPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
     if (!schoolType) {
       setError("Please select a school type.");
       return;
