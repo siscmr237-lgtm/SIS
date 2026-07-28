@@ -2643,3 +2643,12 @@ html {
 .border-b-2 { border-bottom-width: 2px; }
 .-mb-px { margin-bottom: -1px; }
 .last\:border-0:last-child { border-width: 0; }
+.flex-wrap { flex-wrap: wrap; }
+.hover\:text-gray-600:hover { color: var(--color-gray-600); }
+.w-24 { width: calc(var(--spacing) * 24); }
+.font-normal { font-weight: 400; }
+.block { display: block; }
+.mb-0\.5 { margin-bottom: calc(var(--spacing) * .5); }
+@media (width >= 48rem) {
+  .md\:col-span-2 { grid-column: span 2 / span 2; }
+}

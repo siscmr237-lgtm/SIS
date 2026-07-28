@@ -27,6 +27,7 @@ export function StaffManagement({ onNavigate, onViewStaff }: StaffManagementProp
   const [searchTerm, setSearchTerm] = useState('');
   const [openAddStaff, setOpenAddStaff] = useState(false);
   const [openWork, setOpenWork] = useState(false);
+  const [workSubmitting, setWorkSubmitting] = useState(false);
   const [workForm, setWorkForm] = useState({
     date: '',
     class: '',
@@ -233,9 +234,11 @@ export function StaffManagement({ onNavigate, onViewStaff }: StaffManagementProp
                 </div>
                 <div className="flex justify-end gap-2">
                   <DialogClose asChild>
-                    <Button variant="outline">Cancel</Button>
+                    <Button variant="outline" disabled={workSubmitting}>Cancel</Button>
                   </DialogClose>
-                  <Button onClick={async ()=>{
+                  <Button disabled={workSubmitting} onClick={async ()=>{
+                    if (workSubmitting) return;
+                    setWorkSubmitting(true);
                     try {
                       const teacher = staff.find((s:any)=>String(s.id)===workForm.staffId);
                       await api.post('/work-records', {
@@ -255,8 +258,11 @@ export function StaffManagement({ onNavigate, onViewStaff }: StaffManagementProp
                       setWorkRecords(list||[]);
                       setOpenWork(false);
                       setWorkForm({ date:'', class:'', subject:'', topic:'', objectives:'', activities:'', evaluation:'', remarks:'', staffId:'' });
-                    } catch {}
-                  }}>Save Record</Button>
+                    } catch {
+                    } finally {
+                      setWorkSubmitting(false);
+                    }
+                  }}>{workSubmitting ? 'Saving...' : 'Save Record'}</Button>
                 </div>
               </DialogContent>
             </Dialog>

@@ -36,6 +36,12 @@ export function ClassesManagement({ onNavigate }: ClassesManagementProps) {
   const [creating, setCreating] = useState(false);
   const [openAdd, setOpenAdd] = useState(false);
   const [newClassName, setNewClassName] = useState('');
+  const [addSubmitting, setAddSubmitting] = useState(false);
+  const [deletingClassId, setDeletingClassId] = useState<number | null>(null);
+  const [addSubjectSubmitting, setAddSubjectSubmitting] = useState(false);
+  const [removingSubjectId, setRemovingSubjectId] = useState<number | null>(null);
+  const [addingTeacherSubjectId, setAddingTeacherSubjectId] = useState<number | null>(null);
+  const [removingTeacherId, setRemovingTeacherId] = useState<number | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -104,16 +110,22 @@ export function ClassesManagement({ onNavigate }: ClassesManagementProps) {
 
   const handleAddSubject = async () => {
     if (!addSubjectId || !managingClass) return;
+    if (addSubjectSubmitting) return;
+    setAddSubjectSubmitting(true);
     try {
       await api.post(`/classes/${managingClass.id}/subjects`, { subjectId: Number(addSubjectId) });
       const data = await api.get(`/classes/${managingClass.id}/subjects`);
       setClassSubjects(data || []);
       setAddSubjectId('');
-    } catch {}
+    } catch {} finally {
+      setAddSubjectSubmitting(false);
+    }
   };
 
   const handleRemoveSubject = async (assignment: any) => {
     if (!confirm(`Remove "${assignment.name ?? 'this subject'}" from this class?`)) return;
+    if (removingSubjectId) return;
+    setRemovingSubjectId(assignment.id);
     try {
       await api.delete(`/classes/${managingClass.id}/subjects/${assignment.id}`);
       const [subjects, stAssignments] = await Promise.all([
@@ -122,19 +134,19 @@ export function ClassesManagement({ onNavigate }: ClassesManagementProps) {
       ]);
       setClassSubjects(subjects || []);
       setSubjectTeachers(stAssignments || []);
-    } catch {}
+    } catch {} finally {
+      setRemovingSubjectId(null);
+    }
   };
 
   const handleAddSubjectTeacher = async (subject: any) => {
     const staffId = addTeacherSelections[subject.id];
     if (!staffId || !managingClass) return;
+    if (addingTeacherSubjectId) return;
     // subjectId may be on a junction record; fall back to id if not present
     const subjectId = subject.subjectId ?? subject.id;
+    setAddingTeacherSubjectId(subject.id);
     try {
-      // await api.post(`/classes/${managingClass.id}/subject-teachers`, {
-      //   staffId: Number(staffId),
-      //   subjectId: Number(subjectId),
-      // });
       await api.post(`/classes/${managingClass.id}/subject-teachers`, {
         staffId: staffId,
         subjectId: Number(subjectId),
@@ -144,16 +156,22 @@ export function ClassesManagement({ onNavigate }: ClassesManagementProps) {
       setAddTeacherSelections(prev => ({ ...prev, [subject.id]: '' }));
     } catch (e: any) {
       console.error('subject-teacher assign failed:', e?.message || e);
+    } finally {
+      setAddingTeacherSubjectId(null);
     }
   };
 
   const handleRemoveSubjectTeacher = async (assignmentId: number) => {
     if (!managingClass) return;
+    if (removingTeacherId) return;
+    setRemovingTeacherId(assignmentId);
     try {
       await api.delete(`/classes/${managingClass.id}/subject-teachers/${assignmentId}`);
       const data = await api.get(`/classes/${managingClass.id}/subject-teachers`);
       setSubjectTeachers(data || []);
-    } catch {}
+    } catch {} finally {
+      setRemovingTeacherId(null);
+    }
   };
 
   const assignedSubjectIds = new Set(classSubjects.map((a: any) => a.subjectId ?? a.id));
@@ -173,20 +191,28 @@ export function ClassesManagement({ onNavigate }: ClassesManagementProps) {
   const handleAdd = async () => {
     const name = newClassName.trim();
     if (!name) return;
+    if (addSubmitting) return;
+    setAddSubmitting(true);
     try {
       await api.post('/classes', { name });
       await refresh();
       setNewClassName('');
       setOpenAdd(false);
-    } catch {}
+    } catch {} finally {
+      setAddSubmitting(false);
+    }
   };
 
   const handleDelete = async (cls: any) => {
     if (!confirm(`Delete class "${cls.name}"? This cannot be undone.`)) return;
+    if (deletingClassId) return;
+    setDeletingClassId(cls.id);
     try {
       await api.delete(`/classes/${cls.id}`);
       await refresh();
-    } catch {}
+    } catch {} finally {
+      setDeletingClassId(null);
+    }
   };
 
   return (
@@ -228,9 +254,11 @@ export function ClassesManagement({ onNavigate }: ClassesManagementProps) {
               </div>
               <div className="flex justify-end gap-2">
                 <DialogClose asChild>
-                  <Button variant="outline">Cancel</Button>
+                  <Button variant="outline" disabled={addSubmitting}>Cancel</Button>
                 </DialogClose>
-                <Button onClick={handleAdd}>Save Class</Button>
+                <Button onClick={handleAdd} disabled={addSubmitting}>
+                  {addSubmitting ? 'Saving...' : 'Save Class'}
+                </Button>
               </div>
             </DialogContent>
           </Dialog>
@@ -295,10 +323,11 @@ export function ClassesManagement({ onNavigate }: ClassesManagementProps) {
                       variant="destructive"
                       size="sm"
                       onClick={() => handleDelete(cls)}
+                      disabled={deletingClassId === cls.id}
                       className="flex items-center gap-2"
                     >
                       <Trash2 size={16} />
-                      Delete
+                      {deletingClassId === cls.id ? 'Deleting...' : 'Delete'}
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -338,6 +367,7 @@ export function ClassesManagement({ onNavigate }: ClassesManagementProps) {
                               variant="ghost"
                               size="sm"
                               onClick={() => handleRemoveSubject(subject)}
+                              disabled={removingSubjectId === subject.id}
                               className="text-red-500 hover:text-red-700 h-7 px-2"
                             >
                               <Trash2 size={14} />
@@ -353,7 +383,8 @@ export function ClassesManagement({ onNavigate }: ClassesManagementProps) {
                                     {st.staff?.firstName} {st.staff?.lastName}
                                     <button
                                       onClick={() => handleRemoveSubjectTeacher(st.id)}
-                                      className="text-gray-400 hover:text-red-500 leading-none ml-0.5"
+                                      disabled={removingTeacherId === st.id}
+                                      className="text-gray-400 hover:text-red-500 leading-none ml-0.5 disabled:opacity-50"
                                     >
                                       ×
                                     </button>
@@ -377,9 +408,9 @@ export function ClassesManagement({ onNavigate }: ClassesManagementProps) {
                                   size="sm"
                                   className="h-7 text-xs px-2"
                                   onClick={() => handleAddSubjectTeacher(subject)}
-                                  disabled={!addTeacherSelections[subject.id]}
+                                  disabled={!addTeacherSelections[subject.id] || addingTeacherSubjectId === subject.id}
                                 >
-                                  Add
+                                  {addingTeacherSubjectId === subject.id ? 'Adding...' : 'Add'}
                                 </Button>
                               </div>
                             )}
@@ -401,8 +432,8 @@ export function ClassesManagement({ onNavigate }: ClassesManagementProps) {
                         <option key={s.id} value={s.id}>{s.name}</option>
                       ))}
                     </select>
-                    <Button size="sm" onClick={handleAddSubject} disabled={!addSubjectId}>
-                      Add
+                    <Button size="sm" onClick={handleAddSubject} disabled={!addSubjectId || addSubjectSubmitting}>
+                      {addSubjectSubmitting ? 'Adding...' : 'Add'}
                     </Button>
                   </div>
                 )}

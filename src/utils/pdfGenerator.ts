@@ -1,6 +1,6 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { Expense, Student, Staff, ReportCard, WorkRecord, TimetableEntry, AttendanceRecord } from '../types';
+import { Expense, Student, Staff, ReportCard, WorkRecord, TimetableEntry, AttendanceRecord, TestExamBreakdownSubject } from '../types';
 import { BASE_URL } from '../lib/api';
 
 const SCHOOL_INFO = {
@@ -460,13 +460,16 @@ export function generateWorkRecord(record: WorkRecord) {
   doc.save(`Work_Record_${record.staffName}_${record.date}.pdf`);
 }
 
-export function generateReportCard(report: ReportCard) {
+export function generateReportCard(
+  report: ReportCard,
+  extra?: { breakdown?: TestExamBreakdownSubject[]; rank?: { rank: number; totalStudents: number } }
+) {
   const doc = new jsPDF();
-  
+
   // Header with school colors
   doc.setFillColor(37, 99, 235);
   doc.rect(0, 0, 210, 50, 'F');
-  
+
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(22);
   doc.text(SCHOOL_INFO.name, 105, 20, { align: 'center' });
@@ -474,18 +477,21 @@ export function generateReportCard(report: ReportCard) {
   doc.text('STUDENT REPORT CARD', 105, 32, { align: 'center' });
   doc.setFontSize(10);
   doc.text(`${report.term} - ${report.academicYear}`, 105, 42, { align: 'center' });
-  
+
   // Student information
   doc.setTextColor(0, 0, 0);
   doc.setFontSize(12);
   doc.text('Student Information', 20, 65);
-  
+
   autoTable(doc, {
     startY: 70,
     body: [
       ['Name:', report.studentName, 'Class:', report.class],
       ['Average Score:', `${report.averageScore}%`, 'Position:', `${report.position} of ${report.totalStudents}`],
-      ['Attendance:', `${report.attendance}%`, '', '']
+      [
+        'Attendance:', `${report.attendance}%`,
+        extra?.rank ? 'Class Rank:' : '', extra?.rank ? `${extra.rank.rank} of ${extra.rank.totalStudents}` : '',
+      ],
     ],
     theme: 'plain',
     styles: { fontSize: 10 },
@@ -496,20 +502,63 @@ export function generateReportCard(report: ReportCard) {
       3: { cellWidth: 60 }
     }
   });
-  
-  // Subjects table
+
+  let cursorY: number = (doc as any).lastAutoTable.finalY;
+
+  // Tests & Exams breakdown — each test/exam's marksObtained/total individually,
+  // per subject, plus the compiled subject total. Optional: an older report
+  // card (or one predating Tests & Exams setup) simply omits this section.
+  if (extra?.breakdown?.length) {
+    cursorY += 15;
+    if (cursorY > 270) { doc.addPage(); cursorY = 20; }
+    doc.setFontSize(12);
+    doc.text('Tests & Exams Breakdown', 20, cursorY);
+    cursorY += 8;
+
+    for (const subject of extra.breakdown) {
+      const blockHeight = 8 + (subject.testExams.length + 1) * 7;
+      if (cursorY + blockHeight > 280) { doc.addPage(); cursorY = 20; }
+
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`${subject.subjectName} — ${subject.marksObtained}/${subject.totalMarks}`, 20, cursorY);
+      doc.setFont('helvetica', 'normal');
+      cursorY += 5;
+
+      autoTable(doc, {
+        startY: cursorY,
+        head: [['Test/Exam', 'Type', 'Marks Obtained', 'Total']],
+        body: subject.testExams.map(t => [
+          t.name,
+          t.type === 'EXAM' ? 'Exam' : 'Test',
+          t.marksObtained ?? '—',
+          t.totalMarks,
+        ]),
+        theme: 'grid',
+        headStyles: { fillColor: [100, 116, 139] },
+        styles: { fontSize: 9 },
+        margin: { left: 20, right: 20 },
+      });
+      cursorY = (doc as any).lastAutoTable.finalY + 8;
+    }
+  }
+
+  // Subjects table (legacy manually-entered scores)
   const subjectData = report.subjects.map(subject => [
     subject.name,
     subject.score.toString(),
     subject.grade,
     subject.teacherComment
   ]);
-  
+
+  cursorY += 7;
+  if (cursorY > 270) { doc.addPage(); cursorY = 20; }
   doc.setFontSize(12);
-  doc.text('Academic Performance', 20, (doc as any).lastAutoTable.finalY + 15);
-  
+  doc.text('Academic Performance', 20, cursorY);
+  cursorY += 5;
+
   autoTable(doc, {
-    startY: (doc as any).lastAutoTable.finalY + 20,
+    startY: cursorY,
     head: [['Subject', 'Score', 'Grade', 'Teacher Comment']],
     body: subjectData,
     theme: 'striped',
@@ -522,25 +571,28 @@ export function generateReportCard(report: ReportCard) {
       3: { cellWidth: 100 }
     }
   });
-  
+  cursorY = (doc as any).lastAutoTable.finalY;
+
   // Grading scale
+  if (cursorY + 10 > 280) { doc.addPage(); cursorY = 20; }
   doc.setFontSize(10);
-  doc.text('Grading Scale: A (80-100) | B (70-79) | C (60-69) | D (50-59) | F (0-49)', 20, (doc as any).lastAutoTable.finalY + 10);
-  
+  doc.text('Grading Scale: A (80-100) | B (70-79) | C (60-69) | D (50-59) | F (0-49)', 20, cursorY + 10);
+
   // Head teacher comment
-  doc.setFontSize(12);
-  doc.text('Head Teacher Comment:', 20, (doc as any).lastAutoTable.finalY + 22);
-  doc.setFontSize(10);
   const commentLines = doc.splitTextToSize(report.headTeacherComment, 170);
-  doc.text(commentLines, 20, (doc as any).lastAutoTable.finalY + 29);
-  
+  if (cursorY + 29 + (commentLines.length * 5) > 280) { doc.addPage(); cursorY = 0; }
+  doc.setFontSize(12);
+  doc.text('Head Teacher Comment:', 20, cursorY + 22);
+  doc.setFontSize(10);
+  doc.text(commentLines, 20, cursorY + 29);
+
   // Signature section
-  const finalY = (doc as any).lastAutoTable.finalY + 29 + (commentLines.length * 5) + 15;
+  const finalY = cursorY + 29 + (commentLines.length * 5) + 15;
   doc.line(20, finalY, 80, finalY);
   doc.text('Head Teacher Signature', 25, finalY + 5);
-  
+
   doc.line(130, finalY, 190, finalY);
   doc.text('Date', 155, finalY + 5);
-  
+
   doc.save(`Report_Card_${report.studentName}_${report.term}.pdf`);
 }

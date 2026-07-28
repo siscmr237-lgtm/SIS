@@ -11,35 +11,33 @@ import {
   UserCheck,
   Users,
 } from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { BASE_URL } from '../lib/api';
 import { useSisCache } from '../lib/SisCache';
 import { resolveSchoolTerm } from '../utils/academicTerm';
-import { NavigationPage } from "../App";
 
 interface SidebarProps {
-  currentPage: NavigationPage;
-  onNavigate: (page: NavigationPage) => void;
   open?: boolean;
   onClose?: () => void;
 }
 
-export function Sidebar({ currentPage, onNavigate, open = false, onClose }: SidebarProps) {
+const MENU_ITEMS = [
+  { href: "/dashboard", label: "Dashboard", icon: Home },
+  { href: "/students", label: "Students", icon: Users },
+  { href: "/staff", label: "Staff", icon: UserCheck },
+  { href: "/classes", label: "Classes", icon: LayoutGrid },
+  { href: "/finance", label: "Finance", icon: DollarSign },
+  { href: "/report-cards", label: "Report Cards", icon: FileText },
+  { href: "/attendance", label: "Attendance", icon: Calendar },
+  { href: "/timetable", label: "Timetable", icon: Clock },
+];
+
+export function Sidebar({ open = false, onClose }: SidebarProps) {
   const cache = useSisCache();
-  const menuItems = [
-    { id: "dashboard" as NavigationPage, label: "Dashboard", icon: Home },
-    { id: "students" as NavigationPage, label: "Students", icon: Users },
-    { id: "staff" as NavigationPage, label: "Staff", icon: UserCheck },
-    { id: "classes" as NavigationPage, label: "Classes", icon: LayoutGrid },
-    { id: "finance" as NavigationPage, label: "Finance", icon: DollarSign },
-    {
-      id: "report-cards" as NavigationPage,
-      label: "Report Cards",
-      icon: FileText,
-    },
-    { id: "attendance" as NavigationPage, label: "Attendance", icon: Calendar },
-    { id: "timetable" as NavigationPage, label: "Timetable", icon: Clock },
-  ];
+  const pathname = usePathname();
+  const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
   const [schoolSettings, setSchoolSettings] = useState({
     name: "School",
     logo: "https://images.unsplash.com/photo-1599305445671-ac291c95aaa9?w=200&h=200&fit=crop",
@@ -49,11 +47,6 @@ export function Sidebar({ currentPage, onNavigate, open = false, onClose }: Side
   });
   const [logoSrc, setLogoSrc] = useState<string | null>(null);
   const { academicYear, term } = resolveSchoolTerm(schoolSettings);
-
-  const handleNavigate = (page: NavigationPage) => {
-    onNavigate(page);
-    onClose?.();
-  };
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -106,39 +99,41 @@ export function Sidebar({ currentPage, onNavigate, open = false, onClose }: Side
       </div>
 
       <nav className="flex-1 p-4 overflow-y-auto">
-        {menuItems.map((item) => {
+        {MENU_ITEMS.map((item) => {
           const Icon = item.icon;
-          const isActive = currentPage === item.id;
+          const active = isActive(item.href);
 
           return (
-            <button
-              key={item.id}
-              onClick={() => handleNavigate(item.id)}
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={() => onClose?.()}
               className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg mb-1 transition-colors ${
-                isActive
+                active
                   ? "bg-blue-700 text-white"
                   : "text-blue-100 hover:bg-blue-800"
               }`}
             >
               <Icon size={18} />
               <span>{item.label}</span>
-            </button>
+            </Link>
           );
         })}
       </nav>
 
       <div className="px-4 py-2 border-t border-blue-800">
-        <button
-          onClick={() => handleNavigate("settings")}
+        <Link
+          href="/settings"
+          onClick={() => onClose?.()}
           className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${
-            currentPage === "settings"
+            isActive("/settings")
               ? "bg-blue-700 text-white"
               : "text-blue-100 hover:bg-blue-800"
           }`}
         >
           <Settings size={18} />
           <span>School Settings</span>
-        </button>
+        </Link>
       </div>
 
       <div className="p-4 border-t border-blue-800">

@@ -15,6 +15,7 @@ export function ExpensesManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [openAdd, setOpenAdd] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({
     date: '',
     invoiceNumber: '',
@@ -130,10 +131,13 @@ export function ExpensesManagement() {
             </div>
             <div className="flex justify-end gap-2">
               <DialogClose asChild>
-                <Button variant="outline">Cancel</Button>
+                <Button variant="outline" disabled={submitting}>Cancel</Button>
               </DialogClose>
               <Button
+                disabled={submitting}
                 onClick={async ()=>{
+                  if (submitting) return;
+                  setSubmitting(true);
                   try {
                     await api.post('/expenses', {
                       date: form.date,
@@ -151,9 +155,12 @@ export function ExpensesManagement() {
                     setExpenses(data||[]);
                     setOpenAdd(false);
                     setForm({ date:'', invoiceNumber:'', category:'', description:'', amount:'', payee:'', paymentMethod:'' });
-                  } catch {}
+                  } catch {
+                  } finally {
+                    setSubmitting(false);
+                  }
                 }}
-              >Record Expense</Button>
+              >{submitting ? 'Recording...' : 'Record Expense'}</Button>
             </div>
           </DialogContent>
         </Dialog>

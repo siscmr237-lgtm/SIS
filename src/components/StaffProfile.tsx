@@ -1,5 +1,6 @@
 import { ArrowLeft, Edit, FileText, MoreHorizontal, Plus } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { NavigationPage } from '../App';
 import { api } from '../lib/api';
 import { useSisCache } from '../lib/SisCache';
@@ -85,9 +86,22 @@ function Field({ label, value }: { label: string; value: string | undefined }) {
   );
 }
 
+const VALID_TABS: Tab[] = ['general', 'finance', 'attendance'];
+
 export function StaffProfile({ staff, onNavigate }: StaffProfileProps) {
   const cache = useSisCache();
-  const [activeTab, setActiveTab] = useState<Tab>('general');
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  const initialTab: Tab = (VALID_TABS as string[]).includes(tabParam || '') ? (tabParam as Tab) : 'general';
+  const [activeTab, setActiveTabState] = useState<Tab>(initialTab);
+  // Keeps the active tab in the URL (?tab=) so reloading mid-tab restores it,
+  // instead of only living in component state.
+  const setActiveTab = (tab: Tab) => {
+    setActiveTabState(tab);
+    router.replace(`${pathname}?tab=${tab}`, { scroll: false });
+  };
 
   // Editable info — local state so updates appear immediately after save
   const [displayInfo, setDisplayInfo] = useState({

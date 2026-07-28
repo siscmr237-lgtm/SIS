@@ -5,6 +5,7 @@ export interface Student {
   dateOfBirth: string;
   gender: 'male' | 'female';
   class: string;
+  parentId: number;
   parentName: string;
   parentPhone: string;
   address: string;
@@ -97,6 +98,32 @@ export interface SubjectConfig {
   id: string;
   className: string;
   subjects: string[];
+}
+
+export interface TestExamBreakdownEntry {
+  testExamId: number;
+  name: string;
+  type: 'TEST' | 'EXAM';
+  order: number;
+  marksObtained: number | null;
+  totalMarks: number;
+}
+
+export interface TestExamBreakdownSubject {
+  subjectId: number;
+  subjectName: string;
+  marksObtained: number;
+  totalMarks: number;
+  testExams: TestExamBreakdownEntry[];
+}
+
+export interface ClassRankingRow {
+  studentId: string;
+  firstName: string;
+  lastName: string;
+  totalObtained: number;
+  totalPossible: number;
+  rank: number;
 }
 
 export interface SchoolSettings {
