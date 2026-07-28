@@ -37,6 +37,15 @@ async function request(path: string, init?: RequestInit) {
     throw err;
   }
 
+  // Rolling idle session: every authenticated call that reaches the server
+  // and gets handled comes back with a freshly-extended token. Pick it up
+  // regardless of whether this particular call succeeded or failed on its
+  // own merits (e.g. a validation 400 still means the session is alive).
+  const refreshedToken = res.headers.get('x-refreshed-token');
+  if (refreshedToken && typeof window !== 'undefined') {
+    window.localStorage.setItem('auth_token', refreshedToken);
+  }
+
   if (!res.ok) {
     const text = await res.text();
     let message = text || `Request failed: ${res.status}`;
@@ -47,11 +56,15 @@ async function request(path: string, init?: RequestInit) {
       if (parsed.code) code = String(parsed.code);
     } catch {}
 
-    // A 401 only means a session genuinely died if we actually believed we had one
-    // (i.e. this call went out with a token attached). A call that went out with no
-    // token — e.g. a straggling effect that fires right after an intentional logout
-    // already cleared it — has nothing to "expire"; don't show that banner for it.
-    if (res.status === 401 && !path.startsWith('/auth/')) {
+    // A 401 only means a session genuinely died if the backend actually said
+    // so (code === 'SESSION_INVALID') AND we believed we had a session to
+    // begin with (sentWithToken). Any other failure — a transient server
+    // error, a straggling no-token effect right after logout, a 401 some
+    // future route returns for an unrelated reason — must never be treated
+    // as proof the session expired. This is the same bug class as the prior
+    // stale-post-logout-401 fix: don't let an unrelated failure masquerade
+    // as "your session expired."
+    if (res.status === 401 && !path.startsWith('/auth/') && code === 'SESSION_INVALID') {
       clearSessionAndRedirect(sentWithToken);
     }
 

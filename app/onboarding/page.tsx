@@ -28,6 +28,40 @@ const SCHOOL_TYPE_OPTIONS = [
   },
 ];
 
+const DRAFT_KEY_BASE = "onboarding_draft_v1";
+
+interface OnboardingDraft {
+  schoolType?: SchoolType | "";
+  selectedClasses?: string[];
+  sectionsByClass?: Record<string, number>;
+  motto?: string;
+  address?: string;
+  uniformColors?: UniformColors;
+}
+
+// Scoped to the signed-in account so a shared browser can't leak one admin's
+// in-progress draft into another admin's onboarding form.
+function getDraftKey(): string {
+  if (typeof window === "undefined") return DRAFT_KEY_BASE;
+  try {
+    const userStr = window.localStorage.getItem("user");
+    const user = userStr ? JSON.parse(userStr) : null;
+    return `${DRAFT_KEY_BASE}:${user?.id ?? "anon"}`;
+  } catch {
+    return DRAFT_KEY_BASE;
+  }
+}
+
+function loadDraft(): OnboardingDraft | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(getDraftKey());
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
 const inputStyle: React.CSSProperties = {
   display: "block",
   width: "100%",
@@ -86,16 +120,16 @@ function Section({
 export default function OnboardingPage() {
   const router = useRouter();
 
-  const [schoolType, setSchoolType] = useState<SchoolType | "">("");
+  const [schoolType, setSchoolType] = useState<SchoolType | "">(() => loadDraft()?.schoolType ?? "");
   const [catalog, setCatalog] = useState<CatalogEntry[]>([]);
-  const [selectedClasses, setSelectedClasses] = useState<string[]>([]);
-  const [sectionsByClass, setSectionsByClass] = useState<Record<string, number>>({});
-  const [motto, setMotto] = useState("");
-  const [address, setAddress] = useState("");
+  const [selectedClasses, setSelectedClasses] = useState<string[]>(() => loadDraft()?.selectedClasses ?? []);
+  const [sectionsByClass, setSectionsByClass] = useState<Record<string, number>>(() => loadDraft()?.sectionsByClass ?? {});
+  const [motto, setMotto] = useState(() => loadDraft()?.motto ?? "");
+  const [address, setAddress] = useState(() => loadDraft()?.address ?? "");
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [logoUploading, setLogoUploading] = useState(false);
-  const [uniformColors, setUniformColors] = useState<UniformColors>(EMPTY_UNIFORM_COLORS);
+  const [uniformColors, setUniformColors] = useState<UniformColors>(() => loadDraft()?.uniformColors ?? EMPTY_UNIFORM_COLORS);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -117,7 +151,10 @@ export default function OnboardingPage() {
     }
   }, [router]);
 
-  // Fetch filtered class catalog whenever school type changes.
+  // Fetch filtered class catalog whenever school type changes. Selections
+  // that no longer belong to the new catalog are dropped, but ones that do
+  // (e.g. a class shared between school types, or a draft restored from an
+  // earlier session) are kept rather than always wiped.
   useEffect(() => {
     if (!schoolType) {
       setCatalog([]);
@@ -126,12 +163,38 @@ export default function OnboardingPage() {
     api
       .get(`/onboarding/class-catalog?schoolType=${schoolType}`)
       .then((data) => {
-        setCatalog(data || []);
-        setSelectedClasses([]); // Reset selections when type changes
-        setSectionsByClass({});
+        const list: CatalogEntry[] = data || [];
+        setCatalog(list);
+        const validNames = new Set(list.map((c) => c.name));
+        setSelectedClasses((prev) => prev.filter((name) => validNames.has(name)));
+        setSectionsByClass((prev) =>
+          Object.fromEntries(Object.entries(prev).filter(([name]) => validNames.has(name)))
+        );
       })
       .catch(() => setCatalog([]));
   }, [schoolType]);
+
+  // Draft autosave: persists in-progress selections so a forced logout (a
+  // genuine session expiry, or anything else that crashes/reloads this page)
+  // never silently loses what the user already typed. Debounced so rapid
+  // typing doesn't hit localStorage on every keystroke.
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      if (typeof window === "undefined") return;
+      const draft: OnboardingDraft = {
+        schoolType,
+        selectedClasses,
+        sectionsByClass,
+        motto,
+        address,
+        uniformColors,
+      };
+      try {
+        window.localStorage.setItem(getDraftKey(), JSON.stringify(draft));
+      } catch {}
+    }, 500);
+    return () => clearTimeout(handle);
+  }, [schoolType, selectedClasses, sectionsByClass, motto, address, uniformColors]);
 
   const toggleClass = (name: string) =>
     setSelectedClasses((prev) =>
@@ -221,6 +284,10 @@ export default function OnboardingPage() {
         ...(logoPath !== undefined && { logo: logoPath }),
         uniformColors,
       });
+
+      try {
+        window.localStorage.removeItem(getDraftKey());
+      } catch {}
 
       // Update localStorage so subsequent checks see onboardingCompleted=true
       try {
