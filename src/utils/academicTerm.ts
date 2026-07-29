@@ -17,6 +17,29 @@
 
 export type Term = 'Term 1' | 'Term 2' | 'Term 3';
 
+/**
+ * How a term is WRITTEN FOR THE USER. Display-only — the canonical stored
+ * value stays 'Term 1'/'Term 2'/'Term 3' everywhere (database columns, query
+ * params, <SelectItem value>, PDF filenames), because ledger entries, report
+ * cards and test/exams are all filtered by exact string match on it. Only ever
+ * pass a term through this at the point it's rendered, never before it's saved
+ * or sent to the server.
+ *
+ * Use this at EVERY site that shows a term so the wording can't drift between
+ * screens. Unrecognised values pass through unchanged, so a manually-typed
+ * custom term in School Settings still displays as entered.
+ */
+const TERM_LABELS: Record<string, string> = {
+  'Term 1': '1st Term',
+  'Term 2': '2nd Term',
+  'Term 3': '3rd Term',
+};
+
+export function formatTermLabel(term: string | null | undefined): string {
+  if (!term) return 'Holiday';
+  return TERM_LABELS[term] ?? term;
+}
+
 export interface TermAndYear {
   term: Term | null;
   academicYear: string;

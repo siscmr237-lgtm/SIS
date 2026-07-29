@@ -16,7 +16,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { BASE_URL } from '../lib/api';
 import { useSisCache } from '../lib/SisCache';
-import { resolveSchoolTerm } from '../utils/academicTerm';
+import { formatTermLabel, resolveSchoolTerm } from '../utils/academicTerm';
 
 interface SidebarProps {
   open?: boolean;
@@ -139,7 +139,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
       <div className="p-4 border-t border-blue-800">
         <p className="text-sm text-blue-300">{academicYear}</p>
         <p className="text-xs text-blue-400 mt-1">
-          {term ?? 'Holiday (no active term)'}
+          {formatTermLabel(term)}
         </p>
       </div>
     </aside>

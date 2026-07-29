@@ -4,7 +4,8 @@ import { DollarSign, TrendingUp, UserCheck, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api, BASE_URL } from "../../src/lib/api";
 import { useSisCache } from "../../src/lib/SisCache";
-import { resolveSchoolTerm } from "../../src/utils/academicTerm";
+import { formatTermLabel, resolveSchoolTerm } from "../../src/utils/academicTerm";
+import { computeSchoolAbbreviation } from "../../src/utils/schoolAbbreviation";
 import { Card } from "./ui/card";
 
 export function Dashboard() {
@@ -21,6 +22,16 @@ export function Dashboard() {
   });
   const [logoSrc, setLogoSrc] = useState<string | null>(null);
   const { academicYear, term } = resolveSchoolTerm(schoolSettings);
+
+  // The school object here comes from the cached localStorage copy written at
+  // login, which for a session predating the abbreviation column simply has no
+  // abbreviation field. Falling back to the raw name overflows the header for
+  // long names, so derive one on the fly as a last resort — this holds no
+  // matter which code path created the school or how stale the cache is.
+  const headerName =
+    schoolSettings.abbreviation ||
+    computeSchoolAbbreviation(schoolSettings.name) ||
+    schoolSettings.name;
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -111,21 +122,28 @@ export function Dashboard() {
   return (
     <div className="p-4 md:p-8">
       {/* School Header */}
-      <Card className="p-6 mb-8 bg-gradient-to-r from-blue-50 to-purple-50">
-        <div className="flex items-center gap-6">
+      {/* overflow-hidden + min-w-0 are what actually keep this inside the
+          viewport on narrow screens: a flex child defaults to min-width:auto,
+          which refuses to shrink below its content, so without min-w-0 the
+          `truncate` below can never engage and a long abbreviation pushes the
+          card past the right edge. shrink-0 stops the logo being squashed, and
+          flex-wrap lets the year/term line drop to a second line instead of
+          overflowing. None of these change desktop, where there's room to spare. */}
+      <Card className="p-6 mb-8 bg-gradient-to-r from-blue-50 to-purple-50 overflow-hidden">
+        <div className="flex items-center gap-6 min-w-0">
           {logoSrc && (
             <img
               src={logoSrc}
               alt="School Logo"
-              className="w-20 h-20 object-cover rounded-lg border-2 border-white shadow-lg"
+              className="w-20 h-20 object-cover rounded-lg border-2 border-white shadow-lg shrink-0"
             />
           )}
-          <div className="flex-1">
-            <h1 className="text-3xl mb-1 truncate">{schoolSettings.abbreviation || schoolSettings.name}</h1>
-            <div className="flex gap-4 text-gray-600">
-              <span>Academic Year: {academicYear}</span>
-              <span>•</span>
-              <span>{term ?? 'Holiday (no active term)'}</span>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-3xl mb-1 truncate">{headerName}</h1>
+            <div className="flex flex-wrap gap-4 text-gray-600 min-w-0">
+              <span className="truncate min-w-0">Academic Year: {academicYear}</span>
+              <span className="shrink-0">•</span>
+              <span className="truncate min-w-0">{formatTermLabel(term)}</span>
             </div>
           </div>
         </div>
