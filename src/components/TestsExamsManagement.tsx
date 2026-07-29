@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { NavigationPage } from '../App';
 import { api } from '@/lib/api';
-import { getDefaultTermFields } from '../utils/academicTerm';
+import { formatTermLabel, getDefaultTermFields } from '../utils/academicTerm';
 import { ArrowLeft, Plus, Trash2, Settings2, Pencil } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
@@ -201,7 +201,7 @@ export function TestsExamsManagement({ onNavigate }: TestsExamsManagementProps) 
             <DialogHeader>
               <DialogTitle>{editingId ? 'Edit Test/Exam' : 'Add Test/Exam'}</DialogTitle>
               <DialogDescription>
-                {editingId ? 'Update this test/exam.' : `For this class, ${term} — ${academicYear}.`}
+                {editingId ? 'Update this test/exam.' : `For this class, ${formatTermLabel(term)} — ${academicYear}.`}
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-2">
@@ -272,9 +272,9 @@ export function TestsExamsManagement({ onNavigate }: TestsExamsManagementProps) 
                 <SelectValue placeholder="Select term" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Term 1">Term 1</SelectItem>
-                <SelectItem value="Term 2">Term 2</SelectItem>
-                <SelectItem value="Term 3">Term 3</SelectItem>
+                <SelectItem value="Term 1">{formatTermLabel('Term 1')}</SelectItem>
+                <SelectItem value="Term 2">{formatTermLabel('Term 2')}</SelectItem>
+                <SelectItem value="Term 3">{formatTermLabel('Term 3')}</SelectItem>
               </SelectContent>
             </Select>
           </div>

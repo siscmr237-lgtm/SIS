@@ -2,6 +2,7 @@ import { AlertTriangle, Calendar, Filter, Receipt, Search } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
 import { useSisCache } from '../lib/SisCache';
+import { formatTermLabel } from '../utils/academicTerm';
 import { NavigationPage } from '../App';
 import { Student } from '../types';
 import { Button } from './ui/button';
@@ -343,7 +344,7 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
                     <SelectContent>
                       <SelectItem value="all">All</SelectItem>
                       {TERM_OPTIONS.map(t => (
-                        <SelectItem key={t} value={t}>{t}</SelectItem>
+                        <SelectItem key={t} value={t}>{formatTermLabel(t)}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>

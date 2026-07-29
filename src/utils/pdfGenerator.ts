@@ -2,6 +2,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Expense, Student, Staff, ReportCard, WorkRecord, TimetableEntry, AttendanceRecord, TestExamBreakdownSubject } from '../types';
 import { BASE_URL } from '../lib/api';
+import { formatTermLabel } from './academicTerm';
 
 const SCHOOL_INFO = {
   name: 'École Primaire et Maternelle',
@@ -476,7 +477,7 @@ export function generateReportCard(
   doc.setFontSize(16);
   doc.text('STUDENT REPORT CARD', 105, 32, { align: 'center' });
   doc.setFontSize(10);
-  doc.text(`${report.term} - ${report.academicYear}`, 105, 42, { align: 'center' });
+  doc.text(`${formatTermLabel(report.term)} - ${report.academicYear}`, 105, 42, { align: 'center' });
 
   // Student information
   doc.setTextColor(0, 0, 0);

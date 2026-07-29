@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 import { api, BASE_URL } from '@/lib/api';
 import { compressImageForUpload } from '@/lib/imageResize';
 import { PasswordHints } from './PasswordHints';
-import { resolveSchoolTerm, resolveEffectiveSchoolTerm } from '@/utils/academicTerm';
+import { formatTermLabel, resolveSchoolTerm, resolveEffectiveSchoolTerm } from '@/utils/academicTerm';
 import { computeSchoolAbbreviation } from '@/utils/schoolAbbreviation';
 
 interface ChargeCategory {
@@ -506,7 +506,7 @@ export function SchoolSettings() {
                 placeholder="e.g., Term 1"
               />
             ) : (
-              <p className="mt-2 p-2 bg-gray-50 rounded">{displayedTerm.term ?? 'Holiday — no active term'}</p>
+              <p className="mt-2 p-2 bg-gray-50 rounded">{formatTermLabel(displayedTerm.term)}</p>
             )}
           </div>
 

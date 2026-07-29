@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { NavigationPage } from '../App';
 import { api } from '@/lib/api';
-import { getDefaultTermFields } from '../utils/academicTerm';
+import { formatTermLabel, getDefaultTermFields } from '../utils/academicTerm';
 import { ArrowLeft, RefreshCw } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
@@ -93,9 +93,9 @@ export function ClassRanking({ onNavigate }: ClassRankingProps) {
                 <SelectValue placeholder="Select term" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Term 1">Term 1</SelectItem>
-                <SelectItem value="Term 2">Term 2</SelectItem>
-                <SelectItem value="Term 3">Term 3</SelectItem>
+                <SelectItem value="Term 1">{formatTermLabel('Term 1')}</SelectItem>
+                <SelectItem value="Term 2">{formatTermLabel('Term 2')}</SelectItem>
+                <SelectItem value="Term 3">{formatTermLabel('Term 3')}</SelectItem>
               </SelectContent>
             </Select>
           </div>

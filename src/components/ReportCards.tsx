@@ -11,7 +11,7 @@ import { Textarea } from './ui/textarea';
 import { Plus, FileText, Search, ClipboardList, PenLine, Trophy } from 'lucide-react';
 import { generateReportCard } from '../utils/pdfGenerator';
 import { api } from '@/lib/api';
-import { getDefaultTermFields } from '../utils/academicTerm';
+import { formatTermLabel, getDefaultTermFields } from '../utils/academicTerm';
 
 interface ReportCardsProps {
   onNavigate?: (page: NavigationPage) => void;
@@ -138,9 +138,9 @@ export function ReportCards({ onNavigate }: ReportCardsProps) {
                       <SelectValue placeholder="Select term" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Term 1">Term 1</SelectItem>
-                      <SelectItem value="Term 2">Term 2</SelectItem>
-                      <SelectItem value="Term 3">Term 3</SelectItem>
+                      <SelectItem value="Term 1">{formatTermLabel('Term 1')}</SelectItem>
+                      <SelectItem value="Term 2">{formatTermLabel('Term 2')}</SelectItem>
+                      <SelectItem value="Term 3">{formatTermLabel('Term 3')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -268,7 +268,7 @@ export function ReportCards({ onNavigate }: ReportCardsProps) {
                 <TableCell>{report.id}</TableCell>
                 <TableCell>{report.studentName}</TableCell>
                 <TableCell>{report.class}</TableCell>
-                <TableCell>{report.term}</TableCell>
+                <TableCell>{formatTermLabel(report.term)}</TableCell>
                 <TableCell>{report.academicYear}</TableCell>
                 <TableCell>{report.averageScore}%</TableCell>
                 <TableCell>{report.position} of {report.totalStudents}</TableCell>
