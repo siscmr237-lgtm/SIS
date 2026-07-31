@@ -24,7 +24,17 @@
 export const AUTH_DIAG_KEY = 'sis_auth_diagnostic';
 const MAX_ENTRIES = 8;
 
-export type AuthDiagnosticSource = 'api-401' | 'auth-gate' | 'logout';
+export type AuthDiagnosticSource =
+  | 'api-401'
+  | 'auth-gate'
+  | 'logout'
+  // 'login' proves whether a login actually mints a NEW token (compare
+  // tokenIatBefore vs tokenIatAfter). 'stale-refresh' fires when a response's
+  // X-Refreshed-Token is OLDER than the token already held — the clobber that
+  // undoes a fresh login — and names the request that delivered it. Purely
+  // observational: the write still happens exactly as before.
+  | 'login'
+  | 'stale-refresh';
 
 export interface AuthDiagnosticEntry {
   at: string;
@@ -64,11 +74,31 @@ export interface AuthDiagnosticEntry {
   responseDate?: string | null;
   refreshedTokenPresent?: boolean;
 
+  // --- login-time evidence (source: 'login') ---
+  /** iat of whatever token was in localStorage immediately BEFORE the login. */
+  tokenIatBefore?: number;
+  /** iat of the token the server issued for this login. If this is not newer
+   *  than tokenIatBefore, login itself is not minting a fresh token. */
+  tokenIatAfter?: number;
+
+  // --- stale-refresh evidence (source: 'stale-refresh') ---
+  /** iat of the token arriving in X-Refreshed-Token. */
+  incomingIat?: number;
+  /** iat of the token we were already holding when it arrived. */
+  heldIat?: number;
+  /** How much older the incoming token is, in seconds. */
+  incomingOlderBySec?: number;
+  /** Was the incoming token already expired on arrival? */
+  incomingAlreadyExpired?: boolean;
+
   // --- device context ---
   ua?: string;
   viewport?: string;
   online?: boolean;
   deviceNow?: number;
+  /** Server's Date header minus the device clock, in seconds. Large values mean
+   *  the device clock is skewed, which would distort every expiry calculation. */
+  clockSkewSec?: number;
 }
 
 function decodeJwtPayload(token: string): { iat?: number; exp?: number } | null {
@@ -81,6 +111,12 @@ function decodeJwtPayload(token: string): { iat?: number; exp?: number } | null 
   } catch {
     return null;
   }
+}
+
+/** Claims needed to compare two tokens' recency. Returns null if unparseable. */
+export function readTokenClaims(token: string | null | undefined): { iat?: number; exp?: number } | null {
+  if (!token) return null;
+  return decodeJwtPayload(token);
 }
 
 /** Everything about the token we hold right now, in diagnostic-safe form. */
