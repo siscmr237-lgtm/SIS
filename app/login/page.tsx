@@ -8,7 +8,10 @@ import { api } from "../../src/lib/api";
 import {
   AuthDiagnosticEntry,
   clearAuthDiagnostics,
+  describeHeldToken,
   readAuthDiagnostics,
+  readTokenClaims,
+  recordAuthDiagnostic,
 } from "../../src/lib/authDiagnostic";
 
 function mapLoginError(err: any): string {
@@ -77,12 +80,34 @@ export default function LoginPage() {
 
     setLoading(true);
     try {
+      // TEMPORARY DIAGNOSTIC — capture what we held BEFORE the login so the
+      // recorded entry can prove whether a login actually mints a new token.
+      const tokenBefore =
+        typeof window !== "undefined" ? window.localStorage.getItem("auth_token") : null;
+
       const res = await api.post("/auth/login", { phoneNumber, password });
       if ((res as any)?.token) {
         const user = (res as any).user;
         if (typeof window !== "undefined") {
           window.localStorage.setItem("auth_token", (res as any).token);
           window.localStorage.setItem("user", JSON.stringify(user));
+
+          // TEMPORARY DIAGNOSTIC (see src/lib/authDiagnostic.ts). If
+          // tokenIatAfter is not newer than tokenIatBefore, login itself is at
+          // fault; if it IS newer yet a later api-401 entry reports the older
+          // iat again, something overwrote it after the fact.
+          const before = readTokenClaims(tokenBefore);
+          const after = readTokenClaims((res as any).token);
+          recordAuthDiagnostic({
+            source: "login",
+            reason:
+              after?.iat != null && before?.iat != null && after.iat <= before.iat
+                ? "login did NOT mint a newer token"
+                : "login stored a freshly minted token",
+            tokenIatBefore: before?.iat,
+            tokenIatAfter: after?.iat,
+            ...describeHeldToken((res as any).token),
+          });
         }
         if (user?.emailVerified === false) {
           router.replace("/verify-email");

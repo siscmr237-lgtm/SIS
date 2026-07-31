@@ -1,4 +1,4 @@
-import { describeHeldToken, recordAuthDiagnostic } from './authDiagnostic';
+import { describeHeldToken, readTokenClaims, recordAuthDiagnostic } from './authDiagnostic';
 
 const runtimeApiUrl =
   (typeof process !== 'undefined' && (process as any).env?.NEXT_PUBLIC_API_URL) ||
@@ -54,6 +54,41 @@ async function request(path: string, init?: RequestInit) {
   // own merits (e.g. a validation 400 still means the session is alive).
   const refreshedToken = res.headers.get('x-refreshed-token');
   if (refreshedToken && typeof window !== 'undefined') {
+    // TEMPORARY DIAGNOSTIC (see src/lib/authDiagnostic.ts). This write is
+    // currently unconditional, so a response carrying an OLDER token than the
+    // one we hold silently undoes a fresh login. Detect that here and record
+    // which request delivered it — WITHOUT changing the behaviour, so the
+    // captured evidence reflects what production actually does today.
+    const incoming = readTokenClaims(refreshedToken);
+    const held = readTokenClaims(token);
+    const nowSec = Math.floor(Date.now() / 1000);
+    const isOlder = incoming?.iat != null && held?.iat != null && incoming.iat < held.iat;
+    const isExpired = incoming?.exp != null && incoming.exp <= nowSec;
+    if (isOlder || isExpired) {
+      const serverDate = res.headers.get('date');
+      recordAuthDiagnostic({
+        source: 'stale-refresh',
+        reason: isOlder
+          ? 'a response carried an OLDER token than the one we held'
+          : 'a response carried an already-expired token',
+        path,
+        status: res.status,
+        incomingIat: incoming?.iat,
+        heldIat: held?.iat,
+        incomingOlderBySec:
+          incoming?.iat != null && held?.iat != null ? held.iat - incoming.iat : undefined,
+        incomingAlreadyExpired: isExpired,
+        cacheControl: res.headers.get('cache-control'),
+        age: res.headers.get('age'),
+        xVercelCache: res.headers.get('x-vercel-cache'),
+        xVercelId: res.headers.get('x-vercel-id'),
+        etag: res.headers.get('etag'),
+        responseDate: serverDate,
+        clockSkewSec: serverDate
+          ? Math.floor(new Date(serverDate).getTime() / 1000) - nowSec
+          : undefined,
+      });
+    }
     window.localStorage.setItem('auth_token', refreshedToken);
   }
 
