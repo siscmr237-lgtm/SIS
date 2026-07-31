@@ -10,6 +10,7 @@ import { Settings, Plus, Trash2, Edit, Save, X, Upload, KeyRound, EyeIcon, EyeOf
 import { schoolSettings } from '../data/mockData';
 import { toast } from 'sonner';
 import { api, BASE_URL } from '@/lib/api';
+import { describeHeldToken, recordAuthDiagnostic } from '@/lib/authDiagnostic';
 import { compressImageForUpload } from '@/lib/imageResize';
 import { PasswordHints } from './PasswordHints';
 import { formatTermLabel, resolveSchoolTerm, resolveEffectiveSchoolTerm } from '@/utils/academicTerm';
@@ -577,6 +578,14 @@ export function SchoolSettings() {
           onClick={() => {
             try {
               if (typeof window !== "undefined") {
+                // TEMPORARY DIAGNOSTIC (see src/lib/authDiagnostic.ts) — records
+                // that THIS is a deliberate logout, so an unexplained return to
+                // /login can be told apart from the user pressing this button.
+                recordAuthDiagnostic({
+                  source: "logout",
+                  reason: "user pressed Logout",
+                  ...describeHeldToken(window.localStorage.getItem("auth_token")),
+                });
                 window.localStorage.removeItem("auth_token");
                 window.localStorage.removeItem("user");
                 router.replace("/login");
