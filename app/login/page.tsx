@@ -5,6 +5,11 @@ import { EyeIcon, EyeOffIcon, PhoneIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { api } from "../../src/lib/api";
+import {
+  AuthDiagnosticEntry,
+  clearAuthDiagnostics,
+  readAuthDiagnostics,
+} from "../../src/lib/authDiagnostic";
 
 function mapLoginError(err: any): string {
   if (err?.status === 0 || err?.code === 'NETWORK_ERROR') {
@@ -32,6 +37,14 @@ export default function LoginPage() {
   const [sessionMessage, setSessionMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [focusedField, setFocusedField] = useState<string | null>(null);
+  // TEMPORARY DIAGNOSTIC (see src/lib/authDiagnostic.ts).
+  const [diagnostics, setDiagnostics] = useState<AuthDiagnosticEntry[]>([]);
+  const [diagOpen, setDiagOpen] = useState(false);
+  const [diagCopied, setDiagCopied] = useState(false);
+
+  useEffect(() => {
+    setDiagnostics(readAuthDiagnostics());
+  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -171,6 +184,110 @@ export default function LoginPage() {
               }}
             >
               {sessionMessage}
+            </div>
+          )}
+
+          {/* ================= TEMPORARY DIAGNOSTIC =================
+              Renders only when the app has actually recorded a bounce back to
+              this page. Remove together with src/lib/authDiagnostic.ts once the
+              "Session expired" cause is confirmed. */}
+          {diagnostics.length > 0 && (
+            <div
+              style={{
+                marginBottom: "1.25rem",
+                borderRadius: 10,
+                border: "1px solid #CBD5E1",
+                backgroundColor: "#F8FAFC",
+                fontSize: "0.75rem",
+                overflow: "hidden",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setDiagOpen((v) => !v)}
+                style={{
+                  width: "100%",
+                  textAlign: "left",
+                  padding: "0.625rem 0.75rem",
+                  color: "#334155",
+                  fontWeight: 500,
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                }}
+              >
+                {diagOpen ? "▾" : "▸"} Session diagnostic — {diagnostics.length} event
+                {diagnostics.length === 1 ? "" : "s"} recorded (tap to {diagOpen ? "hide" : "view"})
+              </button>
+
+              {diagOpen && (
+                <div style={{ padding: "0 0.75rem 0.75rem" }}>
+                  <pre
+                    style={{
+                      margin: 0,
+                      padding: "0.625rem",
+                      backgroundColor: "#0F172A",
+                      color: "#E2E8F0",
+                      borderRadius: 8,
+                      fontSize: "0.6875rem",
+                      lineHeight: 1.5,
+                      maxHeight: 260,
+                      overflow: "auto",
+                      whiteSpace: "pre-wrap",
+                      wordBreak: "break-word",
+                    }}
+                  >
+                    {JSON.stringify(diagnostics, null, 2)}
+                  </pre>
+                  <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const text = JSON.stringify(diagnostics, null, 2);
+                        try {
+                          await navigator.clipboard.writeText(text);
+                          setDiagCopied(true);
+                          setTimeout(() => setDiagCopied(false), 2000);
+                        } catch {
+                          // Clipboard is blocked in plenty of mobile contexts —
+                          // the <pre> above is always selectable as a fallback.
+                          setDiagCopied(false);
+                        }
+                      }}
+                      style={{
+                        padding: "0.375rem 0.625rem",
+                        borderRadius: 6,
+                        border: "1px solid #CBD5E1",
+                        backgroundColor: "#FFFFFF",
+                        color: "#334155",
+                        cursor: "pointer",
+                        fontSize: "0.75rem",
+                      }}
+                    >
+                      {diagCopied ? "Copied" : "Copy"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        clearAuthDiagnostics();
+                        setDiagnostics([]);
+                        setDiagOpen(false);
+                      }}
+                      style={{
+                        padding: "0.375rem 0.625rem",
+                        borderRadius: 6,
+                        border: "1px solid #CBD5E1",
+                        backgroundColor: "#FFFFFF",
+                        color: "#334155",
+                        cursor: "pointer",
+                        fontSize: "0.75rem",
+                      }}
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
