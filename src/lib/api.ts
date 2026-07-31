@@ -1,5 +1,3 @@
-import { describeHeldToken, readTokenClaims, recordAuthDiagnostic } from './authDiagnostic';
-
 const runtimeApiUrl =
   (typeof process !== 'undefined' && (process as any).env?.NEXT_PUBLIC_API_URL) ||
   (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_URL) ||
@@ -54,41 +52,6 @@ async function request(path: string, init?: RequestInit) {
   // own merits (e.g. a validation 400 still means the session is alive).
   const refreshedToken = res.headers.get('x-refreshed-token');
   if (refreshedToken && typeof window !== 'undefined') {
-    // TEMPORARY DIAGNOSTIC (see src/lib/authDiagnostic.ts). This write is
-    // currently unconditional, so a response carrying an OLDER token than the
-    // one we hold silently undoes a fresh login. Detect that here and record
-    // which request delivered it — WITHOUT changing the behaviour, so the
-    // captured evidence reflects what production actually does today.
-    const incoming = readTokenClaims(refreshedToken);
-    const held = readTokenClaims(token);
-    const nowSec = Math.floor(Date.now() / 1000);
-    const isOlder = incoming?.iat != null && held?.iat != null && incoming.iat < held.iat;
-    const isExpired = incoming?.exp != null && incoming.exp <= nowSec;
-    if (isOlder || isExpired) {
-      const serverDate = res.headers.get('date');
-      recordAuthDiagnostic({
-        source: 'stale-refresh',
-        reason: isOlder
-          ? 'a response carried an OLDER token than the one we held'
-          : 'a response carried an already-expired token',
-        path,
-        status: res.status,
-        incomingIat: incoming?.iat,
-        heldIat: held?.iat,
-        incomingOlderBySec:
-          incoming?.iat != null && held?.iat != null ? held.iat - incoming.iat : undefined,
-        incomingAlreadyExpired: isExpired,
-        cacheControl: res.headers.get('cache-control'),
-        age: res.headers.get('age'),
-        xVercelCache: res.headers.get('x-vercel-cache'),
-        xVercelId: res.headers.get('x-vercel-id'),
-        etag: res.headers.get('etag'),
-        responseDate: serverDate,
-        clockSkewSec: serverDate
-          ? Math.floor(new Date(serverDate).getTime() / 1000) - nowSec
-          : undefined,
-      });
-    }
     window.localStorage.setItem('auth_token', refreshedToken);
   }
 
@@ -111,30 +74,6 @@ async function request(path: string, init?: RequestInit) {
     // stale-post-logout-401 fix: don't let an unrelated failure masquerade
     // as "your session expired."
     if (res.status === 401 && !path.startsWith('/auth/') && code === 'SESSION_INVALID') {
-      // TEMPORARY DIAGNOSTIC (see src/lib/authDiagnostic.ts) — capture what we
-      // actually sent and what actually came back, before the session is torn
-      // down and the evidence goes with it. `age`/`x-vercel-cache` are the
-      // interesting ones: a cached response is what an intermediary serving a
-      // stale 401 to an authenticated request would look like.
-      recordAuthDiagnostic({
-        source: 'api-401',
-        reason: sentWithToken
-          ? 'server rejected a token we were holding'
-          : 'no token was attached to the request',
-        path,
-        status: res.status,
-        code,
-        message: message.slice(0, 200),
-        sentAuthHeader: sentWithToken,
-        cacheControl: res.headers.get('cache-control'),
-        age: res.headers.get('age'),
-        xVercelCache: res.headers.get('x-vercel-cache'),
-        xVercelId: res.headers.get('x-vercel-id'),
-        etag: res.headers.get('etag'),
-        responseDate: res.headers.get('date'),
-        refreshedTokenPresent: Boolean(refreshedToken),
-        ...describeHeldToken(token),
-      });
       clearSessionAndRedirect(sentWithToken);
     }
 

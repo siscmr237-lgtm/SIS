@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { describeHeldToken, recordAuthDiagnostic } from './authDiagnostic';
 
 export type AuthGateStatus = 'checking' | 'ready';
 
@@ -33,22 +32,7 @@ export function useAuthGate(): AuthGateStatus {
         }
       }
       if (alive) setStatus('ready');
-    } catch (e) {
-      // TEMPORARY DIAGNOSTIC (see src/lib/authDiagnostic.ts). This branch is
-      // the OTHER way a user lands back on /login, and it looks different to
-      // them: no ?reason=expired, so no "session has expired" banner. Recording
-      // it is what lets us tell the two apart from the device afterwards.
-      let heldToken: string | null = null;
-      try {
-        heldToken = typeof window !== 'undefined' ? window.localStorage.getItem('auth_token') : null;
-      } catch {}
-      recordAuthDiagnostic({
-        source: 'auth-gate',
-        reason: heldToken
-          ? `gate threw while a token was present: ${String((e as Error)?.message || e).slice(0, 80)}`
-          : 'no auth_token in localStorage at gate time',
-        ...describeHeldToken(heldToken),
-      });
+    } catch {
       if (alive) router.replace('/login');
     }
     return () => {
