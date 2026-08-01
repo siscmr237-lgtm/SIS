@@ -3,15 +3,22 @@
 import { DollarSign, TrendingUp, UserCheck, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api, BASE_URL } from "../../src/lib/api";
-import { useSisCache } from "../../src/lib/SisCache";
+import { useCachedResource, useSisCache } from "../../src/lib/SisCache";
 import { formatTermLabel, resolveSchoolTerm } from "../../src/utils/academicTerm";
 import { computeSchoolAbbreviation } from "../../src/utils/schoolAbbreviation";
 import { Card } from "./ui/card";
 
 export function Dashboard() {
-  const [dashboardData, setDashboardData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
   const cache = useSisCache();
+  // /dashboard carries feesCollected, outstandingFees and financialSummary, so
+  // it is fetched fresh on every visit and never cached — the loading state on
+  // this screen is the price of never showing a figure that a payment or an
+  // expense recorded a moment ago has already changed.
+  const { data: dashboardData, loading } = useCachedResource<any>(
+    null,
+    () => api.get("/dashboard"),
+    { policy: 'fresh' },
+  );
   const [schoolSettings, setSchoolSettings] = useState({
     name: "School",
     abbreviation: "",
@@ -65,29 +72,6 @@ export function Dashboard() {
       }
     } catch {}
   }, []);
-  useEffect(() => {
-    let mounted = true;
-    const cached = cache.get<any>('dashboard');
-    if (cached) {
-      setDashboardData(cached);
-      setLoading(false);
-      return;
-    }
-    (async () => {
-      try {
-        const data = await api.get("/dashboard");
-        if (mounted && data) {
-          cache.set('dashboard', data);
-          setDashboardData(data);
-        }
-      } catch {
-        // 401s are handled globally in api.ts (clears session + redirects)
-      }
-      if (mounted) setLoading(false);
-    })();
-    return () => { mounted = false; };
-  }, []);
-
   const stats = [
     {
       title: "Total Students",

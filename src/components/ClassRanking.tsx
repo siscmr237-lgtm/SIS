@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { NavigationPage } from '../App';
 import { api } from '@/lib/api';
+import { useCachedResource } from '@/lib/SisCache';
 import { formatTermLabel, getDefaultTermFields } from '../utils/academicTerm';
 import { ArrowLeft, RefreshCw } from 'lucide-react';
 import { Button } from './ui/button';
@@ -17,39 +18,33 @@ interface ClassRankingProps {
 }
 
 export function ClassRanking({ onNavigate }: ClassRankingProps) {
-  const [classes, setClasses] = useState<any[]>([]);
   const [classId, setClassId] = useState('');
   const [{ term, academicYear }, setPeriod] = useState(() => getDefaultTermFields());
-  const [rankings, setRankings] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
+
+  const { data: classList } = useCachedResource<any[]>('classes', () => api.get('/classes'));
+  const classes = classList ?? [];
 
   useEffect(() => {
-    (async () => {
-      try {
-        const data = await api.get('/classes');
-        setClasses(data || []);
-        if (Array.isArray(data) && data.length && !classId) setClassId(String(data[0].id));
-      } catch {}
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (!classId && classes.length) setClassId(String(classes[0].id));
+  }, [classes, classId]);
 
-  const refresh = async () => {
-    if (!classId || !term || !academicYear) return;
-    setLoading(true);
-    try {
-      const data = await api.get(`/test-exams/class-ranking?classId=${classId}&term=${encodeURIComponent(term)}&academicYear=${encodeURIComponent(academicYear)}`);
-      setRankings(data?.rankings || []);
-    } catch {
-      setRankings([]);
-    }
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    refresh();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [classId, term, academicYear]);
+  // Rankings are derived from marks and shift as marks are entered, so they
+  // are always fetched fresh — a stale position is exactly the kind of number
+  // someone would act on.
+  const {
+    data: rankingData,
+    loading,
+    refresh,
+  } = useCachedResource<any>(
+    null,
+    () => api.get(`/test-exams/class-ranking?classId=${classId}&term=${encodeURIComponent(term)}&academicYear=${encodeURIComponent(academicYear)}`),
+    {
+      policy: 'fresh',
+      enabled: Boolean(classId && term && academicYear),
+      deps: [classId, term, academicYear],
+    },
+  );
+  const rankings = rankingData?.rankings ?? [];
 
   return (
     <div className="p-4 md:p-8">

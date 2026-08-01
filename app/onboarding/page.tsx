@@ -4,6 +4,7 @@ import { Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { api, BASE_URL } from "../../src/lib/api";
+import { sectionName } from "../../src/lib/classes";
 import { compressImageForUpload } from "../../src/lib/imageResize";
 import { EMPTY_UNIFORM_COLORS, UniformColors } from "../../src/lib/uniformColors";
 import { UniformColorPicker } from "../../src/components/onboarding/UniformColorPicker";
@@ -208,11 +209,13 @@ export default function OnboardingPage() {
   };
 
   // Expand each selected class into its sections (e.g. 2 sections of "Class 1"
-  // becomes "Class 1A"/"Class 1B"); a single section stays as the plain name.
+  // becomes "Class 1 A"/"Class 1 B"); a single section stays as the plain name.
+  // The separator lives in sectionName() because these strings are stored on
+  // Student.class and matched by exact text — see src/lib/classes.ts.
   const expandedClassNames = selectedClasses.flatMap((name) => {
     const sections = sectionsByClass[name] ?? 1;
     if (sections <= 1) return [name];
-    return Array.from({ length: sections }, (_, i) => `${name}${String.fromCharCode(65 + i)}`);
+    return Array.from({ length: sections }, (_, i) => sectionName(name, i));
   });
 
   const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {

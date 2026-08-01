@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { NavigationPage } from '../App';
 import { api } from '@/lib/api';
-import { useSisCache } from '@/lib/SisCache';
-import { SCHOOL_CLASSES } from '@/lib/classes';
+import { useCachedResource, useSisCache } from '@/lib/SisCache';
+import { RevalidatingBadge, useResourceError } from './ResourceStatus';
 import { BookOpen, Plus, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import {
@@ -20,11 +21,114 @@ interface ClassesManagementProps {
   onNavigate?: (page: NavigationPage) => void;
 }
 
+interface CreateOutcome {
+  created: string[];
+  alreadyExisted: string[];
+  failed: string[];
+  message?: string;
+}
+
+/**
+ * Reports the result of "create standard classes" when it did NOT fully
+ * succeed. Silent on success — the class list itself is the confirmation, and
+ * a toast already fired. Names every class individually rather than giving a
+ * count, so it is clear exactly what is missing and what to expect from a
+ * retry. Inline styles because src/index.css is a pre-compiled Tailwind build
+ * and arbitrary utility classes would silently render as nothing.
+ */
+function CreateStandardOutcome({
+  outcome,
+  onRetry,
+  onDismiss,
+  retrying,
+}: {
+  outcome: CreateOutcome | null;
+  onRetry: () => void;
+  onDismiss: () => void;
+  retrying: boolean;
+}) {
+  if (!outcome) return null;
+  const problem = outcome.failed.length > 0 || Boolean(outcome.message);
+  if (!problem) return null;
+
+  return (
+    <div
+      style={{
+        margin: '0 0 1.5rem',
+        padding: '1rem 1.25rem',
+        borderRadius: 10,
+        border: '1px solid #FCD34D',
+        backgroundColor: '#FFFBEB',
+        color: '#92400E',
+        fontSize: '0.875rem',
+      }}
+    >
+      <p style={{ fontWeight: 600, marginBottom: '0.5rem' }}>
+        {outcome.failed.length
+          ? 'Some classes were not created'
+          : 'The standard classes could not be created'}
+      </p>
+      {outcome.message && <p style={{ marginBottom: '0.5rem' }}>{outcome.message}</p>}
+      {outcome.created.length > 0 && (
+        <p style={{ marginBottom: '0.25rem' }}>
+          <strong>Created:</strong> {outcome.created.join(', ')}
+        </p>
+      )}
+      {outcome.alreadyExisted.length > 0 && (
+        <p style={{ marginBottom: '0.25rem' }}>
+          <strong>Already existed:</strong> {outcome.alreadyExisted.join(', ')}
+        </p>
+      )}
+      {outcome.failed.length > 0 && (
+        <p style={{ marginBottom: '0.25rem' }}>
+          <strong>Not created:</strong> {outcome.failed.join(', ')}
+        </p>
+      )}
+      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
+        <Button size="sm" onClick={onRetry} disabled={retrying}>
+          {retrying ? 'Retrying...' : 'Retry'}
+        </Button>
+        <Button size="sm" variant="outline" onClick={onDismiss} disabled={retrying}>
+          Dismiss
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export function ClassesManagement({ onNavigate }: ClassesManagementProps) {
   const cache = useSisCache();
-  const [classes, setClasses] = useState<any[]>([]);
-  const [teachers, setTeachers] = useState<any[]>([]);
-  const [allSubjects, setAllSubjects] = useState<any[]>([]);
+  // Three independent cached resources rather than one Promise.all, so each is
+  // keyed on its own and shared with every other section that needs it — the
+  // staff list here is the same cached entry Staff Management and Timetable use.
+  const {
+    data: classesData,
+    loading: classesLoading,
+    revalidating,
+    error: classesError,
+    refresh: refreshClasses,
+  } = useCachedResource<any[]>('classes', () => api.get('/classes'));
+  const { data: staffData } = useCachedResource<any[]>('staff', () => api.get('/staff'));
+  const { data: subjectsData } = useCachedResource<any[]>('subjects', () => api.get('/subjects'));
+  // "Create standard classes" must offer only the levels this school's TYPE
+  // allows — a Daycare–Nursery school has no Class 1–6, and seeding them here
+  // would put back exactly the rows that don't belong to it. The filtered
+  // catalog is fetched from the server rather than mirrored locally so it
+  // cannot drift from sis-backend/src/utils/classCatalog.js.
+  const { data: settingsData } = useCachedResource<any>('settings', () => api.get('/settings'));
+  const schoolType = settingsData?.schoolType ?? null;
+  const { data: catalogData } = useCachedResource<Array<{ name: string }>>(
+    schoolType ? `class-catalog:${schoolType}` : null,
+    () => api.get(`/onboarding/class-catalog?schoolType=${encodeURIComponent(schoolType)}`),
+    { deps: [schoolType] },
+  );
+  const catalogNames = (catalogData ?? []).map((c) => c.name);
+
+  useResourceError(classesError, 'classes', classesData !== null);
+
+  const classes = classesData ?? [];
+  const teachers = (staffData ?? []).filter((s: any) => s.isTeacher);
+  const allSubjects = subjectsData ?? [];
   const [subjectTeachers, setSubjectTeachers] = useState<any[]>([]);
   const [addTeacherSelections, setAddTeacherSelections] = useState<Record<number, string>>({});
   const [managingClass, setManagingClass] = useState<any>(null);
@@ -32,8 +136,12 @@ export function ClassesManagement({ onNavigate }: ClassesManagementProps) {
   const [openManage, setOpenManage] = useState(false);
   const [addSubjectId, setAddSubjectId] = useState('');
   const [loadingSubjects, setLoadingSubjects] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const loading = classesLoading;
   const [creating, setCreating] = useState(false);
+  // Outcome of the last "create standard classes" attempt. Held in state (not
+  // just a toast) so a partial or failed run stays on screen to be acted on
+  // rather than vanishing after a few seconds.
+  const [createOutcome, setCreateOutcome] = useState<CreateOutcome | null>(null);
   const [openAdd, setOpenAdd] = useState(false);
   const [newClassName, setNewClassName] = useState('');
   const [addSubmitting, setAddSubmitting] = useState(false);
@@ -43,42 +151,13 @@ export function ClassesManagement({ onNavigate }: ClassesManagementProps) {
   const [addingTeacherSubjectId, setAddingTeacherSubjectId] = useState<number | null>(null);
   const [removingTeacherId, setRemovingTeacherId] = useState<number | null>(null);
 
-  useEffect(() => {
-    let mounted = true;
-    const cachedClasses = cache.get<any[]>('classes');
-    const cachedStaff   = cache.get<any[]>('staff');
-    if (cachedClasses && cachedStaff && mounted) {
-      setClasses(cachedClasses);
-      setTeachers(cachedStaff.filter((s: any) => s.isTeacher));
-      setLoading(false);
-      return;
-    }
-    (async () => {
-      try {
-        const [classData, staffData, subjectData] = await Promise.all([
-          api.get('/classes'),
-          api.get('/staff'),
-          api.get('/subjects'),
-        ]);
-        if (mounted) {
-          if (Array.isArray(classData) && classData.length > 0) cache.set('classes', classData);
-          if (Array.isArray(staffData) && staffData.length > 0) cache.set('staff', staffData);
-          setClasses(classData || []);
-          setTeachers((staffData || []).filter((s: any) => s.isTeacher));
-          setAllSubjects(subjectData || []);
-        }
-      } catch {}
-      if (mounted) setLoading(false);
-    })();
-    return () => { mounted = false; };
-  }, []);
-
+  // Clears every key a class edit can reach, then repopulates the list. The
+  // old version only re-cached a non-empty response, so deleting the last
+  // class left the deleted one sitting in the cache; refresh() now stores
+  // whatever the server returns, empty list included.
   const refresh = async () => {
-    try {
-      const data = await api.get('/classes');
-      if (Array.isArray(data) && data.length > 0) cache.set('classes', data);
-      setClasses(data || []);
-    } catch {}
+    cache.invalidateOn('class:write');
+    await refreshClasses();
   };
 
   const handleAssignTeacher = async (cls: any, selectedCode: string) => {
@@ -114,6 +193,7 @@ export function ClassesManagement({ onNavigate }: ClassesManagementProps) {
     setAddSubjectSubmitting(true);
     try {
       await api.post(`/classes/${managingClass.id}/subjects`, { subjectId: Number(addSubjectId) });
+      cache.invalidateOn('class:write');
       const data = await api.get(`/classes/${managingClass.id}/subjects`);
       setClassSubjects(data || []);
       setAddSubjectId('');
@@ -128,6 +208,7 @@ export function ClassesManagement({ onNavigate }: ClassesManagementProps) {
     setRemovingSubjectId(assignment.id);
     try {
       await api.delete(`/classes/${managingClass.id}/subjects/${assignment.id}`);
+      cache.invalidateOn('class:write');
       const [subjects, stAssignments] = await Promise.all([
         api.get(`/classes/${managingClass.id}/subjects`),
         api.get(`/classes/${managingClass.id}/subject-teachers`),
@@ -151,6 +232,7 @@ export function ClassesManagement({ onNavigate }: ClassesManagementProps) {
         staffId: staffId,
         subjectId: Number(subjectId),
       });
+      cache.invalidateOn('class:write');
       const data = await api.get(`/classes/${managingClass.id}/subject-teachers`);
       setSubjectTeachers(data || []);
       setAddTeacherSelections(prev => ({ ...prev, [subject.id]: '' }));
@@ -167,6 +249,7 @@ export function ClassesManagement({ onNavigate }: ClassesManagementProps) {
     setRemovingTeacherId(assignmentId);
     try {
       await api.delete(`/classes/${managingClass.id}/subject-teachers/${assignmentId}`);
+      cache.invalidateOn('class:write');
       const data = await api.get(`/classes/${managingClass.id}/subject-teachers`);
       setSubjectTeachers(data || []);
     } catch {} finally {
@@ -177,15 +260,48 @@ export function ClassesManagement({ onNavigate }: ClassesManagementProps) {
   const assignedSubjectIds = new Set(classSubjects.map((a: any) => a.subjectId ?? a.id));
   const availableSubjects = allSubjects.filter(s => !assignedSubjectIds.has(s.id));
 
+  // One request, not a POST per class. The server creates the whole set in a
+  // single statement, so there is no partial state to end up in — the previous
+  // loop swallowed each failure with `catch {}` and then reported success
+  // regardless, which is how a school could silently end up with half its
+  // classes. Anything short of complete success is surfaced and retryable.
   const handleCreateStandard = async () => {
+    if (creating) return;
     setCreating(true);
-    for (const name of SCHOOL_CLASSES) {
-      try {
-        await api.post('/classes', { name });
-      } catch {}
+    setCreateOutcome(null);
+    try {
+      const res: any = await api.post('/classes/standard', {});
+      await refresh();
+      const created: string[] = res?.created ?? [];
+      const alreadyExisted: string[] = res?.alreadyExisted ?? [];
+      setCreateOutcome({ created, alreadyExisted, failed: [] });
+      toast.success(
+        created.length
+          ? `Created ${created.length} ${created.length === 1 ? 'class' : 'classes'}${
+              alreadyExisted.length ? ` (${alreadyExisted.length} already existed)` : ''
+            }`
+          : 'All standard classes already exist',
+      );
+    } catch (e: any) {
+      // A PARTIAL_CREATE body still carries the per-class breakdown; anything
+      // else (network, 500) means nothing is known to have been created.
+      await refresh();
+      const failed: string[] = e?.body?.failed ?? [];
+      const created: string[] = e?.body?.created ?? [];
+      setCreateOutcome({
+        created,
+        alreadyExisted: e?.body?.alreadyExisted ?? [],
+        failed,
+        message: e?.message || 'Could not create the standard classes.',
+      });
+      toast.error(
+        failed.length
+          ? `${failed.length} of ${created.length + failed.length} classes could not be created`
+          : e?.message || 'Could not create the standard classes.',
+      );
+    } finally {
+      setCreating(false);
     }
-    await refresh();
-    setCreating(false);
   };
 
   const handleAdd = async () => {
@@ -220,7 +336,9 @@ export function ClassesManagement({ onNavigate }: ClassesManagementProps) {
       <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-8">
         <div>
           <h1 className="text-3xl mb-2">Classes</h1>
-          <p className="text-gray-600">Manage school classes</p>
+          <p className="text-gray-600">
+            Manage school classes <RevalidatingBadge active={revalidating} />
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -265,6 +383,16 @@ export function ClassesManagement({ onNavigate }: ClassesManagementProps) {
         </div>
       </div>
 
+      {/* Rendered outside the empty-state card below: a partial run creates
+          SOME classes, which unmounts that card — the report of what failed
+          has to outlive it. */}
+      <CreateStandardOutcome
+        outcome={createOutcome}
+        onRetry={handleCreateStandard}
+        onDismiss={() => setCreateOutcome(null)}
+        retrying={creating}
+      />
+
       {loading ? (
         <p className="p-4 text-gray-500">Loading classes...</p>
       ) : classes.length === 0 ? (
@@ -274,7 +402,9 @@ export function ClassesManagement({ onNavigate }: ClassesManagementProps) {
             {creating ? 'Creating...' : 'Create standard classes'}
           </Button>
           <p className="text-sm text-gray-400">
-            Creates: {SCHOOL_CLASSES.join(', ')}
+            {catalogNames.length
+              ? `Creates: ${catalogNames.join(', ')}`
+              : 'Loading the class levels for this school type...'}
           </p>
         </Card>
       ) : (

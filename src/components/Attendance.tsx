@@ -10,57 +10,49 @@ import { Badge } from './ui/badge';
 import { Calendar, FileText, Save } from 'lucide-react';
 import { generateAttendanceSheet } from '../utils/pdfGenerator';
 import { api } from '@/lib/api';
-import { SCHOOL_CLASSES } from "@/lib/classes";
+import { useCachedResource } from '@/lib/SisCache';
+import { useSchoolClassNames } from "@/lib/classes";
 
 export function Attendance() {
-  const [attendance, setAttendance] = useState<any[]>([]);
-  const [students, setStudents] = useState<any[]>([]);
-  const [staff, setStaff] = useState<any[]>([]);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+
+  // The rosters are reference data and are cached. The attendance records are
+  // not: they are what this screen is actively writing, and a stale copy would
+  // mean marking someone against a register that has already moved on.
+  const { data: studentsData } = useCachedResource<any[]>('students', () => api.get('/students'));
+  const { data: staffData } = useCachedResource<any[]>('staff', () => api.get('/staff'));
+  const { data: attendanceData, refresh: refreshAttendance } = useCachedResource<any[]>(
+    null,
+    () => api.get(`/attendance?date=${encodeURIComponent(selectedDate)}`),
+    { policy: 'fresh', deps: [selectedDate] },
+  );
+  const students = studentsData ?? [];
+  const staff = staffData ?? [];
+  const attendance = attendanceData ?? [];
   const [selectedClass, setSelectedClass] = useState<string>('Class 3');
   const [studentStatus, setStudentStatus] = useState<Record<string, string>>({});
   const [staffStatus, setStaffStatus] = useState<Record<string, string>>({});
   const [savingStudentAttendance, setSavingStudentAttendance] = useState(false);
   const [savingStaffAttendance, setSavingStaffAttendance] = useState(false);
 
-  const classes = SCHOOL_CLASSES;
+  // This school's real classes — see src/lib/classes.ts.
+  const { classNames: classes } = useSchoolClassNames();
 
   const studentAttendance = attendance.filter(record => record.type === 'student' && record.date?.startsWith(selectedDate));
   const staffAttendance = attendance.filter(record => record.type === 'staff' && record.date?.startsWith(selectedDate));
 
-  // Load students and staff once on mount — they don't change with the date
+  // Seed the per-person dropdowns from whatever is on record for this date.
   useEffect(() => {
-    let mounted = true;
-    Promise.all([api.get('/students'), api.get('/staff')])
-      .then(([sList, stList]) => {
-        if (mounted) {
-          setStudents(sList || []);
-          setStaff(stList || []);
-        }
-      })
-      .catch(() => {});
-    return () => { mounted = false; };
-  }, []);
-
-  // Reload only attendance records when date changes
-  useEffect(() => {
-    let mounted = true;
-    api.get(`/attendance?date=${encodeURIComponent(selectedDate)}`)
-      .then(att => {
-        if (!mounted) return;
-        setAttendance(att || []);
-        const stuMap: Record<string, string> = {};
-        const stfMap: Record<string, string> = {};
-        (att || []).forEach((a: any) => {
-          if (a.type === 'student') stuMap[a.personId] = a.status;
-          if (a.type === 'staff') stfMap[a.personId] = a.status;
-        });
-        setStudentStatus(stuMap);
-        setStaffStatus(stfMap);
-      })
-      .catch(() => {});
-    return () => { mounted = false; };
-  }, [selectedDate]);
+    if (!attendanceData) return;
+    const stuMap: Record<string, string> = {};
+    const stfMap: Record<string, string> = {};
+    attendanceData.forEach((a: any) => {
+      if (a.type === 'student') stuMap[a.personId] = a.status;
+      if (a.type === 'staff') stfMap[a.personId] = a.status;
+    });
+    setStudentStatus(stuMap);
+    setStaffStatus(stfMap);
+  }, [attendanceData]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -96,8 +88,7 @@ export function Attendance() {
           : { date: selectedDate, type: 'student', personId: s.id, personName: `${s.firstName} ${s.lastName}`, status: studentStatus[s.id] || 'present' };
       });
       await api.post('/attendance/bulk', { records });
-      const att = await api.get(`/attendance?date=${encodeURIComponent(selectedDate)}`);
-      setAttendance(att || []);
+      await refreshAttendance();
     } catch {
     } finally {
       setSavingStudentAttendance(false);
@@ -117,8 +108,7 @@ export function Attendance() {
           : { date: selectedDate, type: 'staff', personId: String(t.id), personName: `${t.firstName} ${t.lastName}`, status: staffStatus[t.id] || 'present' };
       });
       await api.post('/attendance/bulk', { records });
-      const att = await api.get(`/attendance?date=${encodeURIComponent(selectedDate)}`);
-      setAttendance(att || []);
+      await refreshAttendance();
     } catch {
     } finally {
       setSavingStaffAttendance(false);

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -9,9 +9,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { FileText, Plus, Search } from 'lucide-react';
 import { generateExpenseInvoice } from '../utils/pdfGenerator';
 import { api } from '@/lib/api';
+import { useCachedResource, useSisCache } from '@/lib/SisCache';
 
 export function ExpensesManagement() {
-  const [expenses, setExpenses] = useState<any[]>([]);
+  const cache = useSisCache();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [openAdd, setOpenAdd] = useState(false);
@@ -28,6 +29,19 @@ export function ExpensesManagement() {
 
   const categories = ['Utilities', 'Supplies', 'Maintenance', 'Salaries', 'Transportation', 'Damage', 'Other'];
 
+  // Money: fetched fresh on every visit, never stored.
+  const { data: expensesData, refresh: refreshExpenses } = useCachedResource<any[]>(
+    null,
+    () => {
+      const params = new URLSearchParams();
+      if (searchTerm) params.set('q', searchTerm);
+      if (filterCategory && filterCategory !== 'all') params.set('category', filterCategory);
+      return api.get(`/expenses${params.toString() ? `?${params.toString()}` : ''}`);
+    },
+    { policy: 'fresh', deps: [searchTerm, filterCategory] },
+  );
+  const expenses = expensesData ?? [];
+
   const filteredExpenses = expenses.filter(expense => {
     const matchesSearch = 
       expense.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -40,21 +54,6 @@ export function ExpensesManagement() {
   });
 
   const totalExpenses = expenses.reduce((sum, expense) => sum + (Number(expense.amount) || 0), 0);
-
-  useEffect(() => {
-    let mounted = true;
-    const load = async () => {
-      try {
-        const params = new URLSearchParams();
-        if (searchTerm) params.set('q', searchTerm);
-        if (filterCategory && filterCategory !== 'all') params.set('category', filterCategory);
-        const data = await api.get(`/expenses${params.toString() ? `?${params.toString()}` : ''}`);
-        if (mounted) setExpenses(data || []);
-      } catch {}
-    };
-    load();
-    return () => { mounted = false; };
-  }, [searchTerm, filterCategory]);
 
   return (
     <div className="p-4 md:p-8">
@@ -148,11 +147,12 @@ export function ExpensesManagement() {
                       paymentMethod: form.paymentMethod,
                       invoiceNumber: form.invoiceNumber,
                     });
-                    const params = new URLSearchParams();
-                    if (searchTerm) params.set('q', searchTerm);
-                    if (filterCategory && filterCategory !== 'all') params.set('category', filterCategory);
-                    const data = await api.get(`/expenses${params.toString() ? `?${params.toString()}` : ''}`);
-                    setExpenses(data||[]);
+                    // This is the invalidation the old expense form never did.
+                    // Nothing financial is cached any more, so it clears no
+                    // stale total today — it routes the write through the map
+                    // so it stays correct if that ever changes.
+                    cache.invalidateOn('expense:write');
+                    await refreshExpenses();
                     setOpenAdd(false);
                     setForm({ date:'', invoiceNumber:'', category:'', description:'', amount:'', payee:'', paymentMethod:'' });
                   } catch {

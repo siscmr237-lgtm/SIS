@@ -28,14 +28,37 @@ import {
 } from "./ui/table";
 import { Plus, FileText, Trash2 } from "lucide-react";
 import { api } from '@/lib/api';
-import { SCHOOL_CLASSES } from "@/lib/classes";
+import { useCachedResource, useSisCache } from '@/lib/SisCache';
+import { RevalidatingBadge, useResourceError } from './ResourceStatus';
+import { useSchoolClassNames } from "@/lib/classes";
 import { generateTimetable } from "../utils/pdfGenerator";
 
 export function Timetable() {
-  const [timetable, setTimetable] = useState<any[]>([]);
-  const [staff, setStaff] = useState<any[]>([]);
-  const [selectedClass, setSelectedClass] =
-    useState<string>("Class 3");
+  const cache = useSisCache();
+  // Starts empty and settles on the school's first real class once loaded — a
+  // hardcoded default (it was "Class 3") names a class that need not exist
+  // here at all, which showed an empty grid for a class the school never had.
+  const [selectedClass, setSelectedClass] = useState<string>("");
+  const { data: staffData } = useCachedResource<any[]>('staff', () => api.get('/staff'));
+  // Keyed per class, so switching back to a class already looked at paints
+  // instantly instead of blanking the grid.
+  const {
+    data: timetableData,
+    revalidating,
+    error: timetableError,
+    refresh: refreshTimetable,
+  } = useCachedResource<any[]>(
+    selectedClass ? `timetable:${selectedClass}` : null,
+    () => api.get(`/timetable?class=${encodeURIComponent(selectedClass)}`),
+    // Held back until a class is actually selected; without this the empty
+    // initial value would fetch `?class=` and cache the result under a key
+    // that belongs to no class.
+    { enabled: Boolean(selectedClass), deps: [selectedClass] },
+  );
+  const staff = staffData ?? [];
+  const timetable = timetableData ?? [];
+
+  useResourceError(timetableError, 'the timetable', timetableData !== null);
   const [openAdd, setOpenAdd] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({
@@ -46,7 +69,12 @@ export function Timetable() {
     teacher: '',
   });
 
-  const classes = SCHOOL_CLASSES;
+  // This school's real classes — see src/lib/classes.ts.
+  const { classNames: classes } = useSchoolClassNames();
+
+  useEffect(() => {
+    if (!selectedClass && classes.length) setSelectedClass(classes[0]);
+  }, [classes, selectedClass]);
   const days = [
     "Monday",
     "Tuesday",
@@ -70,24 +98,6 @@ export function Timetable() {
     (entry) => entry.class === selectedClass,
   );
 
-  // Load staff once on mount — doesn't change with class selection
-  useEffect(() => {
-    let mounted = true;
-    api.get('/staff')
-      .then(st => { if (mounted) setStaff(st || []); })
-      .catch(() => {});
-    return () => { mounted = false; };
-  }, []);
-
-  // Reload timetable when class changes
-  useEffect(() => {
-    let mounted = true;
-    api.get(`/timetable?class=${encodeURIComponent(selectedClass)}`)
-      .then(tt => { if (mounted) setTimetable(tt || []); })
-      .catch(() => {});
-    return () => { mounted = false; };
-  }, [selectedClass]);
-
   const handleGenerateTimetable = () => {
     generateTimetable(filteredTimetable, selectedClass);
   };
@@ -104,7 +114,7 @@ export function Timetable() {
         <div>
           <h1 className="text-3xl mb-2">School Timetable</h1>
           <p className="text-gray-600">
-            Manage class schedules and timetables
+            Manage class schedules and timetables <RevalidatingBadge active={revalidating} />
           </p>
         </div>
         <div className="flex gap-2">
@@ -206,8 +216,10 @@ export function Timetable() {
                       subject: form.subject,
                       teacher: form.teacher,
                     });
-                    const tt = await api.get(`/timetable?class=${encodeURIComponent(selectedClass)}`);
-                    setTimetable(tt||[]);
+                    // The period may have been added to a class other than the
+                    // one on screen, so every class's timetable is cleared.
+                    cache.invalidateOn('timetable:write');
+                    await refreshTimetable();
                     setOpenAdd(false);
                     setForm({ cls:'', day:'', time:'', subject:'', teacher:'' });
                   } catch {} finally {

@@ -1,5 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { api } from '@/lib/api';
+import { useCachedResource, useSisCache } from '@/lib/SisCache';
+import { RevalidatingBadge, useResourceError } from './ResourceStatus';
 import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
 import { NavigationPage } from '../App';
 import { Button } from './ui/button';
@@ -19,8 +21,17 @@ interface SubjectsManagementProps {
 }
 
 export function SubjectsManagement({ onNavigate }: SubjectsManagementProps) {
-  const [subjects, setSubjects] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const cache = useSisCache();
+  const {
+    data: subjectsData,
+    loading,
+    revalidating,
+    error: subjectsError,
+    refresh: refreshSubjects,
+  } = useCachedResource<any[]>('subjects', () => api.get('/subjects'));
+  const subjects = subjectsData ?? [];
+
+  useResourceError(subjectsError, 'subjects', subjectsData !== null);
   const [seeding, setSeeding] = useState(false);
   const [seedResult, setSeedResult] = useState<string | null>(null);
   const [openAdd, setOpenAdd] = useState(false);
@@ -28,24 +39,11 @@ export function SubjectsManagement({ onNavigate }: SubjectsManagementProps) {
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
-  useEffect(() => {
-    let mounted = true;
-    const init = async () => {
-      try {
-        const data = await api.get('/subjects');
-        if (mounted) setSubjects(data || []);
-      } catch {}
-      if (mounted) setLoading(false);
-    };
-    init();
-    return () => { mounted = false; };
-  }, []);
-
+  // Seeding and per-class assignment both reshuffle which subjects a class
+  // has, so a subject write clears the class-subject keys too.
   const refresh = async () => {
-    try {
-      const data = await api.get('/subjects');
-      setSubjects(data || []);
-    } catch {}
+    cache.invalidateOn('subject:write');
+    await refreshSubjects();
   };
 
   const handleSeedStandard = async () => {
@@ -100,7 +98,9 @@ export function SubjectsManagement({ onNavigate }: SubjectsManagementProps) {
             Back to Classes
           </button>
           <h1 className="text-3xl mb-2">Subjects</h1>
-          <p className="text-gray-600">Manage school subjects</p>
+          <p className="text-gray-600">
+            Manage school subjects <RevalidatingBadge active={revalidating} />
+          </p>
         </div>
         <Dialog open={openAdd} onOpenChange={setOpenAdd}>
           <DialogTrigger asChild>

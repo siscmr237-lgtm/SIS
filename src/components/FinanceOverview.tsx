@@ -1,7 +1,7 @@
 import { AlertTriangle, Calendar, Filter, Receipt, Search } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
-import { useSisCache } from '../lib/SisCache';
+import { useCachedResource, useSisCache } from '../lib/SisCache';
 import { formatTermLabel } from '../utils/academicTerm';
 import { NavigationPage } from '../App';
 import { Student } from '../types';
@@ -86,7 +86,11 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
   const [studentRows, setStudentRows] = useState<StudentRow[]>([]);
   const [studentLoading, setStudentLoading] = useState(true);
   const [studentTotalPages, setStudentTotalPages] = useState(1);
-  const [classOptions, setClassOptions] = useState<string[]>([]);
+  // Class names are reference data, cached and shared with the other sections.
+  // The money on this screen is not — see fetchDashboard and the two table
+  // fetchers below, all of which go straight to the network every time.
+  const { data: classList } = useCachedResource<any[]>('classes', () => api.get('/classes'));
+  const classOptions = (classList ?? []).map((c: any) => c.name);
   const [academicYearOptions, setAcademicYearOptions] = useState<string[]>([]);
 
   // --- School Transactions table: filter, pagination, data ---
@@ -166,11 +170,12 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
     }
   };
 
+  // The stat cards are money, so they are fetched on every visit and never
+  // stored — see the 'fresh' policy in SisCache.
   const fetchDashboard = async () => {
     try {
       const data = await api.get('/dashboard');
       setSummary(data);
-      cache.set('dashboard', data);
     } catch {}
   };
 
@@ -179,20 +184,7 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
   useEffect(() => {
     let cancelled = false;
 
-    const cachedDash = cache.get<any>('dashboard');
-    if (cachedDash) setSummary(cachedDash);
-    else fetchDashboard();
-
-    const cachedClasses = cache.get<any[]>('classes');
-    if (cachedClasses) {
-      setClassOptions(cachedClasses.map((c: any) => c.name));
-    } else {
-      api.get('/classes').then(data => {
-        if (cancelled || !Array.isArray(data)) return;
-        setClassOptions(data.map((c: any) => c.name));
-        cache.set('classes', data);
-      }).catch(() => {});
-    }
+    fetchDashboard();
 
     Promise.all([
       api.get('/ledger/current-period').catch(() => ({ academicYear: null, term: null })),
@@ -251,7 +243,10 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
       } else {
         setDamageResult('Damage expense recorded.');
       }
-      cache.invalidate('dashboard');
+      // Damage lands as either a student ledger charge or a school expense
+      // depending on who is responsible, so report both.
+      cache.invalidateOn('expense:write');
+      cache.invalidateOn('ledger:write');
       await Promise.all([fetchDashboard(), fetchStudentPage(studentQuery), fetchTransactionsPage(txQuery)]);
     } catch (e: any) {
       setDamageError(e.message || 'Failed to record damage');

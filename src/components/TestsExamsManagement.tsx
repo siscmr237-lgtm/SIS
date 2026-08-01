@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { NavigationPage } from '../App';
 import { api } from '@/lib/api';
+import { useCachedResource, useSisCache } from '@/lib/SisCache';
+import { RevalidatingBadge, useResourceError } from './ResourceStatus';
 import { formatTermLabel, getDefaultTermFields } from '../utils/academicTerm';
 import { ArrowLeft, Plus, Trash2, Settings2, Pencil } from 'lucide-react';
 import { Button } from './ui/button';
@@ -26,12 +28,36 @@ const TYPE_OPTIONS: { value: 'TEST' | 'EXAM'; label: string }[] = [
 ];
 
 export function TestsExamsManagement({ onNavigate }: TestsExamsManagementProps) {
-  const [classes, setClasses] = useState<any[]>([]);
+  const cache = useSisCache();
   const [classId, setClassId] = useState('');
   const [{ term, academicYear }, setPeriod] = useState(() => getDefaultTermFields());
-  const [testExams, setTestExams] = useState<any[]>([]);
-  const [classSubjects, setClassSubjects] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
+
+  // Exam definitions and the class's subject list are both configuration, so
+  // both are cached. The marks entered against them never are.
+  const { data: classList } = useCachedResource<any[]>('classes', () => api.get('/classes'));
+  const classes = classList ?? [];
+
+  const periodReady = Boolean(classId && term && academicYear);
+  const {
+    data: testExamsData,
+    loading,
+    revalidating,
+    error: testExamsError,
+    refresh: refreshTestExams,
+  } = useCachedResource<any[]>(
+    periodReady ? `test-exams:${classId}|${term}|${academicYear}` : null,
+    () => api.get(`/test-exams?classId=${classId}&term=${encodeURIComponent(term)}&academicYear=${encodeURIComponent(academicYear)}`),
+    { enabled: periodReady, deps: [classId, term, academicYear] },
+  );
+  const { data: classSubjectsData } = useCachedResource<any[]>(
+    classId ? `class-subjects:${Number(classId)}` : null,
+    () => api.get(`/classes/${classId}/subjects`),
+    { enabled: Boolean(classId), deps: [classId] },
+  );
+  const testExams = testExamsData ?? [];
+  const classSubjects = classSubjectsData ?? [];
+
+  useResourceError(testExamsError, 'tests and exams', testExamsData !== null);
 
   const [openForm, setOpenForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -47,36 +73,13 @@ export function TestsExamsManagement({ onNavigate }: TestsExamsManagementProps) 
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
   useEffect(() => {
-    (async () => {
-      try {
-        const data = await api.get('/classes');
-        setClasses(data || []);
-        if (Array.isArray(data) && data.length && !classId) setClassId(String(data[0].id));
-      } catch {}
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (!classId && classes.length) setClassId(String(classes[0].id));
+  }, [classes, classId]);
 
   const refresh = async () => {
-    if (!classId || !term || !academicYear) return;
-    setLoading(true);
-    try {
-      const [rows, subjects] = await Promise.all([
-        api.get(`/test-exams?classId=${classId}&term=${encodeURIComponent(term)}&academicYear=${encodeURIComponent(academicYear)}`),
-        api.get(`/classes/${classId}/subjects`),
-      ]);
-      setTestExams(rows || []);
-      setClassSubjects(subjects || []);
-    } catch {
-      setTestExams([]);
-    }
-    setLoading(false);
+    cache.invalidateOn('test-exam:write');
+    await refreshTestExams();
   };
-
-  useEffect(() => {
-    refresh();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [classId, term, academicYear]);
 
   const openCreateForm = () => {
     setEditingId(null);
@@ -172,6 +175,7 @@ export function TestsExamsManagement({ onNavigate }: TestsExamsManagementProps) 
         failures.push(`${row.name}: ${e?.message || 'failed to save'}`);
       }
     }
+    cache.invalidateOn('test-exam:write');
     setSavingTotals(false);
     setTotalsMessage(failures.length ? `Some totals were not saved: ${failures.join('; ')}` : 'Totals saved.');
   };
@@ -188,7 +192,10 @@ export function TestsExamsManagement({ onNavigate }: TestsExamsManagementProps) 
             Back to Report Cards
           </button>
           <h1 className="text-3xl mb-2">Tests &amp; Exams</h1>
-          <p className="text-gray-600">Manage a class's tests and exams, and their per-subject totals</p>
+          <p className="text-gray-600">
+            Manage a class's tests and exams, and their per-subject totals{' '}
+            <RevalidatingBadge active={revalidating} />
+          </p>
         </div>
         <Dialog open={openForm} onOpenChange={setOpenForm}>
           <DialogTrigger asChild>

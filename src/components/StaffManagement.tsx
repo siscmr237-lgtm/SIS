@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -12,7 +12,8 @@ import { NavigationPage } from '../App';
 import { Staff } from '../types';
 import { generateWorkRecord } from '../utils/pdfGenerator';
 import { api } from '@/lib/api';
-import { useSisCache } from '@/lib/SisCache';
+import { useCachedResource, useSisCache } from '@/lib/SisCache';
+import { RevalidatingBadge, useResourceError } from './ResourceStatus';
 import { StaffForm, StaffFormPayload } from './StaffForm';
 
 interface StaffManagementProps {
@@ -21,9 +22,23 @@ interface StaffManagementProps {
 }
 
 export function StaffManagement({ onNavigate, onViewStaff }: StaffManagementProps) {
-  const [staff, setStaff] = useState<Staff[]>([]);
-  const [workRecords, setWorkRecords] = useState<any[]>([]);
   const cache = useSisCache();
+  const {
+    data: staffData,
+    revalidating,
+    error: staffError,
+    refresh: refreshStaff,
+  } = useCachedResource<Staff[]>('staff', () => api.get('/staff'));
+  const {
+    data: workRecordsData,
+    error: workRecordsError,
+    refresh: refreshWorkRecords,
+  } = useCachedResource<any[]>('work-records', () => api.get('/work-records'));
+  const staff = staffData ?? [];
+  const workRecords = workRecordsData ?? [];
+
+  useResourceError(staffError, 'the staff list', staffData !== null);
+  useResourceError(workRecordsError, 'work records', workRecordsData !== null);
   const [searchTerm, setSearchTerm] = useState('');
   const [openAddStaff, setOpenAddStaff] = useState(false);
   const [openWork, setOpenWork] = useState(false);
@@ -40,38 +55,6 @@ export function StaffManagement({ onNavigate, onViewStaff }: StaffManagementProp
     staffId: '',
   });
 
-  useEffect(() => {
-    let mounted = true;
-    const cachedStaff = cache.get<any[]>('staff');
-    const cachedWork  = cache.get<any[]>('work-records');
-    if (cachedStaff) setStaff(cachedStaff);
-    if (cachedWork)  setWorkRecords(cachedWork);
-    if (cachedStaff && cachedWork) return;
-    (async () => {
-      const fetches: Promise<void>[] = [];
-      if (!cachedStaff) {
-        fetches.push(
-          api.get('/staff').then(data => {
-            if (!mounted) return;
-            if (Array.isArray(data) && data.length > 0) cache.set('staff', data);
-            setStaff(data || []);
-          }).catch(() => {})
-        );
-      }
-      if (!cachedWork) {
-        fetches.push(
-          api.get('/work-records').then(data => {
-            if (!mounted) return;
-            if (Array.isArray(data) && data.length > 0) cache.set('work-records', data);
-            setWorkRecords(data || []);
-          }).catch(() => {})
-        );
-      }
-      await Promise.all(fetches);
-    })();
-    return () => { mounted = false; };
-  }, []);
-
   const filteredStaff = staff.filter(member => {
     const searchLower = searchTerm.toLowerCase();
     return (
@@ -87,7 +70,9 @@ export function StaffManagement({ onNavigate, onViewStaff }: StaffManagementProp
       <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-8">
         <div className="flex-1">
           <h1 className="text-3xl mb-2">Staff Management</h1>
-          <p className="text-gray-600">Manage staff records and work documentation</p>
+          <p className="text-gray-600">
+            Manage staff records and work documentation <RevalidatingBadge active={revalidating} />
+          </p>
         </div>
         <Button className="flex items-center gap-2" onClick={() => setOpenAddStaff(true)}>
           <Plus size={20} />
@@ -99,10 +84,8 @@ export function StaffManagement({ onNavigate, onViewStaff }: StaffManagementProp
           onOpenChange={setOpenAddStaff}
           onSubmit={async (payload: StaffFormPayload) => {
             await api.post('/staff', payload);
-            const list = await api.get('/staff');
-            if (Array.isArray(list) && list.length > 0) cache.set('staff', list);
-            cache.invalidate('dashboard');
-            setStaff(list || []);
+            cache.invalidateOn('staff:write');
+            await refreshStaff();
             setOpenAddStaff(false);
           }}
         />
@@ -253,9 +236,8 @@ export function StaffManagement({ onNavigate, onViewStaff }: StaffManagementProp
                         evaluation: workForm.evaluation,
                         remarks: workForm.remarks,
                       });
-                      const list = await api.get('/work-records');
-                      if (Array.isArray(list) && list.length > 0) cache.set('work-records', list);
-                      setWorkRecords(list||[]);
+                      cache.invalidateOn('work-record:write');
+                      await refreshWorkRecords();
                       setOpenWork(false);
                       setWorkForm({ date:'', class:'', subject:'', topic:'', objectives:'', activities:'', evaluation:'', remarks:'', staffId:'' });
                     } catch {

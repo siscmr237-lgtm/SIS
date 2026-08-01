@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { NavigationPage } from '../App';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
@@ -11,6 +11,8 @@ import { Textarea } from './ui/textarea';
 import { Plus, FileText, Search, ClipboardList, PenLine, Trophy } from 'lucide-react';
 import { generateReportCard } from '../utils/pdfGenerator';
 import { api } from '@/lib/api';
+import { useCachedResource, useSisCache } from '@/lib/SisCache';
+import { RevalidatingBadge, useResourceError } from './ResourceStatus';
 import { formatTermLabel, getDefaultTermFields } from '../utils/academicTerm';
 
 interface ReportCardsProps {
@@ -18,9 +20,22 @@ interface ReportCardsProps {
 }
 
 export function ReportCards({ onNavigate }: ReportCardsProps) {
-  const [reportCards, setReportCards] = useState<any[]>([]);
-  const [students, setStudents] = useState<any[]>([]);
-  const [classes, setClasses] = useState<any[]>([]);
+  const cache = useSisCache();
+  // The index of generated cards is cached. Rendering an individual card is
+  // not — see the per-card fetches further down, which pull the marks and
+  // ranking fresh every time, because that output gets printed and handed out.
+  const {
+    data: reportCardsData,
+    revalidating,
+    error: reportCardsError,
+    refresh: refreshReportCards,
+  } = useCachedResource<any[]>('report-cards', () => api.get('/report-cards'));
+  const { data: studentsData } = useCachedResource<any[]>('students', () => api.get('/students'));
+  const { data: classesData } = useCachedResource<any[]>('classes', () => api.get('/classes'));
+  useResourceError(reportCardsError, 'report cards', reportCardsData !== null);
+  const reportCards = reportCardsData ?? [];
+  const students = studentsData ?? [];
+  const classes = classesData ?? [];
   const [searchTerm, setSearchTerm] = useState('');
   const [openCreate, setOpenCreate] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -34,26 +49,6 @@ export function ReportCards({ onNavigate }: ReportCardsProps) {
     headTeacherComment: '',
     subjects: [] as { name: string; score: string; grade: string; teacherComment: string }[],
   }));
-
-  useEffect(() => {
-    let mounted = true;
-    const load = async () => {
-      try {
-        const [rc, st, cls] = await Promise.all([
-          api.get('/report-cards'),
-          api.get('/students'),
-          api.get('/classes'),
-        ]);
-        if (mounted) {
-          setReportCards(rc || []);
-          setStudents(st || []);
-          setClasses(cls || []);
-        }
-      } catch {}
-    };
-    load();
-    return () => { mounted = false; };
-  }, []);
 
   const filteredReportCards = reportCards.filter(report => {
     const searchLower = searchTerm.toLowerCase();
@@ -71,7 +66,9 @@ export function ReportCards({ onNavigate }: ReportCardsProps) {
       <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-8">
         <div className="flex-1">
           <h1 className="text-3xl mb-2">Report Cards</h1>
-          <p className="text-gray-600">Manage and generate student report cards</p>
+          <p className="text-gray-600">
+            Manage and generate student report cards <RevalidatingBadge active={revalidating} />
+          </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button
@@ -220,8 +217,8 @@ export function ReportCards({ onNavigate }: ReportCardsProps) {
                     attendance: Number(form.attendance)||0,
                     headTeacherComment: form.headTeacherComment,
                   });
-                  const rc = await api.get('/report-cards');
-                  setReportCards(rc||[]);
+                  cache.invalidateOn('report-card:write');
+                  await refreshReportCards();
                   setOpenCreate(false);
                   setForm({ studentId:'', ...getDefaultTermFields(), attendance:'', position:'', totalStudents:'', averageScore:'', headTeacherComment:'', subjects:[] });
                 } catch {} finally {

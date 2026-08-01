@@ -59,8 +59,10 @@ async function request(path: string, init?: RequestInit) {
     const text = await res.text();
     let message = text || `Request failed: ${res.status}`;
     let code: string | undefined;
+    let body: any;
     try {
       const parsed = JSON.parse(text);
+      body = parsed;
       if (parsed.error) message = String(parsed.error);
       if (parsed.code) code = String(parsed.code);
     } catch {}
@@ -77,9 +79,14 @@ async function request(path: string, init?: RequestInit) {
       clearSessionAndRedirect(sentWithToken);
     }
 
-    const err = new Error(message) as Error & { status: number; code?: string };
+    // The parsed body rides along on the error: some failures are structured
+    // rather than fatal (e.g. a partial create reporting which items did and
+    // did not succeed), and callers need those details to say something useful
+    // instead of a generic message.
+    const err = new Error(message) as Error & { status: number; code?: string; body?: any };
     err.status = res.status;
     err.code = code;
+    err.body = body;
     throw err;
   }
 
