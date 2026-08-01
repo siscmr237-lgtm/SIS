@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { NavigationPage } from '../App';
 import { api } from '@/lib/api';
+import { useCachedResource } from '@/lib/SisCache';
 import { formatTermLabel, getDefaultTermFields } from '../utils/academicTerm';
 import { ArrowLeft, Save } from 'lucide-react';
 import { Button } from './ui/button';
@@ -17,92 +18,83 @@ interface EnterMarksProps {
 }
 
 export function EnterMarks({ onNavigate }: EnterMarksProps) {
-  const [classes, setClasses] = useState<any[]>([]);
   const [classId, setClassId] = useState('');
   const [{ term, academicYear }, setPeriod] = useState(() => getDefaultTermFields());
-
-  const [testExams, setTestExams] = useState<any[]>([]);
   const [testExamId, setTestExamId] = useState('');
-
-  const [subjectTotals, setSubjectTotals] = useState<any[]>([]);
   const [subjectId, setSubjectId] = useState('');
 
-  const [roster, setRoster] = useState<{ studentId: string; firstName: string; lastName: string; marksObtained: number | null }[]>([]);
   const [values, setValues] = useState<Record<string, string>>({});
-  const [totalMarks, setTotalMarks] = useState<number | null>(null);
-
-  const [loadingRoster, setLoadingRoster] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [serverErrors, setServerErrors] = useState<Record<string, string>>({});
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const data = await api.get('/classes');
-        setClasses(data || []);
-        if (Array.isArray(data) && data.length && !classId) setClassId(String(data[0].id));
-      } catch {}
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Class list and exam definitions are reference data. The marks themselves
+  // are not — two people entering marks for the same subject must not be shown
+  // a cached roster that predates the other's save.
+  const { data: classList } = useCachedResource<any[]>('classes', () => api.get('/classes'));
+  const classes = classList ?? [];
 
-  // Class/term/year change -> reload the test/exam list, reset downstream selections.
+  const periodReady = Boolean(classId && term && academicYear);
+  const { data: testExamsData } = useCachedResource<any[]>(
+    periodReady ? `test-exams:${classId}|${term}|${academicYear}` : null,
+    () => api.get(`/test-exams?classId=${classId}&term=${encodeURIComponent(term)}&academicYear=${encodeURIComponent(academicYear)}`),
+    { enabled: periodReady, deps: [classId, term, academicYear] },
+  );
+  const testExams = testExamsData ?? [];
+
+  const { data: subjectTotalsData } = useCachedResource<any[]>(
+    testExamId ? `subject-totals:${Number(testExamId)}` : null,
+    () => api.get(`/test-exams/${testExamId}/subject-totals`),
+    { enabled: Boolean(testExamId), deps: [testExamId] },
+  );
+  const subjectTotals = subjectTotalsData ?? [];
+
+  const marksReady = Boolean(testExamId && subjectId);
+  const {
+    data: marksData,
+    loading: loadingRoster,
+    refresh: refreshMarks,
+  } = useCachedResource<any>(
+    null,
+    () => api.get(`/test-exams/${testExamId}/marks?subjectId=${subjectId}`),
+    { policy: 'fresh', enabled: marksReady, deps: [testExamId, subjectId] },
+  );
+  const roster: { studentId: string; firstName: string; lastName: string; marksObtained: number | null }[] =
+    marksReady ? marksData?.roster ?? [] : [];
+  const totalMarks: number | null = marksReady ? marksData?.totalMarks ?? null : null;
+
+  useEffect(() => {
+    if (!classId && classes.length) setClassId(String(classes[0].id));
+  }, [classes, classId]);
+
+  // Class/term/year change -> the chosen exam and subject no longer apply.
   useEffect(() => {
     setTestExamId('');
-    setSubjectId('');
-    setSubjectTotals([]);
-    setRoster([]);
-    setValues({});
-    setTotalMarks(null);
-    if (!classId || !term || !academicYear) { setTestExams([]); return; }
-    (async () => {
-      try {
-        const rows = await api.get(`/test-exams?classId=${classId}&term=${encodeURIComponent(term)}&academicYear=${encodeURIComponent(academicYear)}`);
-        setTestExams(rows || []);
-      } catch {
-        setTestExams([]);
-      }
-    })();
   }, [classId, term, academicYear]);
 
-  // Test/exam change -> reload subjects that have a configured total for it.
   useEffect(() => {
     setSubjectId('');
-    setRoster([]);
-    setValues({});
-    setTotalMarks(null);
-    if (!testExamId) { setSubjectTotals([]); return; }
-    (async () => {
-      try {
-        const rows = await api.get(`/test-exams/${testExamId}/subject-totals`);
-        setSubjectTotals(rows || []);
-      } catch {
-        setSubjectTotals([]);
-      }
-    })();
   }, [testExamId]);
 
-  // Test/exam + subject chosen -> load the roster with prefilled marks.
+  // Changing what is being marked clears any message from the last save. This
+  // is keyed on the selection rather than on the data so that re-reading the
+  // roster after a save does not wipe that save's own confirmation.
   useEffect(() => {
     setSaveMessage(null);
     setServerErrors({});
-    if (!testExamId || !subjectId) { setRoster([]); setValues({}); setTotalMarks(null); return; }
-    setLoadingRoster(true);
-    (async () => {
-      try {
-        const data = await api.get(`/test-exams/${testExamId}/marks?subjectId=${subjectId}`);
-        setRoster(data?.roster || []);
-        setTotalMarks(data?.totalMarks ?? null);
-        setValues(Object.fromEntries((data?.roster || []).map((r: any) => [r.studentId, r.marksObtained != null ? String(r.marksObtained) : ''])));
-      } catch {
-        setRoster([]);
-        setValues({});
-        setTotalMarks(null);
-      }
-      setLoadingRoster(false);
-    })();
   }, [testExamId, subjectId]);
+
+  // Prefill the inputs from whatever is on record for this exam and subject.
+  useEffect(() => {
+    setValues(
+      Object.fromEntries(
+        (marksData?.roster ?? []).map((r: any) => [
+          r.studentId,
+          r.marksObtained != null ? String(r.marksObtained) : '',
+        ]),
+      ),
+    );
+  }, [marksData]);
 
   const rowError = (studentId: string): string | null => {
     const raw = values[studentId];
@@ -133,10 +125,8 @@ export function EnterMarks({ onNavigate }: EnterMarksProps) {
     setServerErrors({});
     try {
       const result = await api.post(`/test-exams/${testExamId}/marks/bulk`, { subjectId: Number(subjectId), marks });
+      await refreshMarks();
       setSaveMessage(`Saved marks for ${result.count} student${result.count === 1 ? '' : 's'}.`);
-      const data = await api.get(`/test-exams/${testExamId}/marks?subjectId=${subjectId}`);
-      setRoster(data?.roster || []);
-      setValues(Object.fromEntries((data?.roster || []).map((r: any) => [r.studentId, r.marksObtained != null ? String(r.marksObtained) : ''])));
     } catch (e: any) {
       const details = e?.message ? e.message : 'Failed to save marks.';
       setSaveMessage(details);

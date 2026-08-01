@@ -1,12 +1,13 @@
 import { api } from "@/lib/api";
-import { useSisCache } from "@/lib/SisCache";
+import { useCachedResource, useSisCache } from "@/lib/SisCache";
 import { NavigationPage } from '../App';
 
 interface StudentsManagementProps {
   onNavigate?: (page: NavigationPage) => void;
   onViewStudent?: (student: Student) => void;
 }
-import { SCHOOL_CLASSES } from "@/lib/classes";
+import { useSchoolClassNames } from "@/lib/classes";
+import { RevalidatingBadge, useResourceError } from "./ResourceStatus";
 import { Plus, Search, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Student } from "../types";
@@ -43,7 +44,6 @@ import {
 } from "./ui/table";
 
 export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManagementProps) {
-  const [students, setStudents] = useState<Student[]>([]);
   const cache = useSisCache();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedClass, setSelectedClass] = useState<string>("all");
@@ -64,7 +64,38 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
     medicalNotes: "",
   });
 
-  const classes = SCHOOL_CLASSES;
+  // This school's real classes, not a master list of every possible level: a
+  // Daycare–Nursery school must never be offered Class 1–6, and sections only
+  // exist as actual Class rows.
+  const { classNames: classes } = useSchoolClassNames();
+
+  const [appliedSearch, setAppliedSearch] = useState("");
+  const isDefaultQuery = !appliedSearch && selectedClass === "all";
+
+  // The unfiltered roster is reference data, so it is cached and revalidated in
+  // the background. Any searched or class-filtered view is a one-off query and
+  // is fetched fresh under a null key so it never lands in the store.
+  const {
+    data: studentsData,
+    revalidating,
+    error: studentsError,
+    refresh: refreshStudents,
+  } = useCachedResource<Student[]>(
+    isDefaultQuery ? "students" : null,
+    () => {
+      const params = new URLSearchParams();
+      if (appliedSearch) params.set("q", appliedSearch);
+      if (selectedClass && selectedClass !== "all") params.set("class", selectedClass);
+      return api.get(`/students${params.toString() ? `?${params.toString()}` : ""}`);
+    },
+    {
+      policy: isDefaultQuery ? "swr" : "fresh",
+      deps: [appliedSearch, selectedClass],
+    },
+  );
+  const students = studentsData ?? [];
+
+  useResourceError(studentsError, "the student list", studentsData !== null);
 
   // Tracks the parent last confirmed via the typeahead (or null if the admin
   // is still free-typing) — see buildParentPayload for how this decides
@@ -104,40 +135,13 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
     return matchesSearch && matchesClass;
   });
 
+  // Debounce typing so a request is not issued per keystroke; class filter
+  // changes apply immediately.
   useEffect(() => {
-    let isMounted = true;
-    const isDefault = !searchTerm && selectedClass === 'all';
-
-    if (isDefault) {
-      const cached = cache.get<Student[]>('students');
-      if (cached) {
-        setStudents(cached);
-        return;
-      }
-    }
-
-    const load = async () => {
-      try {
-        const params = new URLSearchParams();
-        if (searchTerm) params.set("q", searchTerm);
-        if (selectedClass && selectedClass !== "all")
-          params.set("class", selectedClass);
-        const data = await api.get(
-          `/students${params.toString() ? `?${params.toString()}` : ""}`
-        );
-        if (isMounted) {
-          if (isDefault && Array.isArray(data) && data.length > 0) {
-            cache.set('students', data);
-          }
-          setStudents(data || []);
-        }
-      } catch {}
-    };
-    // Debounce search input; respond immediately to class filter changes
-    const delay = searchTerm ? 300 : 0;
-    const timer = setTimeout(load, delay);
-    return () => { isMounted = false; clearTimeout(timer); };
-  }, [searchTerm, selectedClass]);
+    if (searchTerm === appliedSearch) return;
+    const timer = setTimeout(() => setAppliedSearch(searchTerm), 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm, appliedSearch]);
 
   return (
     <div className="p-4 md:p-8">
@@ -145,7 +149,7 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
         <div className="flex-1">
           <h1 className="text-3xl mb-2">Students Management</h1>
           <p className="text-gray-600">
-            Manage student records and information
+            Manage student records and information <RevalidatingBadge active={revalidating} />
           </p>
         </div>
         <Dialog open={openAdd} onOpenChange={setOpenAdd}>
@@ -449,17 +453,8 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
                         );
                       }
                     }
-                    cache.invalidate('students', 'dashboard');
-                    const params = new URLSearchParams();
-                    if (searchTerm) params.set("q", searchTerm);
-                    if (selectedClass && selectedClass !== "all")
-                      params.set("class", selectedClass);
-                    const data = await api.get(
-                      `/students${
-                        params.toString() ? `?${params.toString()}` : ""
-                      }`
-                    );
-                    setStudents(data || []);
+                    cache.invalidateOn('student:write');
+                    await refreshStudents();
                     setOpenAdd(false);
                     setForm({
                       firstName: "",

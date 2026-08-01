@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { api } from '../lib/api';
 import { useSisCache } from '../lib/SisCache';
-import { SCHOOL_CLASSES } from '../lib/classes';
+import { useSchoolClassNames } from '../lib/classes';
 import { NavigationPage } from '../App';
 import { Student } from '../types';
 import { Card } from './ui/card';
@@ -81,6 +81,9 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
     router.replace(`${pathname}?tab=${tab}`, { scroll: false });
   };
   const cache = useSisCache();
+  // The class dropdown offers this school's real classes only — see
+  // src/lib/classes.ts for why a hardcoded level list can't work here.
+  const { classNames: schoolClassNames } = useSchoolClassNames();
 
   // Editable info — local state so updates appear immediately after save
   const [displayInfo, setDisplayInfo] = useState({
@@ -300,7 +303,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
         entryDate: chargeForm.entryDate,
         ...(chargeForm.paymentMethod ? { paymentMethod: chargeForm.paymentMethod } : {}),
       });
-      cache.invalidate('ledger-summary', 'dashboard');
+      cache.invalidateOn('ledger:write');
       setShowCharge(false);
       setChargeForm({ categoryId: '', description: '', amount: '', entryDate: new Date().toISOString().split('T')[0], paymentMethod: '' });
       await refreshLedger();
@@ -322,7 +325,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
         entryDate: paymentForm.entryDate,
         paymentMethod: paymentForm.paymentMethod,
       });
-      cache.invalidate('ledger-summary', 'dashboard');
+      cache.invalidateOn('ledger:write');
       setShowPayment(false);
       setPaymentForm({ description: '', amount: '', entryDate: new Date().toISOString().split('T')[0], paymentMethod: '' });
       await refreshLedger();
@@ -379,7 +382,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
         }
       }
       setEditNewContacts([]);
-      cache.invalidate('students', 'dashboard');
+      cache.invalidateOn('student:write');
       setShowEdit(false);
     } catch (e: any) {
       setEditError(e.message || 'Failed to save');
@@ -394,7 +397,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
     setDeleteError(null);
     try {
       await api.delete(`/students/${student.id}`);
-      cache.invalidate('students', 'dashboard');
+      cache.invalidateOn('student:write');
       onNavigate('students');
     } catch (e: any) {
       setDeleteError(e.message || 'Failed to delete student');
@@ -764,7 +767,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                   >
                     <SelectTrigger><SelectValue placeholder="Select class" /></SelectTrigger>
                     <SelectContent>
-                      {SCHOOL_CLASSES.map(cls => (
+                      {schoolClassNames.map(cls => (
                         <SelectItem key={cls} value={cls}>{cls}</SelectItem>
                       ))}
                     </SelectContent>

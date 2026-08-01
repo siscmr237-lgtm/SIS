@@ -192,7 +192,7 @@ export function StaffProfile({ staff, onNavigate }: StaffProfileProps) {
         entryDate: chargeForm.entryDate,
         ...(chargeForm.paymentMethod ? { paymentMethod: chargeForm.paymentMethod } : {}),
       });
-      cache.invalidate('dashboard');
+      cache.invalidateOn('ledger:write');
       setShowCharge(false);
       setChargeForm({ categoryId: '', description: '', amount: '', entryDate: new Date().toISOString().split('T')[0], paymentMethod: '' });
       await refreshLedger();
@@ -214,7 +214,7 @@ export function StaffProfile({ staff, onNavigate }: StaffProfileProps) {
         entryDate: paymentForm.entryDate,
         paymentMethod: paymentForm.paymentMethod,
       });
-      cache.invalidate('dashboard');
+      cache.invalidateOn('ledger:write');
       setShowPayment(false);
       setPaymentForm({ description: '', amount: '', entryDate: new Date().toISOString().split('T')[0], paymentMethod: '' });
       await refreshLedger();
@@ -299,7 +299,7 @@ export function StaffProfile({ staff, onNavigate }: StaffProfileProps) {
             onSubmit={async (payload: StaffFormPayload) => {
               await api.put(`/staff/${staff.code}`, payload);
               setDisplayInfo(payload);
-              cache.invalidate('staff', 'dashboard');
+              cache.invalidateOn('staff:write');
               setShowEdit(false);
             }}
           />
