@@ -294,7 +294,7 @@ export function LevelFeesDialog({ open, onOpenChange }: Props) {
               ))}
             </div>
 
-            <div className="flex items-center justify-between mt-3">
+            <div className="flex items-center justify-between mt-2">
               <Button variant="outline" size="sm" onClick={addRow} className="flex items-center gap-2">
                 <Plus size={16} />
                 Add Fee
@@ -304,7 +304,7 @@ export function LevelFeesDialog({ open, onOpenChange }: Props) {
               </p>
             </div>
 
-            {error && <p className="text-sm mt-3" style={{ color: '#B91C1C' }}>{error}</p>}
+            {error && <p className="text-sm mt-2" style={{ color: '#B91C1C' }}>{error}</p>}
 
             {notice && (
               <div
@@ -384,7 +384,7 @@ export function LevelFeesDialog({ open, onOpenChange }: Props) {
               </div>
             )}
 
-            <div className="flex justify-end gap-2 mt-5">
+            <div className="flex justify-end gap-2 mt-4">
               <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
                 Cancel
               </Button>
