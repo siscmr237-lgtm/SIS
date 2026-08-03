@@ -3,8 +3,9 @@ import { NavigationPage } from '../App';
 import { api } from '@/lib/api';
 import { useCachedResource, useSisCache } from '@/lib/SisCache';
 import { RevalidatingBadge, useResourceError } from './ResourceStatus';
-import { BookOpen, Plus, Trash2 } from 'lucide-react';
+import { BookOpen, DollarSign, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { LevelFeesDialog } from './LevelFeesDialog';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import {
@@ -143,6 +144,7 @@ export function ClassesManagement({ onNavigate }: ClassesManagementProps) {
   // rather than vanishing after a few seconds.
   const [createOutcome, setCreateOutcome] = useState<CreateOutcome | null>(null);
   const [openAdd, setOpenAdd] = useState(false);
+  const [openFees, setOpenFees] = useState(false);
   const [newClassName, setNewClassName] = useState('');
   const [addSubmitting, setAddSubmitting] = useState(false);
   const [deletingClassId, setDeletingClassId] = useState<number | null>(null);
@@ -349,6 +351,14 @@ export function ClassesManagement({ onNavigate }: ClassesManagementProps) {
             <BookOpen size={20} />
             Manage Subjects
           </Button>
+          <Button
+            variant="outline"
+            className="flex items-center gap-2"
+            onClick={() => setOpenFees(true)}
+          >
+            <DollarSign size={20} />
+            Fee Categories
+          </Button>
           <Dialog open={openAdd} onOpenChange={setOpenAdd}>
             <DialogTrigger asChild>
               <Button className="flex items-center gap-2">
@@ -386,6 +396,8 @@ export function ClassesManagement({ onNavigate }: ClassesManagementProps) {
       {/* Rendered outside the empty-state card below: a partial run creates
           SOME classes, which unmounts that card — the report of what failed
           has to outlive it. */}
+      <LevelFeesDialog open={openFees} onOpenChange={setOpenFees} />
+
       <CreateStandardOutcome
         outcome={createOutcome}
         onRetry={handleCreateStandard}

@@ -34,6 +34,8 @@ export type CacheKey =
   | 'subjects'
   | 'settings'
   | 'charge-categories'
+  // The distinct class LEVELS this school has, derived from its Class rows.
+  | 'class-levels'
   | 'report-cards'
   | 'logo-url'
   | `timetable:${string}`
@@ -44,7 +46,10 @@ export type CacheKey =
   // Which class levels a school TYPE may have. Keyed by the type itself, so a
   // school changing type reads a different entry rather than a stale one —
   // that is why no write event needs to clear it.
-  | `class-catalog:${string}`;
+  | `class-catalog:${string}`
+  // One class level's fee structure — amounts and first-installment shares.
+  // Keyed by level, since each is edited independently.
+  | `level-fees:${string}`;
 
 /**
  * A key, or a trailing-`*` prefix pattern covering every parameterised key in
@@ -56,7 +61,8 @@ type KeyPattern =
   | 'class-subject-teachers:*'
   | 'timetable:*'
   | 'test-exams:*'
-  | 'subject-totals:*';
+  | 'subject-totals:*'
+  | 'level-fees:*';
 
 /**
  * Writes, named by what changed rather than by which screen made the call.
@@ -76,7 +82,10 @@ export type WriteEvent =
   | 'timetable:write'
   | 'test-exam:write'
   | 'ledger:write'
-  | 'expense:write';
+  | 'expense:write'
+  // A class level's fee structure changed, which re-bills every student of that
+  // level and therefore changes their paymentStatus.
+  | 'level-fee:write';
 
 /**
  * What each write invalidates.
@@ -92,8 +101,11 @@ const INVALIDATES: Record<WriteEvent, readonly KeyPattern[]> = {
   'student:write': ['students'],
   'staff:write': ['staff', 'classes', 'class-subject-teachers:*'],
   'work-record:write': ['work-records'],
+  'level-fee:write': ['level-fees:*', 'students'],
   'class:write': [
     'classes',
+    // Adding or removing a class can introduce or retire a whole LEVEL.
+    'class-levels',
     'class-subjects:*',
     'class-subject-teachers:*',
     'timetable:*',
@@ -107,13 +119,17 @@ const INVALIDATES: Record<WriteEvent, readonly KeyPattern[]> = {
     'subject-totals:*',
   ],
   'settings:write': ['settings', 'logo-url'],
+  // Staff charge categories only — student fees are per class level and live
+  // under 'level-fees:*'.
   'charge-category:write': ['charge-categories'],
   'report-card:write': ['report-cards'],
   'timetable:write': ['timetable:*'],
   // Exam definitions and their per-subject totals — not the marks, which are
   // never cached.
   'test-exam:write': ['test-exams:*', 'subject-totals:*'],
-  'ledger:write': [],
+  // A charge or payment changes the paymentStatus and firstInstallmentMet that
+  // the student list now carries, so the roster is no longer accurate.
+  'ledger:write': ['students'],
   'expense:write': [],
 };
 

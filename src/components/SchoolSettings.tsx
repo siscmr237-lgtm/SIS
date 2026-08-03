@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
@@ -17,13 +17,6 @@ import { PasswordHints } from './PasswordHints';
 import { formatTermLabel, resolveSchoolTerm, resolveEffectiveSchoolTerm } from '@/utils/academicTerm';
 import { computeSchoolAbbreviation } from '@/utils/schoolAbbreviation';
 
-interface ChargeCategory {
-  id: number;
-  name: string;
-  limit: number;
-  isBuiltIn: boolean;
-}
-
 export function SchoolSettings() {
   const router = useRouter();
   const cache = useSisCache();
@@ -41,26 +34,11 @@ export function SchoolSettings() {
     revalidating,
     error: settingsError,
   } = useCachedResource<any>('settings', () => api.get('/settings'));
-  const {
-    data: catsData,
-    error: catsError,
-    refresh: refreshCats,
-  } = useCachedResource<ChargeCategory[]>('charge-categories', () => api.get('/charge-categories'));
-  const cats = catsData ?? [];
-
   useResourceError(settingsError, 'school settings', settingsData !== null);
-  useResourceError(catsError, 'charge categories', catsData !== null);
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [editName, setEditName] = useState('');
-  const [editLimit, setEditLimit] = useState('');
-  const [editError, setEditError] = useState<string | null>(null);
-  const [newCatName, setNewCatName] = useState('');
-  const [newCatLimit, setNewCatLimit] = useState('');
-  const [addError, setAddError] = useState<string | null>(null);
-  const [adding, setAdding] = useState(false);
-  const [savingCatEdit, setSavingCatEdit] = useState(false);
-  const [deletingCatId, setDeletingCatId] = useState<number | null>(null);
-  const [showCatsDialog, setShowCatsDialog] = useState(false);
+
+  // Fee configuration is NOT here any more: fees belong to a class LEVEL and are
+  // edited from the Classes page ("Fee Categories"), because one fee structure
+  // is shared by every section of a level.
 
   // Change Password dialog state
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
@@ -314,58 +292,6 @@ export function SchoolSettings() {
     }
   };
 
-  const handleSaveEdit = async (cat: ChargeCategory) => {
-    if (savingCatEdit) return;
-    setSavingCatEdit(true);
-    setEditError(null);
-    try {
-      await api.put(`/charge-categories/${cat.id}`, {
-        ...(!cat.isBuiltIn && editName.trim() !== cat.name ? { name: editName.trim() } : {}),
-        limit: parseInt(editLimit) || 0,
-      });
-      setEditingId(null);
-      cache.invalidateOn('charge-category:write');
-      await refreshCats();
-    } catch (e: any) {
-      setEditError(e.message || 'Failed to update');
-    } finally {
-      setSavingCatEdit(false);
-    }
-  };
-
-  const handleDeleteCat = async (cat: ChargeCategory) => {
-    if (!confirm(`Remove "${cat.name}"?`)) return;
-    if (deletingCatId) return;
-    setDeletingCatId(cat.id);
-    try {
-      await api.delete(`/charge-categories/${cat.id}`);
-      cache.invalidateOn('charge-category:write');
-      await refreshCats();
-    } catch (e: any) {
-      toast.error(e.message || 'Failed to delete category');
-    } finally {
-      setDeletingCatId(null);
-    }
-  };
-
-  const handleAddCat = async () => {
-    const name = newCatName.trim();
-    if (!name) return;
-    setAdding(true);
-    setAddError(null);
-    try {
-      await api.post('/charge-categories', { name, limit: parseInt(newCatLimit) || 0 });
-      setNewCatName('');
-      setNewCatLimit('');
-      cache.invalidateOn('charge-category:write');
-      await refreshCats();
-    } catch (e: any) {
-      setAddError(e.message || 'Failed to add category');
-    } finally {
-      setAdding(false);
-    }
-  };
-
   const resetPasswordDialog = () => {
     setCurrentPassword('');
     setNewPassword('');
@@ -573,22 +499,6 @@ export function SchoolSettings() {
         </div>
       </Card>
 
-      {/* Charge Categories */}
-      <Card className="p-6 mt-6">
-        <div className="flex justify-between items-center">
-          <div>
-            <h2 className="text-xl">Fees Categories</h2>
-            <p className="text-sm text-gray-500 mt-1">
-              {cats.length} categor{cats.length === 1 ? 'y' : 'ies'} configured
-            </p>
-          </div>
-          <Button variant="outline" onClick={() => setShowCatsDialog(true)}>
-            <Settings className="mr-2" size={16} />
-            Manage Categories
-          </Button>
-        </div>
-      </Card>
-
       {/* Logout */}
       <div className="mt-8 pt-6 border-t border-gray-200">
         <Button
@@ -606,132 +516,6 @@ export function SchoolSettings() {
           Logout
         </Button>
       </div>
-
-      {/* Charge Categories Dialog */}
-      <Dialog
-        open={showCatsDialog}
-        onOpenChange={(open) => { setShowCatsDialog(open); if (!open) { setEditingId(null); setEditError(null); } }}
-      >
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Charge Categories</DialogTitle>
-            <DialogDescription>
-              Manage charge categories. Built-in categories cannot be renamed or deleted.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-2 max-h-96 overflow-y-auto">
-            {cats.length === 0 && (
-              <p className="text-sm text-gray-500">No categories yet. Run the seed script to add built-in categories.</p>
-            )}
-            {cats.map(cat => (
-              <div key={cat.id} className="flex items-center gap-3 p-3 border rounded-lg bg-gray-50">
-                {editingId === cat.id ? (
-                  <>
-                    <Input
-                      value={editName}
-                      onChange={e => setEditName(e.target.value)}
-                      disabled={cat.isBuiltIn}
-                      className="flex-1"
-                      placeholder="Category name"
-                    />
-                    <Input
-                      type="number"
-                      min="0"
-                      value={editLimit}
-                      onChange={e => setEditLimit(e.target.value)}
-                      className="w-36"
-                      placeholder="Limit (FCFA)"
-                    />
-                    {editError && <p className="text-xs text-red-600 whitespace-nowrap">{editError}</p>}
-                    <Button size="sm" onClick={() => handleSaveEdit(cat)} disabled={savingCatEdit}>
-                      <Save size={14} />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => { setEditingId(null); setEditError(null); }}
-                      disabled={savingCatEdit}
-                    >
-                      <X size={14} />
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <div className="flex-1 flex items-center gap-2">
-                      <span className="font-medium text-sm">{cat.name}</span>
-                      {cat.isBuiltIn && (
-                        <span className="text-xs px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-medium">
-                          built-in
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-sm text-gray-500">
-                      {cat.limit > 0 ? `Limit: ${cat.limit.toLocaleString()} FCFA` : 'No limit'}
-                    </span>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => {
-                        setEditingId(cat.id);
-                        setEditName(cat.name);
-                        setEditLimit(cat.limit > 0 ? String(cat.limit) : '');
-                        setEditError(null);
-                      }}
-                    >
-                      <Edit size={14} />
-                    </Button>
-                    {!cat.isBuiltIn && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                        onClick={() => handleDeleteCat(cat)}
-                        disabled={deletingCatId === cat.id}
-                      >
-                        <Trash2 size={14} />
-                      </Button>
-                    )}
-                  </>
-                )}
-              </div>
-            ))}
-          </div>
-
-          <div className="border-t pt-4">
-            <p className="text-sm font-medium mb-3">Add Category</p>
-            <div className="flex gap-2 items-end flex-wrap">
-              <div>
-                <Label className="text-xs">Name</Label>
-                <Input
-                  value={newCatName}
-                  onChange={e => setNewCatName(e.target.value)}
-                  placeholder="e.g. Library Fee"
-                  className="w-48"
-                />
-              </div>
-              <div>
-                <Label className="text-xs">
-                  Limit (FCFA) <span className="text-gray-400 font-normal">optional</span>
-                </Label>
-                <Input
-                  type="number"
-                  min="0"
-                  value={newCatLimit}
-                  onChange={e => setNewCatLimit(e.target.value)}
-                  placeholder="0 = none"
-                  className="w-36"
-                />
-              </div>
-              <Button onClick={handleAddCat} disabled={adding || !newCatName.trim()}>
-                <Plus size={14} className="mr-1" />
-                {adding ? 'Adding...' : 'Add'}
-              </Button>
-            </div>
-            {addError && <p className="text-sm text-red-600 mt-2">{addError}</p>}
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Change Password Dialog */}
       <Dialog

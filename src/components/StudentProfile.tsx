@@ -39,13 +39,6 @@ interface LedgerData {
   balance: number;
 }
 
-interface ChargeCategory {
-  id: number;
-  name: string;
-  limit: number;
-  isBuiltIn: boolean;
-}
-
 interface PickupContact {
   id: number;
   studentId: number;
@@ -137,7 +130,6 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
   const [ledgerData, setLedgerData] = useState<LedgerData | null>(null);
   const [ledgerLoading, setLedgerLoading] = useState(false);
   const [ledgerError, setLedgerError] = useState<string | null>(null);
-  const [categories, setCategories] = useState<ChargeCategory[]>([]);
   const [showCharge, setShowCharge] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -161,9 +153,19 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
   }, [showActionsMenu]);
 
   const today = new Date().toISOString().split('T')[0];
+  // Two kinds of charge, held apart in the form as well as on the server, so a
+  // fine can't be logged as a fee-structure category or the reverse:
+  //   'fee'    — an extra charge in one of this student's class-level categories;
+  //              counts toward that category's first-installment requirement.
+  //   'oneOff' — outside the fee structure; raises what they owe but is never
+  //              part of first-installment maths.
+  const [chargeKind, setChargeKind] = useState<'fee' | 'oneOff'>('fee');
   const [chargeForm, setChargeForm] = useState({
-    categoryId: '', description: '', amount: '', entryDate: today, paymentMethod: '',
+    classLevelFeeId: '', description: '', amount: '', entryDate: today, paymentMethod: '',
   });
+  // This student's class-level fee categories, for the 'fee' path.
+  const [levelFees, setLevelFees] = useState<Array<{ id: number; name: string; amount: number }>>([]);
+  const [levelFeesLoading, setLevelFeesLoading] = useState(false);
   const [paymentForm, setPaymentForm] = useState({
     description: '', amount: '', entryDate: today, paymentMethod: '',
   });
@@ -274,14 +276,22 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
       setLedgerLoading(true);
       setLedgerError(null);
       try {
-        const [ledgerRes, catsRes] = await Promise.allSettled([
+        // The student's own class LEVEL supplies the fee categories now —
+        // there is no per-school student category list any more.
+        const level = (student as any).classLevel || (student as any).class;
+        setLevelFeesLoading(true);
+        const [ledgerRes, feesRes] = await Promise.allSettled([
           api.get(`/ledger/student/${encodeURIComponent(student.id)}`),
-          api.get('/charge-categories'),
+          level
+            ? api.get(`/classes/levels/${encodeURIComponent(level)}/fees`)
+            : Promise.resolve({ fees: [] }),
         ]);
         if (!cancelled) {
           if (ledgerRes.status === 'fulfilled') setLedgerData(ledgerRes.value);
           else setLedgerError(ledgerRes.reason?.message || 'Failed to load finance data');
-          if (catsRes.status === 'fulfilled') setCategories(catsRes.value || []);
+          if (feesRes.status === 'fulfilled') setLevelFees((feesRes.value as any)?.fees || []);
+          else setLevelFees([]);
+          setLevelFeesLoading(false);
         }
       } finally {
         if (!cancelled) setLedgerLoading(false);
@@ -292,20 +302,38 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
   }, [activeTab, student.id]);
 
   const handleChargeSubmit = async () => {
-    setSubmitting(true);
     setSubmitError(null);
+    const amt = Number(chargeForm.amount);
+    if (!Number.isFinite(amt) || amt <= 0) {
+      setSubmitError('Enter an amount greater than zero.');
+      return;
+    }
+    if (chargeKind === 'fee' && !chargeForm.classLevelFeeId) {
+      setSubmitError('Choose a fee category, or switch to a one-off charge.');
+      return;
+    }
+    if (chargeKind === 'oneOff' && !chargeForm.description.trim()) {
+      setSubmitError('Give the one-off charge a description.');
+      return;
+    }
+    setSubmitting(true);
     try {
+      // classLevelFeeId is what tells the server which kind this is: present
+      // means it counts toward that category's first-installment requirement,
+      // absent means it is a standalone line outside the fee structure.
       await api.post('/ledger/charge', {
         studentId: student.id,
-        categoryId: parseInt(chargeForm.categoryId),
-        description: chargeForm.description,
-        amount: parseInt(chargeForm.amount),
+        ...(chargeKind === 'fee'
+          ? { classLevelFeeId: parseInt(chargeForm.classLevelFeeId, 10) }
+          : {}),
+        description: chargeForm.description.trim(),
+        amount: Math.round(amt),
         entryDate: chargeForm.entryDate,
         ...(chargeForm.paymentMethod ? { paymentMethod: chargeForm.paymentMethod } : {}),
       });
       cache.invalidateOn('ledger:write');
       setShowCharge(false);
-      setChargeForm({ categoryId: '', description: '', amount: '', entryDate: new Date().toISOString().split('T')[0], paymentMethod: '' });
+      setChargeForm({ classLevelFeeId: '', description: '', amount: '', entryDate: new Date().toISOString().split('T')[0], paymentMethod: '' });
       await refreshLedger();
     } catch (e: any) {
       setSubmitError(e.message || 'Failed to record charge');
@@ -1136,25 +1164,99 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                 <DialogDescription>Add a charge to this student's account.</DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-2">
-                <div>
-                  <Label>Category</Label>
-                  <Select value={chargeForm.categoryId} onValueChange={(v) => setChargeForm(f => ({ ...f, categoryId: v }))}>
-                    <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
-                    <SelectContent>
-                      {categories.map(cat => (
-                        <SelectItem key={cat.id} value={String(cat.id)}>{cat.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                {/* The two kinds are picked FIRST and shown as mutually
+                    exclusive cards, so it is not possible to fill in a fee
+                    category and a free-form fine at the same time and be unsure
+                    which one was recorded. */}
+                <div className="space-y-2">
+                  {([
+                    {
+                      kind: 'fee' as const,
+                      title: 'Charge a fee category',
+                      blurb: `Adds to one of ${student.firstName}'s class-level fee categories and counts toward that category's first installment.`,
+                    },
+                    {
+                      kind: 'oneOff' as const,
+                      title: 'One-off charge',
+                      blurb: 'A fine, trip or replacement — outside the fee structure. Increases what they owe but never counts toward first installment.',
+                    },
+                  ]).map(opt => {
+                    const active = chargeKind === opt.kind;
+                    return (
+                      <button
+                        key={opt.kind}
+                        type="button"
+                        onClick={() => { setChargeKind(opt.kind); setSubmitError(null); }}
+                        style={{
+                          display: 'block',
+                          width: '100%',
+                          textAlign: 'left',
+                          padding: '0.625rem 0.75rem',
+                          borderRadius: 8,
+                          border: `1.5px solid ${active ? '#2563EB' : '#E5E7EB'}`,
+                          backgroundColor: active ? '#EFF6FF' : '#FFFFFF',
+                          cursor: 'pointer',
+                        }}
+                        aria-pressed={active}
+                      >
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span
+                            style={{
+                              width: 14, height: 14, borderRadius: '50%', flexShrink: 0,
+                              border: `1.5px solid ${active ? '#2563EB' : '#9CA3AF'}`,
+                              backgroundColor: active ? '#2563EB' : 'transparent',
+                            }}
+                          />
+                          <span className="text-sm" style={{ fontWeight: 500, color: '#0F172A' }}>{opt.title}</span>
+                        </span>
+                        <span className="text-sm" style={{ display: 'block', color: '#6B7280', marginTop: 4, marginLeft: 22 }}>
+                          {opt.blurb}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
-                <div>
-                  <Label>Description</Label>
-                  <Input
-                    value={chargeForm.description}
-                    onChange={e => setChargeForm(f => ({ ...f, description: e.target.value }))}
-                    placeholder="e.g. Term 1 tuition fee"
-                  />
-                </div>
+
+                {chargeKind === 'fee' ? (
+                  <div>
+                    <Label>Fee Category</Label>
+                    <Select
+                      value={chargeForm.classLevelFeeId}
+                      onValueChange={(v) => setChargeForm(f => ({ ...f, classLevelFeeId: v }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={levelFeesLoading ? 'Loading...' : 'Select fee category'} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {levelFees.map(fee => (
+                          <SelectItem key={fee.id} value={String(fee.id)}>{fee.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {!levelFeesLoading && levelFees.length === 0 && (
+                      <p className="text-sm text-gray-500 mt-1">
+                        No fee categories for {(student as any).classLevel || student.class} yet — set them up on the Classes page.
+                      </p>
+                    )}
+                    <div style={{ marginTop: '0.75rem' }}>
+                      <Label>Description <span className="text-gray-400 font-normal">(optional)</span></Label>
+                      <Input
+                        value={chargeForm.description}
+                        onChange={e => setChargeForm(f => ({ ...f, description: e.target.value }))}
+                        placeholder="Defaults to the category name"
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <Label>What is this charge for?</Label>
+                    <Input
+                      value={chargeForm.description}
+                      onChange={e => setChargeForm(f => ({ ...f, description: e.target.value }))}
+                      placeholder="e.g. Replaced library book"
+                    />
+                  </div>
+                )}
                 <div>
                   <Label>Amount (FCFA)</Label>
                   <Input
