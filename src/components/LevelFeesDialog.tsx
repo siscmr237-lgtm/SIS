@@ -40,6 +40,20 @@ interface Props {
   onOpenChange: (open: boolean) => void;
 }
 
+/** A student on custom fees, who therefore did not receive this change. */
+interface DetachedStudent {
+  id: string;
+  name: string;
+  class: string;
+}
+
+/** A fee whose amount actually moved in this save. */
+interface ChangedFee {
+  name: string;
+  from: number | null;
+  to: number;
+}
+
 export function LevelFeesDialog({ open, onOpenChange }: Props) {
   const cache = useSisCache();
   const [levels, setLevels] = useState<string[]>([]);
@@ -49,6 +63,10 @@ export function LevelFeesDialog({ open, onOpenChange }: Props) {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Shown after a save that changed amounts while detached students exist.
+  const [notice, setNotice] = useState<{ detached: DetachedStudent[]; changed: ChangedFee[] } | null>(null);
+  const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
+  const [applying, setApplying] = useState<string | null>(null);
   // Guards the same class of bug as the settings form: a load landing after the
   // user has started editing must not discard their work.
   const dirty = useRef(false);
@@ -158,6 +176,19 @@ export function LevelFeesDialog({ open, onOpenChange }: Props) {
           ? `${level} fees saved — ${billed} charge${billed === 1 ? '' : 's'} updated across ${rb.students} student${rb.students === 1 ? '' : 's'}`
           : `${level} fees saved`,
       );
+
+      // Students on custom fees did NOT receive this change, by design. Surface
+      // them so the admin can pass specific categories on where it should apply,
+      // rather than discovering later that a scholarship student kept the old
+      // amount.
+      const detached: DetachedStudent[] = res?.detachedStudents ?? [];
+      const changed: ChangedFee[] = res?.changedFees ?? [];
+      if (detached.length && changed.length) {
+        setNotice({ detached, changed });
+        setSelectedStudents(new Set());
+      } else {
+        setNotice(null);
+      }
     } catch (e: any) {
       setError(e?.message || 'Could not save these fees.');
     } finally {
@@ -274,6 +305,84 @@ export function LevelFeesDialog({ open, onOpenChange }: Props) {
             </div>
 
             {error && <p className="text-sm mt-3" style={{ color: '#B91C1C' }}>{error}</p>}
+
+            {notice && (
+              <div
+                style={{
+                  marginTop: '1rem', padding: '0.75rem 0.875rem', borderRadius: 8,
+                  border: '1px solid #C4B5FD', backgroundColor: '#F5F3FF',
+                  color: '#4C1D95', fontSize: '0.8125rem',
+                }}
+              >
+                <p style={{ fontWeight: 600, marginBottom: 6 }}>
+                  {notice.detached.length} student{notice.detached.length === 1 ? '' : 's'} on custom
+                  fees did not receive this change
+                </p>
+                <p style={{ marginBottom: 8 }}>
+                  Tick anyone this should also apply to, then choose which changed fee to pass on.
+                  Only that fee is updated for them — their other custom amounts stay as they are,
+                  and they remain on custom fees.
+                </p>
+
+                <div style={{ marginBottom: 10 }}>
+                  {notice.detached.map(s => (
+                    <label
+                      key={s.id}
+                      style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '2px 0' }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedStudents.has(s.id)}
+                        onChange={e => {
+                          setSelectedStudents(prev => {
+                            const next = new Set(prev);
+                            if (e.target.checked) next.add(s.id); else next.delete(s.id);
+                            return next;
+                          });
+                        }}
+                        style={{ width: 15, height: 15 }}
+                      />
+                      <span>{s.name} <span style={{ opacity: 0.7 }}>({s.class})</span></span>
+                    </label>
+                  ))}
+                </div>
+
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {notice.changed.map(f => (
+                    <Button
+                      key={f.name}
+                      size="sm"
+                      variant="outline"
+                      disabled={selectedStudents.size === 0 || applying !== null}
+                      onClick={async () => {
+                        setApplying(f.name);
+                        try {
+                          const res: any = await api.post(
+                            `/classes/levels/${encodeURIComponent(level)}/fees/apply-to-overridden`,
+                            { feeName: f.name, studentIds: [...selectedStudents] },
+                          );
+                          cache.invalidateOn('level-fee:write');
+                          toast.success(
+                            `${f.name} set to ${f.to.toLocaleString()} for ${res?.applied ?? 0} student${res?.applied === 1 ? '' : 's'}`,
+                          );
+                        } catch (e: any) {
+                          toast.error(e?.message || `Could not apply ${f.name}.`);
+                        } finally {
+                          setApplying(null);
+                        }
+                      }}
+                    >
+                      {applying === f.name
+                        ? 'Applying...'
+                        : `Apply ${f.name} (${f.from === null ? 'new' : f.from.toLocaleString()} → ${f.to.toLocaleString()})`}
+                    </Button>
+                  ))}
+                  <Button size="sm" variant="ghost" onClick={() => setNotice(null)} disabled={applying !== null}>
+                    Dismiss
+                  </Button>
+                </div>
+              </div>
+            )}
 
             <div className="flex justify-end gap-2 mt-5">
               <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
