@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { PaymentStatusDot } from './PaymentStatus';
 import { NavigationPage } from '../App';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
@@ -118,7 +119,7 @@ export function ReportCards({ onNavigate }: ReportCardsProps) {
                     <SelectContent>
                       {students.map((student: any) => (
                         <SelectItem key={student.id} value={student.id}>
-                          {student.firstName} {student.lastName} - {student.class}
+                          {student.firstName} {student.lastName}<PaymentStatusDot status={(student as any).paymentStatus} /> - {student.class}
                         </SelectItem>
                       ))}
                     </SelectContent>

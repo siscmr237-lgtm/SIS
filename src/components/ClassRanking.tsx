@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { PaymentStatusDot, useStudentPaymentStatuses } from './PaymentStatus';
 import { NavigationPage } from '../App';
 import { api } from '@/lib/api';
 import { useCachedResource } from '@/lib/SisCache';
@@ -18,6 +19,9 @@ interface ClassRankingProps {
 }
 
 export function ClassRanking({ onNavigate }: ClassRankingProps) {
+  // Rankings and marks rows carry no payment status of their own, so it is
+  // resolved by student CODE from the shared students list, which already has it.
+  const paymentStatuses = useStudentPaymentStatuses();
   const [classId, setClassId] = useState('');
   const [{ term, academicYear }, setPeriod] = useState(() => getDefaultTermFields());
 
@@ -128,7 +132,7 @@ export function ClassRanking({ onNavigate }: ClassRankingProps) {
                 {rankings.map((r: any) => (
                   <TableRow key={r.studentId}>
                     <TableCell>{r.rank}</TableCell>
-                    <TableCell>{r.firstName} {r.lastName}</TableCell>
+                    <TableCell>{r.firstName} {r.lastName}<PaymentStatusDot status={paymentStatuses.get(String(r.studentId))} /></TableCell>
                     <TableCell>{r.totalObtained}</TableCell>
                     <TableCell>{r.totalPossible}</TableCell>
                     <TableCell>{r.totalPossible > 0 ? `${Math.round((r.totalObtained / r.totalPossible) * 100)}%` : '—'}</TableCell>

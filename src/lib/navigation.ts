@@ -32,7 +32,13 @@ export function useAppNavigation() {
   const router = useRouter();
   return {
     navigate: (page: NavigationPage) => router.push(pathForPage(page)),
-    viewStudent: (student: Student) => router.push(`/students/${encodeURIComponent(student.id)}`),
+    // `tab` lands the visitor on a specific profile tab — the Students list's
+    // Fees cell uses it to open straight onto Finance, since that is where the
+    // answer to "why does it say Owing?" lives.
+    viewStudent: (student: Student, tab?: string) =>
+      router.push(
+        `/students/${encodeURIComponent(student.id)}${tab ? `?tab=${encodeURIComponent(tab)}` : ''}`,
+      ),
     viewStaff: (staff: Staff) => router.push(`/staff/${encodeURIComponent(staff.code)}`),
   };
 }

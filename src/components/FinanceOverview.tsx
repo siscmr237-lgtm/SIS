@@ -1,4 +1,5 @@
 import { AlertTriangle, Calendar, Filter, Receipt, Search } from 'lucide-react';
+import { PaymentStatusDot, useStudentPaymentStatuses } from './PaymentStatus';
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
 import { useCachedResource, useSisCache } from '../lib/SisCache';
@@ -14,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 
 interface FinanceOverviewProps {
   onNavigate: (page: NavigationPage) => void;
-  onViewStudent: (student: Student) => void;
+  onViewStudent: (student: Student, tab?: string) => void;
 }
 
 interface StudentRow {
@@ -74,6 +75,9 @@ function formatDate(value: string | undefined) {
 }
 
 export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewProps) {
+  // Summary rows come from the ledger, which has no payment status on them —
+  // resolved by student CODE from the shared students list.
+  const paymentStatuses = useStudentPaymentStatuses();
   const [summary, setSummary] = useState<{ feesCollected: number; outstandingFees: number } | null>(null);
   const cache = useSisCache();
 
@@ -418,6 +422,7 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
                       >
                         {student.firstName} {student.lastName}
                       </button>
+                      <PaymentStatusDot status={paymentStatuses.get(String(student.id))} />
                     </td>
                     <td className="px-4 py-3 text-gray-600">{student.class}</td>
                     <td className="px-4 py-3 text-right text-gray-700">{totalCharged.toLocaleString()} FCFA</td>
@@ -587,7 +592,7 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
                       <SelectTrigger><SelectValue placeholder="Select student" /></SelectTrigger>
                       <SelectContent>
                         {damageStudents.map((s: any) => (
-                          <SelectItem key={s.id} value={s.id}>{s.firstName} {s.lastName} — {s.class}</SelectItem>
+                          <SelectItem key={s.id} value={s.id}>{s.firstName} {s.lastName}<PaymentStatusDot status={paymentStatuses.get(String(s.id))} /> — {s.class}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
