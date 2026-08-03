@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { api } from '../lib/api';
 import { useSisCache } from '../lib/SisCache';
 import { useSchoolClassNames } from '../lib/classes';
+import { PaymentStatusDot, useStudentPaymentStatuses } from './PaymentStatus';
 import { NavigationPage } from '../App';
 import { Student } from '../types';
 import { Card } from './ui/card';
@@ -77,6 +78,12 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
   // The class dropdown offers this school's real classes only — see
   // src/lib/classes.ts for why a hardcoded level list can't work here.
   const { classNames: schoolClassNames } = useSchoolClassNames();
+
+  // The status the server computed. Normally it arrives on the student itself,
+  // whether this page was reached from the list or fetched directly by code;
+  // the roster lookup is a fallback for any caller that passes a leaner object.
+  const paymentStatuses = useStudentPaymentStatuses();
+  const feeStatus = (student as any).paymentStatus ?? paymentStatuses.get(String(student.id));
 
   // Editable info — local state so updates appear immediately after save
   const [displayInfo, setDisplayInfo] = useState({
@@ -458,7 +465,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
       </button>
 
       <div className="mb-6">
-        <h1 className="text-3xl">{displayInfo.firstName} {displayInfo.lastName}</h1>
+        <h1 className="text-3xl">{displayInfo.firstName} {displayInfo.lastName}<PaymentStatusDot status={feeStatus} /></h1>
         <p className="text-gray-500 mt-1">{student.id} · {displayInfo.class}</p>
       </div>
 

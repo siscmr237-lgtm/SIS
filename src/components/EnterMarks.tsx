@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { PaymentStatusDot, useStudentPaymentStatuses } from './PaymentStatus';
 import { NavigationPage } from '../App';
 import { api } from '@/lib/api';
 import { useCachedResource } from '@/lib/SisCache';
@@ -18,6 +19,9 @@ interface EnterMarksProps {
 }
 
 export function EnterMarks({ onNavigate }: EnterMarksProps) {
+  // Rankings and marks rows carry no payment status of their own, so it is
+  // resolved by student CODE from the shared students list, which already has it.
+  const paymentStatuses = useStudentPaymentStatuses();
   const [classId, setClassId] = useState('');
   const [{ term, academicYear }, setPeriod] = useState(() => getDefaultTermFields());
   const [testExamId, setTestExamId] = useState('');
@@ -248,7 +252,7 @@ export function EnterMarks({ onNavigate }: EnterMarksProps) {
                   const err = rowError(r.studentId);
                   return (
                     <TableRow key={r.studentId}>
-                      <TableCell>{r.firstName} {r.lastName}</TableCell>
+                      <TableCell>{r.firstName} {r.lastName}<PaymentStatusDot status={paymentStatuses.get(String(r.studentId))} /></TableCell>
                       <TableCell>
                         <Input
                           type="number"

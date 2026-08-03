@@ -4,9 +4,10 @@ import { NavigationPage } from '../App';
 
 interface StudentsManagementProps {
   onNavigate?: (page: NavigationPage) => void;
-  onViewStudent?: (student: Student) => void;
+  onViewStudent?: (student: Student, tab?: string) => void;
 }
 import { useSchoolClassNames } from "@/lib/classes";
+import { PaymentStatusDot, PaymentStatusLabel } from "./PaymentStatus";
 import { RevalidatingBadge, useResourceError } from "./ResourceStatus";
 import { Plus, Search, X } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -123,17 +124,33 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
       prev.map((c, idx) => (idx === i ? { ...c, [field]: value } : c))
     );
 
-  const filteredStudents = students.filter((student) => {
-    const matchesSearch =
-      student.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.id.toLowerCase().includes(searchTerm.toLowerCase());
+  // Sorted alphabetically by displayed name, because the row numbers are a
+  // count down the visible list — they only make sense if the order is stable
+  // and predictable. Sorting on the same "First Last" string that is rendered
+  // keeps the numbering consistent with what the eye reads.
+  //
+  // Searching by student ID still works even though the column is gone: the
+  // code is no longer on screen, but an admin who has one to hand can still
+  // paste it in.
+  const filteredStudents = students
+    .filter((student) => {
+      const matchesSearch =
+        student.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        student.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        student.id.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesClass =
-      selectedClass === "all" || student.class === selectedClass;
+      const matchesClass =
+        selectedClass === "all" || student.class === selectedClass;
 
-    return matchesSearch && matchesClass;
-  });
+      return matchesSearch && matchesClass;
+    })
+    .sort((a, b) =>
+      `${a.firstName} ${a.lastName}`.localeCompare(
+        `${b.firstName} ${b.lastName}`,
+        undefined,
+        { sensitivity: 'base', numeric: true },
+      ),
+    );
 
   // Debounce typing so a request is not issued per keystroke; class filter
   // changes apply immediately.
@@ -523,19 +540,23 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Student ID</TableHead>
+              {/* Row number, not an identifier — the sequence follows the
+                  alphabetical sort, so it renumbers as the list is filtered.
+                  Student ID lives on the detail page now. */}
+              <TableHead style={{ width: 56 }}>#</TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Class</TableHead>
               <TableHead>Gender</TableHead>
               <TableHead>Parent Name</TableHead>
               <TableHead>Parent Phone</TableHead>
+              <TableHead>Fees</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredStudents.map((student) => (
+            {filteredStudents.map((student, index) => (
               <TableRow key={student.id}>
-                <TableCell>{student.id}</TableCell>
+                <TableCell style={{ color: '#6B7280' }}>{index + 1}</TableCell>
                 <TableCell>
                   <button
                     onClick={() => onViewStudent?.(student)}
@@ -543,11 +564,25 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
                   >
                     {student.firstName} {student.lastName}
                   </button>
+                  <PaymentStatusDot status={(student as any).paymentStatus} />
                 </TableCell>
                 <TableCell>{student.class}</TableCell>
                 <TableCell className="capitalize">{student.gender}</TableCell>
                 <TableCell>{student.parentName}</TableCell>
                 <TableCell>{student.parentPhone}</TableCell>
+                <TableCell>
+                  {/* Straight to this student's Finance tab — the status is a
+                      question about their fees, so the click should land where
+                      the answer is. */}
+                  <button
+                    type="button"
+                    onClick={() => onViewStudent?.(student, 'finance')}
+                    className="text-left hover:underline"
+                    title="View this student's finance record"
+                  >
+                    <PaymentStatusLabel status={(student as any).paymentStatus} />
+                  </button>
+                </TableCell>
                 <TableCell>
                   <Button
                     variant="outline"
