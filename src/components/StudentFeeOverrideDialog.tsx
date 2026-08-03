@@ -252,7 +252,7 @@ export function StudentFeeOverrideDialog({
               ))}
             </div>
 
-            <div className="flex items-center justify-between mt-3">
+            <div className="flex items-center justify-between mt-2">
               <Button variant="outline" size="sm" onClick={addRow} className="flex items-center gap-2">
                 <Plus size={16} />
                 Add Fee
@@ -262,7 +262,7 @@ export function StudentFeeOverrideDialog({
               </p>
             </div>
 
-            {error && <p className="text-sm mt-3" style={{ color: '#B91C1C' }}>{error}</p>}
+            {error && <p className="text-sm mt-2" style={{ color: '#B91C1C' }}>{error}</p>}
 
             {confirmRemove ? (
               <div
@@ -290,7 +290,7 @@ export function StudentFeeOverrideDialog({
                 </div>
               </div>
             ) : (
-              <div className="flex items-center justify-between mt-5">
+              <div className="flex items-center justify-between mt-4">
                 <div>
                   {wasOverridden && (
                     <Button variant="outline" size="sm" onClick={() => setConfirmRemove(true)}>

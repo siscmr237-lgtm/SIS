@@ -6,6 +6,7 @@ import { RevalidatingBadge, useResourceError } from './ResourceStatus';
 import { BookOpen, DollarSign, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { LevelFeesDialog } from './LevelFeesDialog';
+import { LevelSubjectsDialog } from './LevelSubjectsDialog';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import {
@@ -135,7 +136,6 @@ export function ClassesManagement({ onNavigate }: ClassesManagementProps) {
   const [managingClass, setManagingClass] = useState<any>(null);
   const [classSubjects, setClassSubjects] = useState<any[]>([]);
   const [openManage, setOpenManage] = useState(false);
-  const [addSubjectId, setAddSubjectId] = useState('');
   const [loadingSubjects, setLoadingSubjects] = useState(false);
   const loading = classesLoading;
   const [creating, setCreating] = useState(false);
@@ -145,11 +145,10 @@ export function ClassesManagement({ onNavigate }: ClassesManagementProps) {
   const [createOutcome, setCreateOutcome] = useState<CreateOutcome | null>(null);
   const [openAdd, setOpenAdd] = useState(false);
   const [openFees, setOpenFees] = useState(false);
+  const [openSubjects, setOpenSubjects] = useState(false);
   const [newClassName, setNewClassName] = useState('');
   const [addSubmitting, setAddSubmitting] = useState(false);
   const [deletingClassId, setDeletingClassId] = useState<number | null>(null);
-  const [addSubjectSubmitting, setAddSubjectSubmitting] = useState(false);
-  const [removingSubjectId, setRemovingSubjectId] = useState<number | null>(null);
   const [addingTeacherSubjectId, setAddingTeacherSubjectId] = useState<number | null>(null);
   const [removingTeacherId, setRemovingTeacherId] = useState<number | null>(null);
 
@@ -171,7 +170,6 @@ export function ClassesManagement({ onNavigate }: ClassesManagementProps) {
 
   const handleOpenManage = async (cls: any) => {
     setManagingClass(cls);
-    setAddSubjectId('');
     setClassSubjects([]);
     setSubjectTeachers([]);
     setAddTeacherSelections({});
@@ -187,39 +185,6 @@ export function ClassesManagement({ onNavigate }: ClassesManagementProps) {
       setSubjectTeachers(stAssignments || []);
     } catch {}
     setLoadingSubjects(false);
-  };
-
-  const handleAddSubject = async () => {
-    if (!addSubjectId || !managingClass) return;
-    if (addSubjectSubmitting) return;
-    setAddSubjectSubmitting(true);
-    try {
-      await api.post(`/classes/${managingClass.id}/subjects`, { subjectId: Number(addSubjectId) });
-      cache.invalidateOn('class:write');
-      const data = await api.get(`/classes/${managingClass.id}/subjects`);
-      setClassSubjects(data || []);
-      setAddSubjectId('');
-    } catch {} finally {
-      setAddSubjectSubmitting(false);
-    }
-  };
-
-  const handleRemoveSubject = async (assignment: any) => {
-    if (!confirm(`Remove "${assignment.name ?? 'this subject'}" from this class?`)) return;
-    if (removingSubjectId) return;
-    setRemovingSubjectId(assignment.id);
-    try {
-      await api.delete(`/classes/${managingClass.id}/subjects/${assignment.id}`);
-      cache.invalidateOn('class:write');
-      const [subjects, stAssignments] = await Promise.all([
-        api.get(`/classes/${managingClass.id}/subjects`),
-        api.get(`/classes/${managingClass.id}/subject-teachers`),
-      ]);
-      setClassSubjects(subjects || []);
-      setSubjectTeachers(stAssignments || []);
-    } catch {} finally {
-      setRemovingSubjectId(null);
-    }
   };
 
   const handleAddSubjectTeacher = async (subject: any) => {
@@ -346,7 +311,7 @@ export function ClassesManagement({ onNavigate }: ClassesManagementProps) {
           <Button
             variant="outline"
             className="flex items-center gap-2"
-            onClick={() => onNavigate?.('subjects')}
+            onClick={() => setOpenSubjects(true)}
           >
             <BookOpen size={20} />
             Manage Subjects
@@ -397,6 +362,11 @@ export function ClassesManagement({ onNavigate }: ClassesManagementProps) {
           SOME classes, which unmounts that card — the report of what failed
           has to outlive it. */}
       <LevelFeesDialog open={openFees} onOpenChange={setOpenFees} />
+      <LevelSubjectsDialog
+        open={openSubjects}
+        onOpenChange={setOpenSubjects}
+        onManageCatalogue={() => onNavigate?.('subjects')}
+      />
 
       <CreateStandardOutcome
         outcome={createOutcome}
@@ -425,9 +395,11 @@ export function ClassesManagement({ onNavigate }: ClassesManagementProps) {
           <Table>
             <TableHeader>
               <TableRow>
+                {/* No Subjects column: subjects belong to the class LEVEL, not to
+                    an individual section, so a per-row control would suggest each
+                    section had its own list. Managed from "Manage Subjects" above. */}
                 <TableHead>Name</TableHead>
                 <TableHead>Class Teacher</TableHead>
-                <TableHead>Subjects</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -449,7 +421,10 @@ export function ClassesManagement({ onNavigate }: ClassesManagementProps) {
                       ))}
                     </select>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="flex gap-2">
+                    {/* Teacher assignment stays per SECTION — two sections of one
+                        level share subjects but can have different teachers — so it
+                        lives here rather than in the level-scoped dialog. */}
                     <Button
                       variant="outline"
                       size="sm"
@@ -457,10 +432,8 @@ export function ClassesManagement({ onNavigate }: ClassesManagementProps) {
                       className="flex items-center gap-2"
                     >
                       <BookOpen size={16} />
-                      Subjects
+                      Teachers
                     </Button>
-                  </TableCell>
-                  <TableCell>
                     <Button
                       variant="destructive"
                       size="sm"
@@ -485,8 +458,11 @@ export function ClassesManagement({ onNavigate }: ClassesManagementProps) {
       }}>
         <DialogContent className="max-w-xl">
           <DialogHeader>
-            <DialogTitle>Subjects — {managingClass?.name}</DialogTitle>
-            <DialogDescription>Manage subjects and their assigned teachers</DialogDescription>
+            <DialogTitle>Subject Teachers — {managingClass?.name}</DialogTitle>
+            <DialogDescription>
+              Which subjects this section teaches comes from its class level — change that under
+              “Manage Subjects”. Teachers are assigned per section here.
+            </DialogDescription>
           </DialogHeader>
           <div className="py-2 space-y-3">
             {loadingSubjects ? (
@@ -503,17 +479,11 @@ export function ClassesManagement({ onNavigate }: ClassesManagementProps) {
                       const available = teachers.filter(t => !assignedIds.has(t.id));
                       return (
                         <div key={subject.id} className="py-2 space-y-1.5">
+                          {/* No remove control: the subject is on the class LEVEL,
+                              so dropping it here would silently affect every other
+                              section. That belongs in "Manage Subjects". */}
                           <div className="flex items-center justify-between">
                             <span className="text-sm font-medium">{subject.name}</span>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleRemoveSubject(subject)}
-                              disabled={removingSubjectId === subject.id}
-                              className="text-red-500 hover:text-red-700 h-7 px-2"
-                            >
-                              <Trash2 size={14} />
-                            </Button>
                           </div>
                           <div className="pl-2 space-y-1.5">
                             {assigned.length === 0 ? (
@@ -562,22 +532,18 @@ export function ClassesManagement({ onNavigate }: ClassesManagementProps) {
                     })}
                   </div>
                 )}
-                {availableSubjects.length > 0 && (
-                  <div className="flex gap-2 pt-2 border-t">
-                    <select
-                      className="border rounded h-9 px-2 text-sm flex-1"
-                      value={addSubjectId}
-                      onChange={e => setAddSubjectId(e.target.value)}
-                    >
-                      <option value="">Select subject to add</option>
-                      {availableSubjects.map(s => (
-                        <option key={s.id} value={s.id}>{s.name}</option>
-                      ))}
-                    </select>
-                    <Button size="sm" onClick={handleAddSubject} disabled={!addSubjectId || addSubjectSubmitting}>
-                      {addSubjectSubmitting ? 'Adding...' : 'Add'}
-                    </Button>
-                  </div>
+                {/* No "add subject" control either — a subject added here would
+                    have to apply to the whole level, which is what the
+                    level-scoped "Manage Subjects" dialog is for. */}
+                {/* Padding is inline, not `pt-2`: that utility is absent from the
+                    pre-compiled src/index.css and would render as nothing. */}
+                {classSubjects.length === 0 && (
+                  <p
+                    className="text-sm text-gray-500"
+                    style={{ borderTop: '1px solid #E5E7EB', paddingTop: '0.5rem' }}
+                  >
+                    Set this level’s subjects under “Manage Subjects” first, then assign teachers here.
+                  </p>
                 )}
               </>
             )}
