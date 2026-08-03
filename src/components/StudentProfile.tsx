@@ -6,6 +6,7 @@ import { api } from '../lib/api';
 import { useSisCache } from '../lib/SisCache';
 import { useSchoolClassNames } from '../lib/classes';
 import { PaymentStatusDot, useStudentPaymentStatuses } from './PaymentStatus';
+import { StudentFeeOverrideDialog } from './StudentFeeOverrideDialog';
 import { NavigationPage } from '../App';
 import { Student } from '../types';
 import { Card } from './ui/card';
@@ -138,6 +139,10 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
   const [ledgerLoading, setLedgerLoading] = useState(false);
   const [ledgerError, setLedgerError] = useState<string | null>(null);
   const [showCharge, setShowCharge] = useState(false);
+  const [showFeeOverride, setShowFeeOverride] = useState(false);
+  // Whether this student is detached from their class level's fee structure.
+  // Seeded from the record we were handed and refreshed after an override edit.
+  const [feesOverridden, setFeesOverridden] = useState<boolean>(Boolean((student as any).feesOverridden));
   const [showPayment, setShowPayment] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -466,7 +471,24 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
 
       <div className="mb-6">
         <h1 className="text-3xl">{displayInfo.firstName} {displayInfo.lastName}<PaymentStatusDot status={feeStatus} /></h1>
-        <p className="text-gray-500 mt-1">{student.id} · {displayInfo.class}</p>
+        <p className="text-gray-500 mt-1">
+          {student.id} · {displayInfo.class}
+          {feesOverridden && (
+            <>
+              {' · '}
+              <span
+                title="This student is billed from their own fee structure, not their class level's"
+                style={{
+                  color: '#5B21B6', backgroundColor: '#F5F3FF',
+                  border: '1px solid #C4B5FD', borderRadius: 999,
+                  padding: '1px 8px', fontSize: '0.75rem', fontWeight: 500,
+                }}
+              >
+                Custom fees
+              </span>
+            </>
+          )}
+        </p>
       </div>
 
       <div className="flex gap-1 border-b mb-6">
@@ -1070,11 +1092,42 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
               <Plus size={16} className="mr-1" />
               Record Charge
             </Button>
+            <Button variant="outline" onClick={() => setShowFeeOverride(true)}>
+              Edit This Student's Fees
+            </Button>
             <Button onClick={() => { setSubmitError(null); setShowPayment(true); }}>
               <Plus size={16} className="mr-1" />
               Record Payment
             </Button>
           </div>
+
+          {/* Makes it unmistakable that this student is not on standard class
+              fees, so nobody reads their balance against the wrong structure. */}
+          {feesOverridden && (
+            <div
+              style={{
+                padding: '0.75rem 0.875rem',
+                borderRadius: 8,
+                border: '1px solid #C4B5FD',
+                backgroundColor: '#F5F3FF',
+                color: '#5B21B6',
+                fontSize: '0.8125rem',
+              }}
+            >
+              <strong>Custom fee structure.</strong>{' '}
+              {displayInfo.firstName} is billed from their own fees, not the standard{' '}
+              {(student as any).classLevel || displayInfo.class} fees, and class-level fee changes
+              do not apply to them automatically.{' '}
+              <button
+                type="button"
+                onClick={() => setShowFeeOverride(true)}
+                className="hover:underline"
+                style={{ color: '#5B21B6', fontWeight: 600, textDecoration: 'underline' }}
+              >
+                Review or remove
+              </button>
+            </div>
+          )}
 
           {ledgerLoading && <Card className="p-6 text-gray-500">Loading...</Card>}
           {ledgerError && (
@@ -1162,6 +1215,23 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
               </Card>
             </>
           )}
+
+          <StudentFeeOverrideDialog
+            open={showFeeOverride}
+            onOpenChange={setShowFeeOverride}
+            studentCode={String(student.id)}
+            studentName={`${displayInfo.firstName} ${displayInfo.lastName}`}
+            overridden={feesOverridden}
+            onChanged={async () => {
+              // Re-read the student so the indicator and the fee figures reflect
+              // what was actually saved rather than what we assumed.
+              try {
+                const fresh: any = await api.get(`/students/${encodeURIComponent(String(student.id))}`);
+                setFeesOverridden(Boolean(fresh?.feesOverridden));
+              } catch {}
+              await refreshLedger();
+            }}
+          />
 
           {/* Record Charge dialog */}
           <Dialog open={showCharge} onOpenChange={(open) => { setShowCharge(open); if (!open) setSubmitError(null); }}>
