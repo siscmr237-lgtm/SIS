@@ -233,7 +233,7 @@ export function Timetable() {
       </div>
 
       <Card className="p-6 mb-6">
-        <div className="flex gap-4 items-end">
+        <div className="flex flex-col sm:flex-row sm:items-end gap-3">
           <div className="flex-1">
             <Label>Select Class</Label>
             <Select

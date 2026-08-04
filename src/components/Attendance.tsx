@@ -166,7 +166,7 @@ export function Attendance() {
 
         <TabsContent value="students">
           <Card className="mb-4 p-4">
-            <div className="flex gap-4 items-center">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
               <p className="text-sm text-gray-600">Mark attendance for {selectedClass} on {selectedDate}</p>
               <Button size="sm" variant="outline" className="ml-auto flex items-center gap-2" onClick={saveStudentAttendance} disabled={savingStudentAttendance}>
                 <Save size={16} />
@@ -224,7 +224,7 @@ export function Attendance() {
 
         <TabsContent value="staff">
           <Card className="mb-4 p-4">
-            <div className="flex gap-4 items-center">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
               <p className="text-sm text-gray-600">Mark staff attendance for {selectedDate}</p>
               <Button size="sm" variant="outline" className="ml-auto flex items-center gap-2" onClick={saveStaffAttendance} disabled={savingStaffAttendance}>
                 <Save size={16} />

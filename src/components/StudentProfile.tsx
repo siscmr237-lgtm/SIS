@@ -1084,7 +1084,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
           </div>
 
           {/* Desktop: three-button row */}
-          <div className="hidden md:flex gap-2 justify-end">
+          <div className="hidden md:flex gap-2 justify-end flex-wrap">
             <Button variant="outline" onClick={handleDownloadStatement} disabled={!ledgerData}>
               <FileText size={16} className="mr-1" />
               Financial Sheet
