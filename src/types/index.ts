@@ -100,20 +100,31 @@ export interface SubjectConfig {
   subjects: string[];
 }
 
+/** MARKED counts, EXEMPT and UNMARKED are excluded from a student's totals. */
+export type MarkState = 'MARKED' | 'UNMARKED' | 'EXEMPT';
+
 export interface TestExamBreakdownEntry {
   testExamId: number;
   name: string;
   type: 'TEST' | 'EXAM';
   order: number;
+  state: MarkState;
   marksObtained: number | null;
-  totalMarks: number;
+  /** Null when this assessment does not count for this student (exempt/unmarked). */
+  totalMarks: number | null;
+  /** What the assessment is out of regardless of whether it counts here. */
+  configuredTotalMarks: number;
 }
 
 export interface TestExamBreakdownSubject {
   subjectId: number;
   subjectName: string;
   marksObtained: number;
+  /** Sum of only the COUNTED assessments — 0 when nothing counts yet. */
   totalMarks: number;
+  counted: number;
+  exempt: number;
+  unmarked: number;
   testExams: TestExamBreakdownEntry[];
 }
 
@@ -123,7 +134,12 @@ export interface ClassRankingRow {
   lastName: string;
   totalObtained: number;
   totalPossible: number;
-  rank: number;
+  /** Null when nothing counts yet, so the student has no percentage or rank. */
+  percentage: number | null;
+  rank: number | null;
+  assessmentsCounted: number;
+  assessmentsExempt: number;
+  assessmentsUnmarked: number;
 }
 
 export interface SchoolSettings {

@@ -1,6 +1,8 @@
 "use client";
 
 import { DollarSign, TrendingUp, UserCheck, Users } from "lucide-react";
+import { useAcademicYear } from '@/lib/academicYear';
+import { AcademicYearNotices } from './AcademicYearNotices';
 import { useEffect, useState } from "react";
 import { api, BASE_URL } from "../../src/lib/api";
 import { useCachedResource, useSisCache } from "../../src/lib/SisCache";
@@ -9,6 +11,9 @@ import { computeSchoolAbbreviation } from "../../src/utils/schoolAbbreviation";
 import { Card } from "./ui/card";
 
 export function Dashboard() {
+  // Reading the status IS the app-load half of the rollover: the endpoint runs
+  // the same advanceYearIfDue() the cron runs, so a missed cron self-corrects here.
+  const { status: yearStatus, advance: advanceYear, acknowledge: ackYear } = useAcademicYear();
   const cache = useSisCache();
   // /dashboard carries feesCollected, outstandingFees and financialSummary, so
   // it is fetched fresh on every visit and never cached — the loading state on
@@ -28,7 +33,14 @@ export function Dashboard() {
     autoTermEnabled: true,
   });
   const [logoSrc, setLogoSrc] = useState<string | null>(null);
-  const { academicYear, term } = resolveSchoolTerm(schoolSettings);
+  const resolved = resolveSchoolTerm(schoolSettings);
+  // The school object below comes from the localStorage copy written at LOGIN, so
+  // its academicYear is whatever it was then. Advancing the year would leave the
+  // most prominent place showing it stale until the next sign-in — so the live
+  // status wins whenever we have it, and the cached value is only a fallback for
+  // the moment before it arrives.
+  const academicYear = yearStatus?.activeYear ?? resolved.academicYear;
+  const term = resolved.term;
 
   // The school object here comes from the cached localStorage copy written at
   // login, which for a session predating the abbreviation column simply has no
@@ -113,6 +125,8 @@ export function Dashboard() {
           card past the right edge. shrink-0 stops the logo being squashed, and
           flex-wrap lets the year/term line drop to a second line instead of
           overflowing. None of these change desktop, where there's room to spare. */}
+      <AcademicYearNotices status={yearStatus} onAdvance={advanceYear} onAcknowledge={ackYear} />
+
       <Card className="p-6 mb-8 bg-gradient-to-r from-blue-50 to-purple-50 overflow-hidden">
         <div className="flex items-center gap-6 min-w-0">
           {logoSrc && (

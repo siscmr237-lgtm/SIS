@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
+import { AcademicYearSelect, useAcademicYear } from '@/lib/academicYear';
 import { PaymentStatusDot, useStudentPaymentStatuses } from './PaymentStatus';
+import { ZeroMarkDot, useStudentsWithZeroMarks } from './MarkStatus';
 import { NavigationPage } from '../App';
 import { api } from '@/lib/api';
 import { useCachedResource } from '@/lib/SisCache';
@@ -19,9 +21,11 @@ interface EnterMarksProps {
 }
 
 export function EnterMarks({ onNavigate }: EnterMarksProps) {
+  const { status: yearStatus } = useAcademicYear();
   // Rankings and marks rows carry no payment status of their own, so it is
   // resolved by student CODE from the shared students list, which already has it.
   const paymentStatuses = useStudentPaymentStatuses();
+  const zeroMarks = useStudentsWithZeroMarks();
   const [classId, setClassId] = useState('');
   const [{ term, academicYear }, setPeriod] = useState(() => getDefaultTermFields());
   const [testExamId, setTestExamId] = useState('');
@@ -186,10 +190,10 @@ export function EnterMarks({ onNavigate }: EnterMarksProps) {
           </div>
           <div>
             <Label>Academic Year</Label>
-            <Input
-              placeholder="2026/2027"
+            <AcademicYearSelect
               value={academicYear}
-              onChange={e => setPeriod(p => ({ ...p, academicYear: e.target.value }))}
+              onChange={v => setPeriod(p => ({ ...p, academicYear: v }))}
+              years={yearStatus?.years ?? []}
             />
           </div>
           <div>
@@ -252,7 +256,7 @@ export function EnterMarks({ onNavigate }: EnterMarksProps) {
                   const err = rowError(r.studentId);
                   return (
                     <TableRow key={r.studentId}>
-                      <TableCell>{r.firstName} {r.lastName}<PaymentStatusDot status={paymentStatuses.get(String(r.studentId))} /></TableCell>
+                      <TableCell>{r.firstName} {r.lastName}<PaymentStatusDot status={paymentStatuses.get(String(r.studentId))} /><ZeroMarkDot hasZero={zeroMarks.has(String(r.studentId))} /></TableCell>
                       <TableCell>
                         <Input
                           type="number"

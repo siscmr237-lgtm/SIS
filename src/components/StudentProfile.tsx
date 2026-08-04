@@ -6,6 +6,7 @@ import { api } from '../lib/api';
 import { useSisCache } from '../lib/SisCache';
 import { useSchoolClassNames } from '../lib/classes';
 import { PaymentStatusDot, useStudentPaymentStatuses } from './PaymentStatus';
+import { ZeroMarkDot } from './MarkStatus';
 import { StudentFeeOverrideDialog } from './StudentFeeOverrideDialog';
 import { NavigationPage } from '../App';
 import { Student } from '../types';
@@ -470,7 +471,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
       </button>
 
       <div className="mb-6">
-        <h1 className="text-3xl">{displayInfo.firstName} {displayInfo.lastName}<PaymentStatusDot status={feeStatus} /></h1>
+        <h1 className="text-3xl">{displayInfo.firstName} {displayInfo.lastName}<PaymentStatusDot status={feeStatus} /><ZeroMarkDot hasZero={(displayInfo as any).hasZeroMark} /></h1>
         <p className="text-gray-500 mt-1">
           {student.id} · {displayInfo.class}
           {feesOverridden && (

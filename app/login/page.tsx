@@ -1,20 +1,23 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { EyeIcon, EyeOffIcon, PhoneIcon } from "lucide-react";
+import { EyeIcon, EyeOffIcon, UserIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { api } from "../../src/lib/api";
 
+// One form serves both actor types now, so nothing here may name a phone
+// number specifically — a teacher signing in with their email must not be told
+// their "phone number" was wrong.
 function mapLoginError(err: any): string {
   if (err?.status === 0 || err?.code === 'NETWORK_ERROR') {
     return 'Unable to connect to the server. Please try again in a moment.';
   }
   switch (err?.code) {
-    case 'PHONE_NOT_FOUND': return 'No account linked to this number.';
-    case 'INVALID_CREDENTIALS': return 'Invalid phone number or password.';
+    case 'PHONE_NOT_FOUND': return 'No account linked to those details.';
+    case 'INVALID_CREDENTIALS': return 'Invalid login details or password.';
     case 'ACCOUNT_CLOSED': return 'This account has been closed. Contact support if this was a mistake.';
-    case 'MISSING_FIELDS': return 'Please enter your phone number and password.';
+    case 'MISSING_FIELDS': return 'Please enter your phone number or email, and your password.';
     case 'SERVER_ERROR': return 'Something went wrong on our end. Please try again shortly.';
     default:
       if (err?.status >= 500) return 'Something went wrong on our end. Please try again shortly.';
@@ -24,7 +27,7 @@ function mapLoginError(err: any): string {
 
 export default function LoginPage() {
   const router = useRouter();
-  const [phoneNumber, setPhoneNumber] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -57,21 +60,30 @@ export default function LoginPage() {
     if (loading) return;
     setError(null);
 
-    if (!phoneNumber.trim() || !password.trim()) {
-      setError('Please enter your phone number and password.');
+    if (!identifier.trim() || !password.trim()) {
+      setError('Please enter your phone number or email, and your password.');
       return;
     }
 
     setLoading(true);
     try {
-      const res = await api.post("/auth/login", { phoneNumber, password });
+      const res = await api.post("/auth/login", { identifier, password });
       if ((res as any)?.token) {
-        const user = (res as any).user;
+        // actorType is stored ON the user object rather than beside it because
+        // every gate downstream reads a single parsed `user` from localStorage;
+        // a second key would be one more thing a partial write could desync.
+        const actorType = (res as any).actorType;
+        const user = { ...(res as any).user, actorType };
         if (typeof window !== "undefined") {
           window.localStorage.setItem("auth_token", (res as any).token);
           window.localStorage.setItem("user", JSON.stringify(user));
         }
-        if (user?.emailVerified === false) {
+        if (actorType === "teacher") {
+          // Teachers have no school-onboarding or email-verification flow of
+          // their own — those are admin-account concerns — so they go straight
+          // to their own section.
+          router.replace("/teacher");
+        } else if (user?.emailVerified === false) {
           router.replace("/verify-email");
         } else {
           const school = user?.School?.[0];
@@ -175,71 +187,56 @@ export default function LoginPage() {
           )}
 
           <form onSubmit={onSubmit} className="space-y-5">
-            {/* Phone Number */}
+            {/* Phone Number or Email — admins sign in with the former,
+                teachers with the latter, and the server tells them apart. The
+                country-code select that used to sit here is gone: it cannot
+                mean anything for an email address, and prefixing one would
+                have corrupted the value being sent. */}
             <div>
               <label
+                htmlFor="identifier"
                 className="text-sm font-medium"
                 style={{ display: "block", marginBottom: 6, color: "#374151" }}
               >
-                Phone Number
+                Phone Number or Email
               </label>
               <div
-                onFocus={() => setFocusedField("phone")}
+                onFocus={() => setFocusedField("identifier")}
                 onBlur={groupBlur}
+                className="relative"
                 style={{
                   display: "flex",
-                  alignItems: "stretch",
+                  alignItems: "center",
                   height: 44,
                   borderRadius: 12,
                   overflow: "hidden",
                   backgroundColor: "white",
-                  ...fieldRing("phone"),
+                  ...fieldRing("identifier"),
                 }}
               >
-                <select
-                  defaultValue="CM +237"
-                  aria-label="Country code"
+                <UserIcon
+                  className="absolute"
+                  style={{ left: 12, color: "#9CA3AF", width: 16, height: 16 }}
+                />
+                <input
+                  id="identifier"
+                  type="text"
+                  autoComplete="username"
+                  placeholder="Phone number or email address"
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
                   style={{
+                    flex: 1,
+                    height: "100%",
+                    paddingLeft: "2.5rem",
+                    paddingRight: "0.75rem",
                     border: "none",
-                    borderRight: "1px solid #E5E7EB",
-                    padding: "0 8px 0 12px",
-                    backgroundColor: "#F9FAFB",
-                    fontSize: "0.875rem",
-                    color: "#374151",
                     outline: "none",
-                    minWidth: 90,
+                    fontSize: "0.875rem",
+                    color: "#111827",
+                    background: "transparent",
                   }}
-                >
-                  <option>CM +237</option>
-                  <option>NG +234</option>
-                  <option>GH +233</option>
-                </select>
-                <div
-                  className="relative flex-1"
-                  style={{ display: "flex", alignItems: "center" }}
-                >
-                  <PhoneIcon
-                    className="absolute"
-                    style={{ left: 12, color: "#9CA3AF", width: 16, height: 16 }}
-                  />
-                  <input
-                    type="tel"
-                    placeholder="Enter your phone number"
-                    value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
-                    style={{
-                      flex: 1,
-                      height: "100%",
-                      paddingLeft: "2.5rem",
-                      paddingRight: "0.75rem",
-                      border: "none",
-                      outline: "none",
-                      fontSize: "0.875rem",
-                      color: "#111827",
-                      background: "transparent",
-                    }}
-                  />
-                </div>
+                />
               </div>
             </div>
 

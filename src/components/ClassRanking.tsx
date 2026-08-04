@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
+import { AcademicYearSelect, useAcademicYear } from '@/lib/academicYear';
 import { PaymentStatusDot, useStudentPaymentStatuses } from './PaymentStatus';
+import { ZeroMarkDot, useStudentsWithZeroMarks } from './MarkStatus';
 import { NavigationPage } from '../App';
 import { api } from '@/lib/api';
 import { useCachedResource } from '@/lib/SisCache';
@@ -19,9 +21,11 @@ interface ClassRankingProps {
 }
 
 export function ClassRanking({ onNavigate }: ClassRankingProps) {
+  const { status: yearStatus } = useAcademicYear();
   // Rankings and marks rows carry no payment status of their own, so it is
   // resolved by student CODE from the shared students list, which already has it.
   const paymentStatuses = useStudentPaymentStatuses();
+  const zeroMarks = useStudentsWithZeroMarks();
   const [classId, setClassId] = useState('');
   const [{ term, academicYear }, setPeriod] = useState(() => getDefaultTermFields());
 
@@ -100,10 +104,10 @@ export function ClassRanking({ onNavigate }: ClassRankingProps) {
           </div>
           <div>
             <Label>Academic Year</Label>
-            <Input
-              placeholder="2026/2027"
+            <AcademicYearSelect
               value={academicYear}
-              onChange={e => setPeriod(p => ({ ...p, academicYear: e.target.value }))}
+              onChange={v => setPeriod(p => ({ ...p, academicYear: v }))}
+              years={yearStatus?.years ?? []}
             />
           </div>
         </div>
@@ -131,11 +135,16 @@ export function ClassRanking({ onNavigate }: ClassRankingProps) {
               <TableBody>
                 {rankings.map((r: any) => (
                   <TableRow key={r.studentId}>
-                    <TableCell>{r.rank}</TableCell>
-                    <TableCell>{r.firstName} {r.lastName}<PaymentStatusDot status={paymentStatuses.get(String(r.studentId))} /></TableCell>
-                    <TableCell>{r.totalObtained}</TableCell>
-                    <TableCell>{r.totalPossible}</TableCell>
-                    <TableCell>{r.totalPossible > 0 ? `${Math.round((r.totalObtained / r.totalPossible) * 100)}%` : '—'}</TableCell>
+                    {/* A student with nothing counted yet is unranked rather than
+                        last — the server sends a null rank for them. */}
+                    <TableCell>{r.rank ?? '—'}</TableCell>
+                    <TableCell>{r.firstName} {r.lastName}<PaymentStatusDot status={paymentStatuses.get(String(r.studentId))} /><ZeroMarkDot hasZero={zeroMarks.has(String(r.studentId))} /></TableCell>
+                    <TableCell>{r.totalPossible > 0 ? r.totalObtained : '—'}</TableCell>
+                    <TableCell>{r.totalPossible > 0 ? r.totalPossible : '—'}</TableCell>
+                    {/* The server's percentage, not a re-derived one: ranking is
+                        sorted on it, and rounding it differently here would show
+                        two students as equal while ranking them apart. */}
+                    <TableCell>{r.percentage == null ? '—' : `${r.percentage}%`}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

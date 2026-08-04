@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { PaymentStatusDot } from './PaymentStatus';
+import { ZeroMarkDot } from './MarkStatus';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -195,7 +196,7 @@ export function Attendance() {
                   return (
                     <TableRow key={student.id}>
                       <TableCell>{student.id}</TableCell>
-                      <TableCell>{student.firstName} {student.lastName}<PaymentStatusDot status={student.paymentStatus} /></TableCell>
+                      <TableCell>{student.firstName} {student.lastName}<PaymentStatusDot status={student.paymentStatus} /><ZeroMarkDot hasZero={(student as any).hasZeroMark} /></TableCell>
                       <TableCell>{student.class}</TableCell>
                       <TableCell>{getStatusBadge(studentStatus[student.id] || status)}</TableCell>
                       <TableCell>{record?.remarks || '-'}</TableCell>

@@ -14,7 +14,18 @@ function clearSessionAndRedirect(genuineExpiry: boolean) {
 // The only /auth/ endpoints reachable with no session yet — every other /auth/
 // route (otp/send-code, pending-email, otp/verify-signup, ...) requires the
 // caller's own authenticated session, never a raw client-supplied identifier.
-const PUBLIC_AUTH_PATHS = ['/auth/login', '/auth/signup'];
+//
+// The two teacher-invite routes belong here for the same reason as login: they
+// are opened from an email link, and the invite token in the body — not a
+// session — is what authorizes them. A stale admin token left in this browser
+// must not ride along on a request that is about to establish a DIFFERENT
+// actor's credentials.
+const PUBLIC_AUTH_PATHS = [
+  '/auth/login',
+  '/auth/signup',
+  '/auth/teacher/invite/verify',
+  '/auth/teacher/set-password',
+];
 
 async function request(path: string, init?: RequestInit) {
   const token = typeof window !== 'undefined' ? window.localStorage.getItem('auth_token') : null;

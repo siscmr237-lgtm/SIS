@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { AcademicYearSelect, useAcademicYear } from '@/lib/academicYear';
 import { NavigationPage } from '../App';
 import { api } from '@/lib/api';
 import { useCachedResource, useSisCache } from '@/lib/SisCache';
@@ -28,6 +29,7 @@ const TYPE_OPTIONS: { value: 'TEST' | 'EXAM'; label: string }[] = [
 ];
 
 export function TestsExamsManagement({ onNavigate }: TestsExamsManagementProps) {
+  const { status: yearStatus } = useAcademicYear();
   const cache = useSisCache();
   const [classId, setClassId] = useState('');
   const [{ term, academicYear }, setPeriod] = useState(() => getDefaultTermFields());
@@ -287,10 +289,10 @@ export function TestsExamsManagement({ onNavigate }: TestsExamsManagementProps) 
           </div>
           <div>
             <Label>Academic Year</Label>
-            <Input
-              placeholder="2026/2027"
+            <AcademicYearSelect
               value={academicYear}
-              onChange={e => setPeriod(p => ({ ...p, academicYear: e.target.value }))}
+              onChange={v => setPeriod(p => ({ ...p, academicYear: v }))}
+              years={yearStatus?.years ?? []}
             />
           </div>
         </div>

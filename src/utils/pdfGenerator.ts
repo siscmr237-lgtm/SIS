@@ -522,7 +522,17 @@ export function generateReportCard(
 
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
-      doc.text(`${subject.subjectName} — ${subject.marksObtained}/${subject.totalMarks}`, 20, cursorY);
+      // The subject total covers only the assessments that count for this
+      // student: exempt ones are excluded, and unmarked ones are not zeros until
+      // their term ends. With nothing counted there is no fraction to print —
+      // "0/0" would read as a score of zero.
+      doc.text(
+        subject.counted > 0
+          ? `${subject.subjectName} — ${subject.marksObtained}/${subject.totalMarks}`
+          : `${subject.subjectName} — not yet marked`,
+        20,
+        cursorY,
+      );
       doc.setFont('helvetica', 'normal');
       cursorY += 5;
 
@@ -532,8 +542,11 @@ export function generateReportCard(
         body: subject.testExams.map(t => [
           t.name,
           t.type === 'EXAM' ? 'Exam' : 'Test',
-          t.marksObtained ?? '—',
-          t.totalMarks,
+          // Exempt is a statement in its own right, not a missing mark: the
+          // student was excused, and this assessment counts towards neither
+          // side of their total.
+          t.state === 'EXEMPT' ? 'Exempt' : t.marksObtained ?? '—',
+          t.state === 'EXEMPT' ? '—' : t.totalMarks ?? `(${t.configuredTotalMarks})`,
         ]),
         theme: 'grid',
         headStyles: { fillColor: [100, 116, 139] },

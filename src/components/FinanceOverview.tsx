@@ -1,5 +1,7 @@
 import { AlertTriangle, Calendar, Filter, Receipt, Search } from 'lucide-react';
+import { AcademicYearSelect, useAcademicYear } from '@/lib/academicYear';
 import { PaymentStatusDot, useStudentPaymentStatuses } from './PaymentStatus';
+import { ZeroMarkDot, useStudentsWithZeroMarks } from './MarkStatus';
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
 import { useCachedResource, useSisCache } from '../lib/SisCache';
@@ -75,9 +77,13 @@ function formatDate(value: string | undefined) {
 }
 
 export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewProps) {
+  // Year options come from the school's real range, not just years that happen
+  // to have ledger rows, so the filter is consistent with every other screen.
+  const { status: yearStatus } = useAcademicYear();
   // Summary rows come from the ledger, which has no payment status on them —
   // resolved by student CODE from the shared students list.
   const paymentStatuses = useStudentPaymentStatuses();
+  const zeroMarks = useStudentsWithZeroMarks();
   const [summary, setSummary] = useState<{ feesCollected: number; outstandingFees: number } | null>(null);
   const cache = useSisCache();
 
@@ -326,15 +332,14 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
                 </div>
                 <div>
                   <Label className="text-xs text-gray-500 mb-1">Academic Year</Label>
-                  <Select value={studentQuery.academicYear} onValueChange={(v: string) => updateStudentFilter({ academicYear: v })}>
-                    <SelectTrigger style={{ borderRadius: 9999 }}><SelectValue placeholder="All" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All</SelectItem>
-                      {academicYearOptions.map(y => (
-                        <SelectItem key={y} value={y}>{y}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <AcademicYearSelect
+                    value={studentQuery.academicYear}
+                    onChange={(v) => updateStudentFilter({ academicYear: v })}
+                    years={yearStatus?.years ?? academicYearOptions}
+                    includeAll
+                    allLabel="All"
+                    style={{ borderRadius: 9999 }}
+                  />
                 </div>
                 <div>
                   <Label className="text-xs text-gray-500 mb-1">Term</Label>
@@ -422,7 +427,7 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
                       >
                         {student.firstName} {student.lastName}
                       </button>
-                      <PaymentStatusDot status={paymentStatuses.get(String(student.id))} />
+                      <PaymentStatusDot status={paymentStatuses.get(String(student.id))} /><ZeroMarkDot hasZero={zeroMarks.has(String(student.id))} />
                     </td>
                     <td className="px-4 py-3 text-gray-600">{student.class}</td>
                     <td className="px-4 py-3 text-right text-gray-700">{totalCharged.toLocaleString()} FCFA</td>
@@ -592,7 +597,7 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
                       <SelectTrigger><SelectValue placeholder="Select student" /></SelectTrigger>
                       <SelectContent>
                         {damageStudents.map((s: any) => (
-                          <SelectItem key={s.id} value={s.id}>{s.firstName} {s.lastName}<PaymentStatusDot status={paymentStatuses.get(String(s.id))} /> — {s.class}</SelectItem>
+                          <SelectItem key={s.id} value={s.id}>{s.firstName} {s.lastName}<PaymentStatusDot status={paymentStatuses.get(String(s.id))} /><ZeroMarkDot hasZero={zeroMarks.has(String(s.id))} /> — {s.class}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>

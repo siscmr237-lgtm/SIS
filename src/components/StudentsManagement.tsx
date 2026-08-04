@@ -8,6 +8,7 @@ interface StudentsManagementProps {
 }
 import { useSchoolClassNames } from "@/lib/classes";
 import { PaymentStatusDot, PaymentStatusLabel } from "./PaymentStatus";
+import { ZeroMarkDot } from "./MarkStatus";
 import { RevalidatingBadge, useResourceError } from "./ResourceStatus";
 import { Plus, Search, X } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -565,6 +566,7 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
                     {student.firstName} {student.lastName}
                   </button>
                   <PaymentStatusDot status={(student as any).paymentStatus} />
+                  <ZeroMarkDot hasZero={(student as any).hasZeroMark} />
                 </TableCell>
                 <TableCell>{student.class}</TableCell>
                 <TableCell className="capitalize">{student.gender}</TableCell>

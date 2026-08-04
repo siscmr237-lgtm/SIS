@@ -1,18 +1,26 @@
 /**
  * Shared academic calendar logic — the frontend mirror of
- * sis-backend/src/utils/academicTerm.js. This is the ONLY place the Aug15/
- * Dec31/Mar31/Jun14/Aug14 boundaries should be encoded on this side; every
+ * sis-backend/src/utils/academicTerm.js. This is the ONLY place the Sep1/
+ * Dec31/Mar31/Jun14/Aug31 boundaries should be encoded on this side; every
  * component that needs "what term/year is it right now" or "what term/year
  * does this school report as current" must go through these functions.
  *
  * Calendar:
- *   Term 1  = Aug 15 – Dec 31
+ *   Term 1  = Sep 1  – Dec 31
  *   Term 2  = Jan 1  – Mar 31
  *   Term 3  = Apr 1  – Jun 14
- *   Holiday = Jun 15 – Aug 14 (no active term)
+ *   Holiday = Jun 15 – Aug 31 (no active term — the admission-prep window)
+ *
+ * Term 1 starts on 1 September so it begins on the same day as the academic-year
+ * window. It previously started on 15 August, which left 15 Aug – 1 Sep reporting
+ * Term 1 of a year that had not begun yet.
+ *
+ * Year and term still move INDEPENDENTLY inside the Holiday window, which is
+ * intended: a school may advance its year early during prep (the August nudge)
+ * and will then show the new year with no active term until 1 September.
  *
  * Academic year labels span two calendar years (e.g. "2026/2027" starts when
- * Term 1 begins in Aug 2026 and runs through Term 3 in Jun 2027).
+ * Term 1 begins in Sep 2026 and runs through Term 3 in Jun 2027).
  */
 
 export type Term = 'Term 1' | 'Term 2' | 'Term 3';
@@ -63,9 +71,10 @@ export function getCurrentTermAndYear(date: Date = new Date()): TermAndYear {
   const day = date.getDate();
   const year = date.getFullYear();
 
-  const isTerm1 = (month === 7 && day >= 15) || month >= 8; // Aug 15 – Dec 31
+  const isTerm1 = month >= 8; // Sep 1 – Dec 31
   const isTerm2 = month >= 0 && month <= 2; // Jan 1 – Mar 31
   const isTerm3 = month === 3 || month === 4 || (month === 5 && day <= 14); // Apr 1 – Jun 14
+  // Remaining window (Jun 15 – Aug 31) is Holiday.
 
   if (isTerm1) {
     return { term: 'Term 1', academicYear: `${year}/${year + 1}` };
@@ -86,11 +95,20 @@ export function resolveSchoolTerm(
   school: Partial<SchoolTermFields> | null | undefined,
   date: Date = new Date()
 ): TermAndYear {
+  // The YEAR always comes from the school's stored active year — it is state that
+  // advances through the manual → nudge → auto rollover, never recomputed from
+  // today's date. Deriving it here would overrule a school that has chosen to
+  // keep working in the old year through August, and would disagree with the
+  // server. Mirrors resolveSchoolTerm in sis-backend/src/utils/academicTerm.js.
+  //
+  // The TERM is unchanged: computed live by date when autoTermEnabled, otherwise
+  // the stored value.
+  const academicYear = school?.academicYear ?? '';
   if (school?.autoTermEnabled) {
-    return getCurrentTermAndYear(date);
+    return { academicYear, term: getCurrentTermAndYear(date).term };
   }
   return {
-    academicYear: school?.academicYear ?? '',
+    academicYear,
     term: (school?.currentTerm as Term) ?? null,
   };
 }

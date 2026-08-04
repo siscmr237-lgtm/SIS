@@ -1,5 +1,8 @@
 import { useState } from 'react';
+import { AcademicYearSelect, useAcademicYear } from '@/lib/academicYear';
+import { EnterMarksDialog } from './EnterMarksDialog';
 import { PaymentStatusDot } from './PaymentStatus';
+import { ZeroMarkDot } from './MarkStatus';
 import { NavigationPage } from '../App';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
@@ -21,6 +24,7 @@ interface ReportCardsProps {
 }
 
 export function ReportCards({ onNavigate }: ReportCardsProps) {
+  const { status: yearStatus } = useAcademicYear();
   const cache = useSisCache();
   // The index of generated cards is cached. Rendering an individual card is
   // not — see the per-card fetches further down, which pull the marks and
@@ -39,6 +43,7 @@ export function ReportCards({ onNavigate }: ReportCardsProps) {
   const classes = classesData ?? [];
   const [searchTerm, setSearchTerm] = useState('');
   const [openCreate, setOpenCreate] = useState(false);
+  const [openEnterMarks, setOpenEnterMarks] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState(() => ({
     studentId: '',
@@ -64,6 +69,11 @@ export function ReportCards({ onNavigate }: ReportCardsProps) {
 
   return (
     <div className="p-4 md:p-8">
+      {/* Rendered at the top level, not inside the header row: a Dialog only
+          portals content when open, but keeping it out of a flex container avoids
+          it ever being treated as a layout child. */}
+      <EnterMarksDialog open={openEnterMarks} onOpenChange={setOpenEnterMarks} />
+
       <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-8">
         <div className="flex-1">
           <h1 className="text-3xl mb-2">Report Cards</h1>
@@ -80,10 +90,13 @@ export function ReportCards({ onNavigate }: ReportCardsProps) {
             <ClipboardList size={20} />
             Manage Tests &amp; Exams
           </Button>
+          {/* Opens a dialog rather than navigating: entering a class's marks is one
+              task, and leaving the page for each subject was the page-hopping this
+              replaces. */}
           <Button
             variant="outline"
             className="flex items-center gap-2"
-            onClick={() => onNavigate?.('enter-marks')}
+            onClick={() => setOpenEnterMarks(true)}
           >
             <PenLine size={20} />
             Enter Marks
@@ -119,7 +132,7 @@ export function ReportCards({ onNavigate }: ReportCardsProps) {
                     <SelectContent>
                       {students.map((student: any) => (
                         <SelectItem key={student.id} value={student.id}>
-                          {student.firstName} {student.lastName}<PaymentStatusDot status={(student as any).paymentStatus} /> - {student.class}
+                          {student.firstName} {student.lastName}<PaymentStatusDot status={(student as any).paymentStatus} /><ZeroMarkDot hasZero={(student as any).hasZeroMark} /> - {student.class}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -127,7 +140,7 @@ export function ReportCards({ onNavigate }: ReportCardsProps) {
                 </div>
                 <div>
                   <Label>Academic Year</Label>
-                  <Input placeholder="2024/2025" value={form.academicYear} onChange={e=>setForm(s=>({...s, academicYear:e.target.value}))} />
+                  <AcademicYearSelect value={form.academicYear} onChange={v=>setForm(s=>({...s, academicYear:v}))} years={yearStatus?.years ?? []} />
                 </div>
                 <div>
                   <Label>Term</Label>

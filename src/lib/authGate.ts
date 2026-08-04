@@ -22,6 +22,15 @@ export function useAuthGate(): AuthGateStatus {
       const userStr = window.localStorage.getItem('user');
       if (userStr) {
         const user = JSON.parse(userStr);
+        // A teacher session is a valid session — it just doesn't belong here.
+        // Checked before anything else because emailVerified and
+        // School[0].onboardingCompleted are admin-account fields that a Staff
+        // actor simply does not carry; reading them first would bounce a
+        // perfectly good teacher into /verify-email or /onboarding.
+        if (user?.actorType === 'teacher') {
+          if (alive) router.replace('/teacher');
+          return;
+        }
         if (user?.emailVerified === false) {
           if (alive) router.replace('/verify-email');
           return;

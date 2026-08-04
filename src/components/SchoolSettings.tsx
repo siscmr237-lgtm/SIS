@@ -10,6 +10,7 @@ import { Settings, Plus, Trash2, Edit, Save, X, Upload, KeyRound, EyeIcon, EyeOf
 import { schoolSettings } from '../data/mockData';
 import { toast } from 'sonner';
 import { api, BASE_URL } from '@/lib/api';
+import { useAcademicYear } from '@/lib/academicYear';
 import { useCachedResource, useSisCache } from '@/lib/SisCache';
 import { RevalidatingBadge, useResourceError } from './ResourceStatus';
 import { compressImageForUpload } from '@/lib/imageResize';
@@ -34,6 +35,17 @@ export function SchoolSettings() {
     revalidating,
     error: settingsError,
   } = useCachedResource<any>('settings', () => api.get('/settings'));
+  // Academic-year state and the manual advance action.
+  const { status: yearStatus, advance: advanceYear } = useAcademicYear();
+  const [confirmAdvanceYear, setConfirmAdvanceYear] = useState(false);
+  const [advancingYear, setAdvancingYear] = useState(false);
+  // Label for the destination year, derived from the active one so the button
+  // says exactly where a click leads.
+  const nextYearLabel = (() => {
+    const start = Number(String(yearStatus?.activeYear || '').slice(0, 4));
+    return Number.isFinite(start) && start > 0 ? `${start + 1}/${start + 2}` : 'the next year';
+  })();
+
   useResourceError(settingsError, 'school settings', settingsData !== null);
 
   // Fee configuration is NOT here any more: fees belong to a class LEVEL and are
@@ -429,16 +441,69 @@ export function SchoolSettings() {
             <Switch checked={settings.autoTermEnabled} onCheckedChange={handleAutoTermToggle} />
           </div>
 
+          {/* The academic year is no longer free text. It is state that moves
+              forward through the manual → nudge → auto flow, so it is shown
+              read-only with an explicit advance action: a typo here would file
+              records under a year that does not exist, and every year-tagged row
+              is matched by exact string. */}
           <div>
             <Label>Academic Year</Label>
-            {isEditingBasic ? (
-              <Input
-                value={formData.academicYear}
-                onChange={(e) => { setFormData(prev => ({ ...prev, academicYear: e.target.value })); setTermFieldsDirty(true); }}
-                placeholder="e.g., 2024/2025"
-              />
-            ) : (
-              <p className="mt-2 p-2 bg-gray-50 rounded">{displayedTerm.academicYear}</p>
+            <p className="mt-2 p-2 bg-gray-50 rounded">
+              {yearStatus?.activeYear ?? displayedTerm.academicYear}
+            </p>
+            {yearStatus && (
+              <div className="mt-2">
+                {confirmAdvanceYear ? (
+                  <div
+                    style={{
+                      padding: '0.75rem 0.875rem', borderRadius: 8,
+                      border: '1px solid #FCD34D', backgroundColor: '#FFFBEB',
+                      color: '#92400E', fontSize: '0.8125rem',
+                    }}
+                  >
+                    <p style={{ fontWeight: 600, marginBottom: 4 }}>
+                      Start the {nextYearLabel} academic year?
+                    </p>
+                    <p style={{ marginBottom: 8 }}>
+                      New marks, fees and other records will be filed under{' '}
+                      <strong>{nextYearLabel}</strong> from now on. Earlier years stay readable and
+                      selectable. Nothing is promoted, graduated or reset.
+                    </p>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      <Button
+                        size="sm"
+                        disabled={advancingYear}
+                        onClick={async () => {
+                          setAdvancingYear(true);
+                          try {
+                            await advanceYear();
+                            toast.success(`Academic year is now ${nextYearLabel}`);
+                            setConfirmAdvanceYear(false);
+                          } catch (e: any) {
+                            toast.error(e?.message || 'Could not advance the academic year.');
+                          } finally {
+                            setAdvancingYear(false);
+                          }
+                        }}
+                      >
+                        {advancingYear ? 'Starting...' : `Yes, start ${nextYearLabel}`}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={advancingYear}
+                        onClick={() => setConfirmAdvanceYear(false)}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <Button variant="outline" size="sm" onClick={() => setConfirmAdvanceYear(true)}>
+                    Start next academic year ({nextYearLabel})
+                  </Button>
+                )}
+              </div>
             )}
           </div>
 
