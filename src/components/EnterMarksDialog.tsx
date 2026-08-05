@@ -96,10 +96,22 @@ export function EnterMarksDialog({
   const [loadingRoster, setLoadingRoster] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Set from the save response — the students the server confirms are still
-  // unmarked for this subject. Cleared whenever the selection changes, since it
-  // describes one subject on one assessment and nothing else.
-  const [missed, setMissed] = useState<MissedStudent[] | null>(null);
+  /**
+   * What the last save reported about students left blank. Cleared whenever the
+   * selection changes, since it describes one subject on one assessment.
+   *
+   * `zeroed` and `pending` are the same students seen at two different stages of
+   * the assessment's life, and only ever one is populated:
+   *   zeroed  — the subject had a mark, so the paper counts as written and the
+   *             blanks became plain zeros at this save.
+   *   pending — the subject had no mark at all, so a blank still means "not
+   *             marked yet" and the term-end sweep is the only thing that will
+   *             convert it.
+   */
+  const [missed, setMissed] = useState<{ zeroed: MissedStudent[]; pending: MissedStudent[] } | null>(null);
+  // Whether this subject has already been graded, so the next save will convert
+  // the remaining blanks. Shown before saving, as a warning rather than a report.
+  const [subjectActivated, setSubjectActivated] = useState(false);
 
   /**
    * Two guards against out-of-order responses, which on this screen are not a
@@ -202,6 +214,7 @@ export function EnterMarksDialog({
       setRoster(rows);
       setTotalMarks(r?.totalMarks ?? null);
       setTermEnded(Boolean(r?.termEnded));
+      setSubjectActivated(Boolean(r?.subjectActivated));
       setMarks(Object.fromEntries(rows.map(s => [s.studentId, s.marksObtained == null ? '' : String(s.marksObtained)])));
       setExempt(Object.fromEntries(rows.filter(s => s.isExempt).map(s => [s.studentId, true])));
     } catch (e: any) {
@@ -244,6 +257,8 @@ export function EnterMarksDialog({
 
   const entered = roster.filter(s => stateOf(s.studentId) === 'MARKED').length;
   const exemptCount = roster.filter(s => stateOf(s.studentId) === 'EXEMPT').length;
+  // Blanks that a save would convert to zeros. Exempt students are not blanks.
+  const blankCount = roster.filter(s => stateOf(s.studentId) === 'UNMARKED').length;
 
   const save = async () => {
     if (saving) return;
@@ -303,9 +318,12 @@ export function EnterMarksDialog({
       if (!moved) {
         await loadRoster();
         // Set AFTER the reload, which clears it — the notice belongs to the save
-        // that just happened, and the server's list is authoritative over the
+        // that just happened, and the server's lists are authoritative over the
         // roster the client happened to be holding.
-        setMissed(Array.isArray(r?.unmarked) ? r.unmarked : []);
+        setMissed({
+          zeroed: Array.isArray(r?.zeroedOnSave) ? r.zeroedOnSave : [],
+          pending: Array.isArray(r?.unmarked) ? r.unmarked : [],
+        });
       }
     } catch (e: any) {
       setError(e?.message || 'Could not save these marks.');
@@ -428,6 +446,17 @@ export function EnterMarksDialog({
                 </p>
               )}
 
+              {/* Said BEFORE saving, not after: the conversion is the kind of
+                  thing a teacher should know is coming while there is still a
+                  chance to fill the blanks in or exempt somebody. */}
+              {!termEnded && !loadingRoster && blankCount > 0 && (
+                <p className="text-sm" style={{ color: '#B45309', marginBottom: '0.5rem' }}>
+                  {subjectActivated
+                    ? `${blankCount} student${blankCount === 1 ? '' : 's'} left blank — saving gives ${blankCount === 1 ? 'them' : 'them'} a 0, because this subject has already been marked.`
+                    : `${blankCount} student${blankCount === 1 ? '' : 's'} left blank — saving any mark here counts the paper as written and gives the rest a 0.`}
+                </p>
+              )}
+
               {/* While a roster is loading, show nothing rather than the previous
                   selection's rows. Switching subject or class re-fetches, and on a
                   slow connection the old rows would sit there for seconds looking
@@ -501,12 +530,10 @@ export function EnterMarksDialog({
             </div>
           )}
 
-          {/* Post-save nudge. Only ever shown after a save, and only for students
-              genuinely left blank — exempt students were excluded on purpose and
-              listing them here would read as an error. Left visible until the
-              selection changes, because it is the one prompt standing between a
-              forgotten student and an automatic zero at term end. */}
-          {missed && missed.length > 0 && (
+          {/* Post-save report. Exempt students never appear in either list — they
+              were excluded on purpose and are not something to chase. Left visible
+              until the selection changes. */}
+          {missed && missed.zeroed.length > 0 && (
             <div
               style={{
                 marginTop: '0.75rem',
@@ -517,20 +544,44 @@ export function EnterMarksDialog({
               }}
             >
               <p className="text-sm" style={{ color: '#E0552E', fontWeight: 500 }}>
-                {missed.length} student{missed.length === 1 ? '' : 's'} still unmarked for this subject
+                {missed.zeroed.length} student{missed.zeroed.length === 1 ? ' was' : 's were'} left unmarked and
+                {missed.zeroed.length === 1 ? ' has' : ' have'} been given 0
               </p>
               <p className="text-sm text-gray-600" style={{ marginTop: '0.25rem' }}>
-                {missed.map(m => `${m.firstName} ${m.lastName}`).join(', ')}
+                {missed.zeroed.map(m => `${m.firstName} ${m.lastName}`).join(', ')}
               </p>
               <p className="text-sm text-gray-500" style={{ marginTop: '0.25rem' }}>
-                {termEnded
-                  ? 'This term has already ended, so any student left blank has been given a 0.'
-                  : 'Enter their marks before the term ends — anyone still blank then is given a 0.'}
+                This subject has been marked, so a blank now counts as a score of zero. Enter a mark
+                to correct any of them, or set a student to Exempt to take them out of the scoring.
               </p>
             </div>
           )}
 
-          {missed && missed.length === 0 && (
+          {/* Nothing has been graded yet, so a blank is still genuinely pending. */}
+          {missed && missed.zeroed.length === 0 && missed.pending.length > 0 && (
+            <div
+              style={{
+                marginTop: '0.75rem',
+                border: '1px solid #E5E7EB',
+                borderRadius: 6,
+                padding: '0.5rem 0.75rem',
+              }}
+            >
+              <p className="text-sm" style={{ fontWeight: 500 }}>
+                {missed.pending.length} student{missed.pending.length === 1 ? '' : 's'} still unmarked for this subject
+              </p>
+              <p className="text-sm text-gray-600" style={{ marginTop: '0.25rem' }}>
+                {missed.pending.map(m => `${m.firstName} ${m.lastName}`).join(', ')}
+              </p>
+              <p className="text-sm text-gray-500" style={{ marginTop: '0.25rem' }}>
+                {termEnded
+                  ? 'This term has already ended, so any student left blank has been given a 0.'
+                  : 'Nothing has been marked for this subject yet, so these are still pending. The first mark entered turns any remaining blanks into a 0.'}
+              </p>
+            </div>
+          )}
+
+          {missed && missed.zeroed.length === 0 && missed.pending.length === 0 && (
             <p className="text-sm" style={{ color: '#05603D', marginTop: '0.75rem' }}>
               Every student in this class now has a mark or an exemption for this subject.
             </p>

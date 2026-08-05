@@ -6,7 +6,10 @@ import { api } from '../lib/api';
 import { useSisCache } from '../lib/SisCache';
 import { useSchoolClassNames } from '../lib/classes';
 import { PaymentStatusDot, useStudentPaymentStatuses } from './PaymentStatus';
-import { ZeroMarkDot } from './MarkStatus';
+import { ZeroMarkDot, ZERO_MARK_COLOR } from './MarkStatus';
+import { StudentFlagNotices } from './StudentFlagNotices';
+import { AcademicYearSelect, useAcademicYear } from '../lib/academicYear';
+import { formatTermLabel } from '../utils/academicTerm';
 import { StudentFeeOverrideDialog } from './StudentFeeOverrideDialog';
 import { NavigationPage } from '../App';
 import { Student } from '../types';
@@ -57,11 +60,11 @@ interface StudentProfileProps {
   onNavigate: (page: NavigationPage) => void;
 }
 
-type Tab = 'general' | 'finance' | 'attendance';
+type Tab = 'general' | 'finance' | 'marks' | 'attendance';
 
 const PAYMENT_METHODS = ['Cash', 'Bank Transfer', 'Mobile Money', 'Cheque'];
 
-const VALID_TABS: Tab[] = ['general', 'finance', 'attendance'];
+const VALID_TABS: Tab[] = ['general', 'finance', 'marks', 'attendance'];
 
 export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
   const router = useRouter();
@@ -86,6 +89,12 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
   // the roster lookup is a fallback for any caller that passes a leaner object.
   const paymentStatuses = useStudentPaymentStatuses();
   const feeStatus = (student as any).paymentStatus ?? paymentStatuses.get(String(student.id));
+
+  // Both come from GET /students/:id, which is what this page always loads.
+  // zeroMarkSubjects is detail-only — the list endpoint returns just the boolean,
+  // so a caller passing a lean student gets no banner rather than a wrong one.
+  const hasZeroMark = (student as any).hasZeroMark === true;
+  const zeroMarkSubjects: string[] | undefined = (student as any).zeroMarkSubjects;
 
   // Editable info — local state so updates appear immediately after save
   const [displayInfo, setDisplayInfo] = useState({
@@ -186,6 +195,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
   const tabs: { id: Tab; label: string }[] = [
     { id: 'general', label: 'General Info' },
     { id: 'finance', label: 'Finance' },
+    { id: 'marks', label: 'Marks' },
     { id: 'attendance', label: 'Attendance' },
   ];
 
@@ -313,6 +323,42 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
     init();
     return () => { cancelled = true; };
   }, [activeTab, student.id]);
+
+  /**
+   * The Marks tab. Loaded only when opened, and only for the year/term selected
+   * here — a student's whole mark history across every year is not what somebody
+   * clicking through from a "has a zero" banner is looking for.
+   *
+   * Everything shown is computed server-side by /test-exams/student-breakdown,
+   * including which assessments count towards the totals. Recomputing any of it
+   * here would mean a second implementation of the mark-state rules.
+   */
+  const [marksYear, setMarksYear] = useState('');
+  const [marksTerm, setMarksTerm] = useState<string>('Term 1');
+  const [breakdown, setBreakdown] = useState<any[] | null>(null);
+  const [breakdownLoading, setBreakdownLoading] = useState(false);
+  const [breakdownError, setBreakdownError] = useState<string | null>(null);
+  const { status: yearStatus } = useAcademicYear();
+
+  useEffect(() => {
+    if (!marksYear && yearStatus?.activeYear) setMarksYear(yearStatus.activeYear);
+  }, [yearStatus, marksYear]);
+
+  useEffect(() => {
+    if (activeTab !== 'marks' || !marksYear || !marksTerm) return;
+    let cancelled = false;
+    setBreakdownLoading(true);
+    setBreakdownError(null);
+    api
+      .get(
+        `/test-exams/student-breakdown?studentId=${encodeURIComponent(student.id)}` +
+          `&term=${encodeURIComponent(marksTerm)}&academicYear=${encodeURIComponent(marksYear)}`,
+      )
+      .then((r: any) => { if (!cancelled) setBreakdown(r?.subjects ?? []); })
+      .catch((e: any) => { if (!cancelled) { setBreakdown(null); setBreakdownError(e?.message || 'Could not load marks.'); } })
+      .finally(() => { if (!cancelled) setBreakdownLoading(false); });
+    return () => { cancelled = true; };
+  }, [activeTab, student.id, marksYear, marksTerm]);
 
   const handleChargeSubmit = async () => {
     setSubmitError(null);
@@ -471,7 +517,10 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
       </button>
 
       <div className="mb-6">
-        <h1 className="text-3xl">{displayInfo.firstName} {displayInfo.lastName}<PaymentStatusDot status={feeStatus} /><ZeroMarkDot hasZero={(displayInfo as any).hasZeroMark} /></h1>
+        {/* hasZeroMark comes off the STUDENT, not displayInfo — displayInfo holds
+            only the editable identity fields, so reading it here left the dot
+            permanently hidden on this page. */}
+        <h1 className="text-3xl">{displayInfo.firstName} {displayInfo.lastName}<PaymentStatusDot status={feeStatus} /><ZeroMarkDot hasZero={hasZeroMark} /></h1>
         <p className="text-gray-500 mt-1">
           {student.id} · {displayInfo.class}
           {feesOverridden && (
@@ -491,6 +540,15 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
           )}
         </p>
       </div>
+
+      {/* Above the tabs, not inside one: these are the reasons somebody would
+          open this page, so they must be visible whichever tab is showing. */}
+      <StudentFlagNotices
+        paymentStatus={feeStatus}
+        zeroMarkSubjects={zeroMarkSubjects}
+        onViewFinance={() => setActiveTab('finance')}
+        onViewMarks={() => setActiveTab('marks')}
+      />
 
       <div className="flex gap-1 border-b mb-6">
         {tabs.map((tab) => (
@@ -1431,6 +1489,86 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
             </DialogContent>
           </Dialog>
         </div>
+      )}
+
+      {activeTab === 'marks' && (
+        <Card className="p-6">
+          <div className="flex items-end gap-3" style={{ marginBottom: '1rem', flexWrap: 'wrap' }}>
+            <div style={{ minWidth: 160 }}>
+              <Label>Academic Year</Label>
+              <AcademicYearSelect
+                value={marksYear}
+                onChange={setMarksYear}
+                years={yearStatus?.years ?? []}
+              />
+            </div>
+            <div style={{ minWidth: 160 }}>
+              <Label>Term</Label>
+              <Select value={marksTerm} onValueChange={setMarksTerm}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {['Term 1', 'Term 2', 'Term 3'].map(t => (
+                    <SelectItem key={t} value={t}>{formatTermLabel(t)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {breakdownError && <p className="text-sm" style={{ color: '#B91C1C' }}>{breakdownError}</p>}
+          {breakdownLoading ? (
+            <p className="text-sm text-gray-500">Loading marks...</p>
+          ) : !breakdown || breakdown.length === 0 ? (
+            <p className="text-sm text-gray-500">
+              No tests or exams recorded for {marksYear} {formatTermLabel(marksTerm)}.
+            </p>
+          ) : (
+            <div className="space-y-4">
+              {breakdown.map((subject: any) => (
+                <div key={subject.subjectId} style={{ border: '1px solid #E5E7EB', borderRadius: 6, padding: '0.75rem' }}>
+                  <div className="flex items-center justify-between" style={{ marginBottom: '0.5rem' }}>
+                    <p style={{ fontWeight: 600 }}>{subject.subjectName}</p>
+                    {/* Only the counted assessments make up the total; exempt and
+                        still-unmarked ones are shown in the rows but contribute to
+                        neither side, so "0/0" would be a lie about a real score. */}
+                    <p className="text-sm text-gray-600">
+                      {subject.counted > 0
+                        ? `${subject.marksObtained} / ${subject.totalMarks}`
+                        : 'Not yet marked'}
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    {(subject.testExams ?? []).map((t: any) => (
+                      <div key={t.testExamId} className="flex items-center gap-2">
+                        <span className="text-sm" style={{ flex: 1 }}>
+                          {t.name}
+                          <span className="text-sm text-gray-400"> · {t.type === 'EXAM' ? 'Exam' : 'Test'}</span>
+                        </span>
+                        {t.state === 'EXEMPT' ? (
+                          <span className="text-sm" style={{ color: '#05603D', fontWeight: 500 }}>Exempt</span>
+                        ) : t.state === 'UNMARKED' ? (
+                          <span className="text-sm text-gray-400">Not marked</span>
+                        ) : (
+                          <span
+                            className="text-sm"
+                            style={{
+                              fontWeight: 500,
+                              // A zero is the thing the banner sent them here to
+                              // find, so it is the one value worth colouring.
+                              color: t.marksObtained === 0 ? ZERO_MARK_COLOR : undefined,
+                            }}
+                          >
+                            {t.marksObtained} / {t.totalMarks}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
       )}
 
       {activeTab === 'attendance' && (
