@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { AcademicYearSelect, useAcademicYear } from '@/lib/academicYear';
 import { EnterMarksDialog } from './EnterMarksDialog';
+import { ManageTestsExamsDialog } from './ManageTestsExamsDialog';
 import { PaymentStatusDot } from './PaymentStatus';
 import { ZeroMarkDot } from './MarkStatus';
 import { NavigationPage } from '../App';
@@ -44,6 +45,7 @@ export function ReportCards({ onNavigate }: ReportCardsProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [openCreate, setOpenCreate] = useState(false);
   const [openEnterMarks, setOpenEnterMarks] = useState(false);
+  const [openManageTests, setOpenManageTests] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState(() => ({
     studentId: '',
@@ -82,14 +84,22 @@ export function ReportCards({ onNavigate }: ReportCardsProps) {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {/* A dialog rather than a page: setting what each subject is marked out
+              of is a short, self-contained task, and leaving Report Cards to do it
+              lost the context you were doing it for. */}
           <Button
             variant="outline"
             className="flex items-center gap-2"
-            onClick={() => onNavigate?.('tests-exams')}
+            onClick={() => setOpenManageTests(true)}
           >
             <ClipboardList size={20} />
             Manage Tests &amp; Exams
           </Button>
+          <ManageTestsExamsDialog
+            open={openManageTests}
+            onOpenChange={setOpenManageTests}
+            academicYear={form.academicYear}
+          />
           {/* Opens a dialog rather than navigating: entering a class's marks is one
               task, and leaving the page for each subject was the page-hopping this
               replaces. */}
