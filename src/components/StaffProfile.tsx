@@ -77,6 +77,41 @@ function formatDate(value: string | undefined) {
   }
 }
 
+/**
+ * Teacher sign-in status, derived entirely from two server fields plus one
+ * session-only fact.
+ *
+ * `invited` cannot be recovered from the API: the invite token is stateless by
+ * design (sis-backend/src/utils/teacherInviteToken.js — "a token is considered
+ * already-used once staff.passwordHash is no longer null"), and no column
+ * records that one was sent. So a teacher who has been invited but has not yet
+ * chosen a password is indistinguishable from one never invited: both are
+ * hasLogin === false. We show `invited` only for an invite sent in THIS session,
+ * which is what makes the Resend button reachable; after a reload it reads as
+ * "Not Invited" again. Persisting it needs a backend field.
+ */
+type AccessStatus = 'not-invited' | 'invited' | 'active' | 'deactivated';
+
+/**
+ * Colours are inline rather than utility classes because src/index.css is a
+ * pre-compiled Tailwind artifact with no build step behind it — it carries only
+ * 24 colour utilities, none of them these. The same reason PaymentStatus.tsx and
+ * MarkStatus.tsx style their indicators inline. All four are brand palette.
+ */
+const ACCESS_BADGE: Record<AccessStatus, { label: string; background: string; color: string }> = {
+  'not-invited': { label: 'Not Invited', background: '#F3F4F6', color: '#6B7280' },
+  invited: { label: 'Invited', background: '#e6c482', color: '#0f2345' },
+  active: { label: 'Active', background: '#05603d', color: '#FFFFFF' },
+  deactivated: { label: 'Deactivated', background: '#e0552e', color: '#FFFFFF' },
+};
+
+const ACCESS_DESCRIPTION: Record<AccessStatus, string> = {
+  'not-invited': 'This teacher has not been invited yet and cannot sign in.',
+  invited: 'Invitation sent. The link expires in 72 hours; sign-in starts once they set a password.',
+  active: 'This teacher can sign in to their own portal.',
+  deactivated: 'Sign-in is disabled for this teacher. Their record and history are unaffected.',
+};
+
 function Field({ label, value }: { label: string; value: string | undefined }) {
   return (
     <div>
@@ -116,6 +151,17 @@ export function StaffProfile({ staff, onNavigate }: StaffProfileProps) {
     isTeacher: staff.isTeacher,
   });
   const [showEdit, setShowEdit] = useState(false);
+
+  // Teacher sign-in access. Held locally so the badge and buttons update the
+  // moment an action succeeds, without reloading the page.
+  const [access, setAccess] = useState({
+    hasLogin: staff.hasLogin === true,
+    isActive: staff.isActive !== false,
+  });
+  const [invitedThisSession, setInvitedThisSession] = useState(false);
+  const [accessBusy, setAccessBusy] = useState(false);
+  const [accessError, setAccessError] = useState<string | null>(null);
+  const [accessNotice, setAccessNotice] = useState<string | null>(null);
 
   const [ledgerData, setLedgerData] = useState<LedgerData | null>(null);
   const [ledgerLoading, setLedgerLoading] = useState(false);
@@ -225,6 +271,74 @@ export function StaffProfile({ staff, onNavigate }: StaffProfileProps) {
     }
   };
 
+  /**
+   * Sends (or re-sends) the activation email. The admin never sees or chooses a
+   * password — the backend only emails a link.
+   *
+   * Re-sending is safe only while no password is set: POST /staff/:id/invite
+   * answers 409 ALREADY_HAS_LOGIN once one is, which is why no resend is offered
+   * in the `active` state.
+   */
+  const handleInvite = async () => {
+    setAccessBusy(true);
+    setAccessError(null);
+    setAccessNotice(null);
+    try {
+      const res = await api.post(`/staff/${encodeURIComponent(staff.code)}/invite`, {});
+      setInvitedThisSession(true);
+      setAccessNotice(res?.message || `Invitation sent to ${displayInfo.email}.`);
+      cache.invalidateOn('staff:write');
+      // Re-read rather than assuming: an invite does not itself change hasLogin
+      // (no password yet), but this keeps the badge honest if anything else has
+      // moved, and is what refreshes the state without a page reload.
+      try {
+        const fresh = await api.get(`/staff/${encodeURIComponent(staff.code)}`);
+        setAccess({ hasLogin: fresh?.hasLogin === true, isActive: fresh?.isActive !== false });
+      } catch {
+        // A failed refresh must not look like a failed invite — the email went.
+      }
+    } catch (e: any) {
+      setAccessError(e?.message || 'Failed to send the invitation.');
+    } finally {
+      setAccessBusy(false);
+    }
+  };
+
+  /**
+   * Turns sign-in on or off. Revocation bites immediately — the backend re-reads
+   * isActive on every authenticated request — so a teacher who is deactivated
+   * while logged in is refused on their next call rather than at next login.
+   *
+   * The endpoint returns the full publicStaff() record, so the badge refreshes
+   * straight from the response with no follow-up read.
+   */
+  const handleAccessToggle = async (nextIsActive: boolean) => {
+    setAccessBusy(true);
+    setAccessError(null);
+    setAccessNotice(null);
+    try {
+      const updated = await api.patch(`/staff/${encodeURIComponent(staff.code)}/access`, {
+        isActive: nextIsActive,
+      });
+      setAccess({
+        hasLogin: updated?.hasLogin === true,
+        isActive: updated?.isActive !== false,
+      });
+      setAccessNotice(
+        nextIsActive
+          ? 'Sign-in re-enabled for this teacher.'
+          : 'Sign-in disabled. Their record, work history and ledger are unaffected.',
+      );
+      cache.invalidateOn('staff:write');
+    } catch (e: any) {
+      setAccessError(
+        e?.message || (nextIsActive ? 'Failed to reactivate access.' : 'Failed to deactivate access.'),
+      );
+    } finally {
+      setAccessBusy(false);
+    }
+  };
+
   const handleDownloadStatement = async () => {
     if (!ledgerData) return;
     let schoolInfo: { name: string; logo?: string; motto?: string; academicYear?: string } | undefined;
@@ -237,6 +351,22 @@ export function StaffProfile({ staff, onNavigate }: StaffProfileProps) {
     } catch {}
     await generateStaffFinancialSheet(staff, ledgerData, schoolInfo);
   };
+
+  // Deactivated first: a revoked teacher cannot sign in whether or not they ever
+  // set a password, so that fact outranks the rest.
+  const accessStatus: AccessStatus = !access.isActive
+    ? 'deactivated'
+    : access.hasLogin
+      ? 'active'
+      : invitedThisSession
+        ? 'invited'
+        : 'not-invited';
+  const accessBadge = ACCESS_BADGE[accessStatus];
+  // Only offered while no password exists — see handleInvite on the 409.
+  const canInvite = accessStatus === 'not-invited' || accessStatus === 'invited';
+  // An email address is what the invitation is sent TO, so without one there is
+  // nothing this panel can do.
+  const showTeacherAccess = displayInfo.isTeacher && Boolean(displayInfo.email);
 
   return (
     <div className="p-4 md:p-8">
@@ -303,6 +433,74 @@ export function StaffProfile({ staff, onNavigate }: StaffProfileProps) {
               setShowEdit(false);
             }}
           />
+        </Card>
+      )}
+
+      {activeTab === 'general' && showTeacherAccess && (
+        <Card className="p-6 mt-4">
+          <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
+            <div>
+              <h2 className="text-base font-medium">Teacher Access</h2>
+              <p className="text-xs text-gray-500 mt-1">
+                Lets {displayInfo.firstName} sign in to the teacher portal.
+              </p>
+            </div>
+            <span
+              className="inline-flex items-center w-fit whitespace-nowrap shrink-0 rounded-md px-2 py-1 text-xs font-medium"
+              style={{ background: accessBadge.background, color: accessBadge.color }}
+            >
+              {accessBadge.label}
+            </span>
+          </div>
+
+          <p className="text-sm text-gray-600">{ACCESS_DESCRIPTION[accessStatus]}</p>
+
+          {/* The three action states are mutually exclusive, so one shared busy
+              flag is enough to guard whichever button is on screen. */}
+          {canInvite && (
+            <div className="flex items-center gap-3 flex-wrap mt-4">
+              <Button variant="outline" size="sm" onClick={handleInvite} disabled={accessBusy}>
+                {accessBusy
+                  ? (accessStatus === 'invited' ? 'Resending…' : 'Sending…')
+                  : (accessStatus === 'invited' ? 'Resend Invite' : 'Invite')}
+              </Button>
+              <span className="text-xs text-gray-400">{displayInfo.email}</span>
+            </div>
+          )}
+
+          {accessStatus === 'active' && (
+            <div className="flex items-center gap-3 flex-wrap mt-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleAccessToggle(false)}
+                disabled={accessBusy}
+              >
+                {accessBusy ? 'Deactivating…' : 'Deactivate'}
+              </Button>
+              <span className="text-xs text-gray-400">Blocks sign-in without deleting anything.</span>
+            </div>
+          )}
+
+          {accessStatus === 'deactivated' && (
+            <div className="flex items-center gap-3 flex-wrap mt-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleAccessToggle(true)}
+                disabled={accessBusy}
+              >
+                {accessBusy ? 'Reactivating…' : 'Reactivate'}
+              </Button>
+            </div>
+          )}
+
+          {accessNotice && (
+            <p className="text-xs mt-2" style={{ color: '#05603d' }}>{accessNotice}</p>
+          )}
+          {accessError && (
+            <p className="text-xs mt-2" style={{ color: '#e0552e' }}>{accessError}</p>
+          )}
         </Card>
       )}
 

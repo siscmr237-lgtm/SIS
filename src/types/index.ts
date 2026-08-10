@@ -28,6 +28,20 @@ export interface Staff {
   hireDate: string;
   salary: number;
   isTeacher: boolean;
+  /**
+   * Whether this staff member has a password set, i.e. can actually sign in.
+   * Derived server-side by publicStaff() in sis-backend/src/routes/staff.js,
+   * which strips the hash itself and returns only this boolean — the hash must
+   * never reach the browser. Optional because the mock fixtures predate it.
+   */
+  hasLogin?: boolean;
+  /**
+   * The admin's revoke switch: false disables sign-in without deleting the
+   * record. Read as `=== false` rather than `!isActive`, matching the backend
+   * (see loadTeacherActor in sis-backend/src/auth.js), so a missing value means
+   * active rather than revoked.
+   */
+  isActive?: boolean;
 }
 
 export interface Expense {
