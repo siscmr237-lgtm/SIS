@@ -51,8 +51,9 @@ function Banner({
   background: string;
   title: string;
   detail: string;
-  actionLabel: string;
-  onAction: () => void;
+  /** Omitted when the banner already sits on the screen it would send you to. */
+  actionLabel?: string;
+  onAction?: () => void;
 }) {
   return (
     <div
@@ -74,9 +75,11 @@ function Banner({
         <p className="text-sm" style={{ color, fontWeight: 600 }}>{title}</p>
         <p className="text-sm text-gray-600" style={{ marginTop: '0.25rem' }}>{detail}</p>
       </div>
-      <Button variant="outline" onClick={onAction} style={{ borderColor: color, color }}>
-        {actionLabel}
-      </Button>
+      {actionLabel && onAction && (
+        <Button variant="outline" onClick={onAction} style={{ borderColor: color, color }}>
+          {actionLabel}
+        </Button>
+      )}
     </div>
   );
 }
@@ -86,33 +89,46 @@ export function StudentFlagNotices({
   zeroMarkSubjects,
   onViewFinance,
   onViewMarks,
+  show = 'all',
 }: {
   paymentStatus: unknown;
   /** Subject names the student holds a zero in — one combined banner, not one each. */
   zeroMarkSubjects: string[] | undefined;
   onViewFinance: () => void;
   onViewMarks: () => void;
+  /**
+   * Which banners this instance renders. The fee banner lives at the BOTTOM of
+   * the Finance tab rather than above the tabs — at the top it crowded out the
+   * page it was describing — while the zero-mark banner stays up top where it
+   * still has somewhere to send you. Hence two instances of this component
+   * rather than one.
+   */
+  show?: 'all' | 'fees' | 'marks';
 }) {
   const fee = typeof paymentStatus === 'string' ? FEE_NOTICES[paymentStatus as PaymentStatus] : undefined;
   const subjects = zeroMarkSubjects ?? [];
+  const wantFee = show === 'all' || show === 'fees';
+  const wantMarks = show === 'all' || show === 'marks';
 
   // Nothing actionable: render nothing at all, not an empty container, so the
-  // page has no unexplained gap above the tabs.
-  if (!fee && !subjects.length) return null;
+  // page has no unexplained gap.
+  if (!(wantFee && fee) && !(wantMarks && subjects.length)) return null;
 
   return (
     <div style={{ marginBottom: '0.5rem' }}>
-      {fee && (
+      {wantFee && fee && (
         <Banner
           color={PAYMENT_STATUS_COLORS[paymentStatus as PaymentStatus]}
           background="#FEF7F5"
           title={fee.title}
           detail={fee.detail}
-          actionLabel="View fees"
-          onAction={onViewFinance}
+          // No "View fees" button when this is already sitting on the Finance
+          // tab — it would only scroll you to where you are.
+          actionLabel={show === 'fees' ? undefined : 'View fees'}
+          onAction={show === 'fees' ? undefined : onViewFinance}
         />
       )}
-      {subjects.length > 0 && (
+      {wantMarks && subjects.length > 0 && (
         <Banner
           color={ZERO_MARK_COLOR}
           background="#FEF2F2"

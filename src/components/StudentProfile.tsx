@@ -1,6 +1,6 @@
 import { ArrowLeft, Edit, FileText, MoreHorizontal, Plus, Trash2, X } from 'lucide-react';
 import { generateFinancialSheet } from '../utils/pdfGenerator';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { api } from '../lib/api';
 import { useSisCache } from '../lib/SisCache';
@@ -36,6 +36,14 @@ interface LedgerEntry {
   entryDate: string;
   paymentMethod?: string | null;
   category?: { name: string } | null;
+  /**
+   * True on the one charge that bills a fee from the student's fee structure —
+   * Tuition, Registration, Books and so on. The server has always sent it (the
+   * ledger query selects no subset); it simply was not modelled here before.
+   * These lines are hidden from the transaction table and shown in the Total
+   * Charged breakdown instead.
+   */
+  isFeeStructureCharge?: boolean;
 }
 
 interface LedgerData {
@@ -154,6 +162,15 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
   // Seeded from the record we were handed and refreshed after an override edit.
   const [feesOverridden, setFeesOverridden] = useState<boolean>(Boolean((student as any).feesOverridden));
   const [showPayment, setShowPayment] = useState(false);
+  // The Total Charged breakdown: the only place the fee-structure charges are
+  // listed, since the transaction table now hides them.
+  const [showChargeBreakdown, setShowChargeBreakdown] = useState(false);
+  const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
+  const [entryEditForm, setEntryEditForm] = useState({ description: '', amount: '' });
+  const [entryBusy, setEntryBusy] = useState(false);
+  const [entryError, setEntryError] = useState<string | null>(null);
+  // The "Custom fees" explanation, which used to be a permanent banner.
+  const [feeInfoOpen, setFeeInfoOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [showActionsMenu, setShowActionsMenu] = useState(false);
@@ -360,6 +377,91 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
     return () => { cancelled = true; };
   }, [activeTab, student.id, marksYear, marksTerm]);
 
+  // Fee-structure charges are hidden from the transaction table: they describe
+  // what the student is billed rather than activity on the account, and a dozen
+  // of them buries the one-off charges and payments somebody opened this tab to
+  // see. They are still charged, still counted in Total Charged, and still
+  // listed in full behind that card — this is a display filter and nothing more.
+  const visibleEntries = useMemo(
+    () => (ledgerData?.entries ?? []).filter((e) => e.type === 'PAYMENT' || !e.isFeeStructureCharge),
+    [ledgerData],
+  );
+  const feeStructureCharges = useMemo(
+    () => (ledgerData?.entries ?? []).filter((e) => e.type === 'CHARGE' && e.isFeeStructureCharge),
+    [ledgerData],
+  );
+  const oneOffCharges = useMemo(
+    () => (ledgerData?.entries ?? []).filter((e) => e.type === 'CHARGE' && !e.isFeeStructureCharge),
+    [ledgerData],
+  );
+
+  // Surfaces the custom-fee explanation once per page load, then gets out of the
+  // way. It replaced a permanent banner: the fact matters when you arrive at the
+  // page, not on every subsequent glance, and it stays reachable by hovering the
+  // badge.
+  useEffect(() => {
+    if (!feesOverridden) return;
+    setFeeInfoOpen(true);
+    const timer = setTimeout(() => setFeeInfoOpen(false), 7000);
+    return () => clearTimeout(timer);
+  }, [feesOverridden]);
+
+  const beginEditEntry = (entry: LedgerEntry) => {
+    setEntryError(null);
+    setEditingEntryId(entry.id);
+    setEntryEditForm({ description: entry.description, amount: String(entry.amount) });
+  };
+
+  const handleEntrySave = async (entry: LedgerEntry) => {
+    const amt = Number(entryEditForm.amount);
+    if (!Number.isFinite(amt) || amt <= 0) {
+      setEntryError('Enter an amount greater than zero.');
+      return;
+    }
+    if (!entryEditForm.description.trim()) {
+      setEntryError('Give the charge a description.');
+      return;
+    }
+    setEntryBusy(true);
+    setEntryError(null);
+    try {
+      await api.patch(`/ledger/${encodeURIComponent(entry.id)}`, {
+        description: entryEditForm.description.trim(),
+        amount: Math.round(amt),
+      });
+      cache.invalidateOn('ledger:write');
+      setEditingEntryId(null);
+      await refreshLedger();
+    } catch (e: any) {
+      setEntryError(e?.message || 'Failed to update the charge.');
+    } finally {
+      setEntryBusy(false);
+    }
+  };
+
+  const handleEntryDelete = async (entry: LedgerEntry) => {
+    if (!window.confirm(`Remove "${entry.description}" (${entry.amount.toLocaleString()} FCFA)? This cannot be undone.`)) return;
+    setEntryBusy(true);
+    setEntryError(null);
+    try {
+      await api.delete(`/ledger/${encodeURIComponent(entry.id)}`);
+      cache.invalidateOn('ledger:write');
+      await refreshLedger();
+    } catch (e: any) {
+      setEntryError(e?.message || 'Failed to remove the charge.');
+    } finally {
+      setEntryBusy(false);
+    }
+  };
+
+  // Fee-structure amounts have exactly one editor — the override dialog — so the
+  // breakdown routes there rather than offering a second way to change them.
+  const editFeeStructure = () => {
+    setShowChargeBreakdown(false);
+    setActiveTab('finance');
+    setShowFeeOverride(true);
+  };
+
   const handleChargeSubmit = async () => {
     setSubmitError(null);
     const amt = Number(chargeForm.amount);
@@ -526,24 +628,75 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
           {feesOverridden && (
             <>
               {' · '}
+              {/* The explanation lives here now rather than in a permanent banner
+                  on the Finance tab. It shows itself once on load, fades, and
+                  comes back on hover — everything is a <span> because this sits
+                  inside a <p>, where a <div> would be invalid. */}
               <span
-                title="This student is billed from their own fee structure, not their class level's"
-                style={{
-                  color: '#5B21B6', backgroundColor: '#F5F3FF',
-                  border: '1px solid #C4B5FD', borderRadius: 999,
-                  padding: '1px 8px', fontSize: '0.75rem', fontWeight: 500,
-                }}
+                style={{ position: 'relative', display: 'inline-block' }}
+                onMouseEnter={() => setFeeInfoOpen(true)}
+                onMouseLeave={() => setFeeInfoOpen(false)}
               >
-                Custom fees
+                <span
+                  role="button"
+                  tabIndex={0}
+                  aria-describedby="custom-fees-info"
+                  onFocus={() => setFeeInfoOpen(true)}
+                  onBlur={() => setFeeInfoOpen(false)}
+                  onClick={() => setFeeInfoOpen((v) => !v)}
+                  style={{
+                    color: '#5B21B6', backgroundColor: '#F5F3FF',
+                    border: '1px solid #C4B5FD', borderRadius: 999,
+                    padding: '1px 8px', fontSize: '0.75rem', fontWeight: 500,
+                    cursor: 'help',
+                  }}
+                >
+                  Custom fees
+                </span>
+                <span
+                  id="custom-fees-info"
+                  role="tooltip"
+                  style={{
+                    position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 30,
+                    display: 'block', width: 300, padding: '0.7rem 0.8rem',
+                    borderRadius: 8, border: '1px solid #C4B5FD',
+                    backgroundColor: '#F5F3FF', color: '#5B21B6',
+                    fontSize: '0.8125rem', lineHeight: 1.45, fontWeight: 400,
+                    boxShadow: '0 6px 18px rgba(0,0,0,0.10)',
+                    // Fades rather than unmounting, so the auto-show on load and
+                    // the hover use one code path and neither jumps the layout.
+                    opacity: feeInfoOpen ? 1 : 0,
+                    visibility: feeInfoOpen ? 'visible' : 'hidden',
+                    transition: 'opacity 200ms ease, visibility 200ms ease',
+                    pointerEvents: feeInfoOpen ? 'auto' : 'none',
+                    textAlign: 'left',
+                    whiteSpace: 'normal',
+                  }}
+                >
+                  <strong>Custom fee structure.</strong>{' '}
+                  {displayInfo.firstName} is billed from their own fees, not the standard{' '}
+                  {(student as any).classLevel || displayInfo.class} fees, and class-level fee
+                  changes do not apply to them automatically.{' '}
+                  <button
+                    type="button"
+                    onClick={editFeeStructure}
+                    className="hover:underline"
+                    style={{ color: '#5B21B6', fontWeight: 600, textDecoration: 'underline' }}
+                  >
+                    Review or remove
+                  </button>
+                </span>
               </span>
             </>
           )}
         </p>
       </div>
 
-      {/* Above the tabs, not inside one: these are the reasons somebody would
-          open this page, so they must be visible whichever tab is showing. */}
+      {/* Only the marks flag sits above the tabs now. The payment notice moved to
+          the bottom of the Finance tab: it was crowding the top of the page, and
+          the tab it points at is where you can act on it anyway. */}
       <StudentFlagNotices
+        show="marks"
         paymentStatus={feeStatus}
         zeroMarkSubjects={zeroMarkSubjects}
         onViewFinance={() => setActiveTab('finance')}
@@ -1160,33 +1313,9 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
             </Button>
           </div>
 
-          {/* Makes it unmistakable that this student is not on standard class
-              fees, so nobody reads their balance against the wrong structure. */}
-          {feesOverridden && (
-            <div
-              style={{
-                padding: '0.75rem 0.875rem',
-                borderRadius: 8,
-                border: '1px solid #C4B5FD',
-                backgroundColor: '#F5F3FF',
-                color: '#5B21B6',
-                fontSize: '0.8125rem',
-              }}
-            >
-              <strong>Custom fee structure.</strong>{' '}
-              {displayInfo.firstName} is billed from their own fees, not the standard{' '}
-              {(student as any).classLevel || displayInfo.class} fees, and class-level fee changes
-              do not apply to them automatically.{' '}
-              <button
-                type="button"
-                onClick={() => setShowFeeOverride(true)}
-                className="hover:underline"
-                style={{ color: '#5B21B6', fontWeight: 600, textDecoration: 'underline' }}
-              >
-                Review or remove
-              </button>
-            </div>
-          )}
+          {/* The standalone "Custom fee structure" banner used to sit here. It is
+              now a popover on the "Custom fees" badge beside the student's class,
+              which shows itself once on load and then stays out of the way. */}
 
           {ledgerLoading && <Card className="p-6 text-gray-500">Loading...</Card>}
           {ledgerError && (
@@ -1201,11 +1330,23 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
             <>
               {/* Summary */}
               <div className="grid grid-cols-3 gap-2 md:gap-4">
+                {/* Clickable because the transaction table no longer lists the
+                    fee-structure charges — this card is where the full picture
+                    lives. The label and figure are untouched; only the wrapper
+                    is new. */}
                 <Card className="p-2 md:p-4">
-                  <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Total Charged</p>
-                  <p className="text-xs md:text-xl font-medium text-gray-900">
-                    {ledgerData.totalCharged.toLocaleString()} FCFA
-                  </p>
+                  <button
+                    type="button"
+                    onClick={() => { setEntryError(null); setEditingEntryId(null); setShowChargeBreakdown(true); }}
+                    className="w-full text-left"
+                    title="See every charge, including fees"
+                    style={{ cursor: 'pointer', background: 'none', border: 0, padding: 0 }}
+                  >
+                    <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Total Charged</p>
+                    <p className="text-xs md:text-xl font-medium text-gray-900">
+                      {ledgerData.totalCharged.toLocaleString()} FCFA
+                    </p>
+                  </button>
                 </Card>
                 <Card className="p-2 md:p-4">
                   <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Total Paid</p>
@@ -1223,8 +1364,12 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
 
               {/* Ledger table */}
               <Card>
-                {ledgerData.entries.length === 0 ? (
-                  <p className="p-6 text-gray-500">No financial records yet.</p>
+                {visibleEntries.length === 0 ? (
+                  <p className="p-6 text-gray-500">
+                    {ledgerData.entries.length === 0
+                      ? 'No financial records yet.'
+                      : 'No one-off charges or payments yet. Fees charged from the fee structure are listed under Total Charged.'}
+                  </p>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
@@ -1239,7 +1384,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                         </tr>
                       </thead>
                       <tbody>
-                        {ledgerData.entries.map((entry) => (
+                        {visibleEntries.map((entry) => (
                           <tr key={entry.id} className="border-b last:border-0 hover:bg-gray-50">
                             <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
                               {formatDate(entry.entryDate)}
@@ -1274,6 +1419,134 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
               </Card>
             </>
           )}
+
+          {/* Every charge, including the fee-structure ones the table hides. */}
+          <Dialog
+            open={showChargeBreakdown}
+            onOpenChange={(open) => {
+              setShowChargeBreakdown(open);
+              if (!open) { setEditingEntryId(null); setEntryError(null); }
+            }}
+          >
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>All charges</DialogTitle>
+                <DialogDescription>
+                  Everything {displayInfo.firstName} has been charged, including the fees the
+                  transaction list leaves out.
+                </DialogDescription>
+              </DialogHeader>
+
+              {entryError && (
+                <p className="text-sm" style={{ color: '#e0552e' }}>{entryError}</p>
+              )}
+
+              <div style={{ maxHeight: '55vh', overflowY: 'auto' }}>
+                <p className="text-xs text-gray-400 mb-2" style={{ marginTop: 4 }}>
+                  From the fee structure
+                </p>
+                {feeStructureCharges.length === 0 ? (
+                  <p className="text-sm text-gray-500 mb-3">No fees charged yet.</p>
+                ) : (
+                  feeStructureCharges.map((entry) => (
+                    <div
+                      key={entry.id}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '0.75rem',
+                        padding: '0.5rem 0', borderBottom: '1px solid #F3F4F6',
+                      }}
+                    >
+                      <span className="text-sm" style={{ flex: 1, minWidth: 0 }}>
+                        {entry.category?.name ?? entry.description}
+                      </span>
+                      <span className="text-sm font-medium" style={{ whiteSpace: 'nowrap' }}>
+                        {entry.amount.toLocaleString()} FCFA
+                      </span>
+                      {/* Routes to the override dialog — the single place fee
+                          amounts are edited — rather than editing here. */}
+                      <Button variant="outline" size="sm" onClick={editFeeStructure}>Edit</Button>
+                    </div>
+                  ))
+                )}
+
+                <p className="text-xs text-gray-400 mb-2" style={{ marginTop: 16 }}>
+                  One-off charges
+                </p>
+                {oneOffCharges.length === 0 ? (
+                  <p className="text-sm text-gray-500">No one-off charges.</p>
+                ) : (
+                  oneOffCharges.map((entry) => (
+                    <div
+                      key={entry.id}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '0.75rem',
+                        padding: '0.5rem 0', borderBottom: '1px solid #F3F4F6', flexWrap: 'wrap',
+                      }}
+                    >
+                      {editingEntryId === entry.id ? (
+                        <>
+                          <Input
+                            value={entryEditForm.description}
+                            onChange={(e) => setEntryEditForm((f) => ({ ...f, description: e.target.value }))}
+                            placeholder="Description"
+                            style={{ flex: 1, minWidth: 160 }}
+                          />
+                          <Input
+                            type="number"
+                            value={entryEditForm.amount}
+                            onChange={(e) => setEntryEditForm((f) => ({ ...f, amount: e.target.value }))}
+                            placeholder="Amount"
+                            style={{ width: 120 }}
+                          />
+                          <Button size="sm" onClick={() => handleEntrySave(entry)} disabled={entryBusy}>
+                            {entryBusy ? 'Saving…' : 'Save'}
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={() => setEditingEntryId(null)} disabled={entryBusy}>
+                            Cancel
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-sm" style={{ flex: 1, minWidth: 0 }}>{entry.description}</span>
+                          <span className="text-sm font-medium" style={{ whiteSpace: 'nowrap' }}>
+                            {entry.amount.toLocaleString()} FCFA
+                          </span>
+                          <Button variant="outline" size="sm" onClick={() => beginEditEntry(entry)} disabled={entryBusy}>
+                            Edit
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={() => handleEntryDelete(entry)} disabled={entryBusy}>
+                            Remove
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <div
+                style={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  borderTop: '1px solid #E5E7EB', paddingTop: '0.75rem', marginTop: '0.5rem',
+                }}
+              >
+                <span className="text-sm text-gray-600">Total charged</span>
+                <span className="text-sm font-medium">
+                  {(ledgerData?.totalCharged ?? 0).toLocaleString()} FCFA
+                </span>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Moved down here from above the tabs — the notice belongs at the end
+              of the tab it describes, not crowding the top of the page. */}
+          <StudentFlagNotices
+            show="fees"
+            paymentStatus={feeStatus}
+            zeroMarkSubjects={zeroMarkSubjects}
+            onViewFinance={() => setActiveTab('finance')}
+            onViewMarks={() => setActiveTab('marks')}
+          />
 
           <StudentFeeOverrideDialog
             open={showFeeOverride}
