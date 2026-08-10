@@ -22,7 +22,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { api } from "@/lib/api";
-import { useTeacherAssignments } from "@/lib/teacherAssignments";
+import { useTeacherTeaching } from "@/lib/teacherAssignments";
 
 interface RosterRow {
   studentId: string;
@@ -32,23 +32,21 @@ interface RosterRow {
 }
 
 export default function TeacherMarksPage() {
-  const { data: assignments, loading: loadingAssignments } = useTeacherAssignments();
-  const subjectAssignments = useMemo(
-    () => assignments?.subjectAssignments ?? [],
-    [assignments],
-  );
+  // Every class this teacher may work in, each carrying the subjects they may
+  // mark in it. Both the list and the per-class subjects come from the server,
+  // which applies the same rule its marks endpoints enforce, so anything offered
+  // here is something the server will accept.
+  const { data: classes, loading: loadingClasses, error: classesError } = useTeacherTeaching();
+  const teachingClasses = useMemo(() => classes ?? [], [classes]);
 
-  // One select drives both classId and subjectId, because a teacher is
-  // authorized on the PAIR, not on either half — offering them separately
-  // would let someone build a combination they aren't assigned to and only
-  // find out when the server refuses it.
-  const [assignmentKey, setAssignmentKey] = useState("");
-  const selected = subjectAssignments.find(
-    (a) => `${a.classId}:${a.subjectId}` === assignmentKey,
-  );
+  const [classId, setClassId] = useState("");
+  const [testExamId, setTestExamId] = useState("");
+  const [subjectId, setSubjectId] = useState("");
+
+  const selectedClass = teachingClasses.find((c) => String(c.id) === classId);
+  const subjects = selectedClass?.subjects ?? [];
 
   const [testExams, setTestExams] = useState<any[]>([]);
-  const [testExamId, setTestExamId] = useState("");
   const [roster, setRoster] = useState<RosterRow[]>([]);
   const [totalMarks, setTotalMarks] = useState<number | null>(null);
   const [values, setValues] = useState<Record<string, string>>({});
@@ -59,26 +57,27 @@ export default function TeacherMarksPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Settle on the teacher's first assignment so the page is usable on arrival
-  // rather than showing three empty dropdowns.
+  // Settle on the only class when there is only one, so the common case is not
+  // an empty dropdown. The selector still renders: a teacher should always be
+  // able to see which class they are marking, not infer it.
   useEffect(() => {
-    if (!assignmentKey && subjectAssignments.length) {
-      const first = subjectAssignments[0];
-      setAssignmentKey(`${first.classId}:${first.subjectId}`);
+    if (!classId && teachingClasses.length === 1) {
+      setClassId(String(teachingClasses[0].id));
     }
-  }, [subjectAssignments, assignmentKey]);
+  }, [teachingClasses, classId]);
 
-  // A different class means a different set of tests/exams.
+  // A different class means different assessments and a different subject list.
   useEffect(() => {
     setTestExamId("");
+    setSubjectId("");
     setTestExams([]);
-    if (!selected) return;
+    if (!classId) return;
     let alive = true;
     setLoadingExams(true);
     api
-      .get(`/test-exams?classId=${selected.classId}`)
+      .get(`/test-exams?classId=${encodeURIComponent(classId)}`)
       .then((res: any) => {
-        if (alive) setTestExams(res ?? []);
+        if (alive) setTestExams(Array.isArray(res) ? res : []);
       })
       .catch((e: any) => {
         if (alive) setError(e?.message || "Failed to load tests and exams.");
@@ -89,20 +88,20 @@ export default function TeacherMarksPage() {
     return () => {
       alive = false;
     };
-  }, [selected?.classId, selected?.subjectId]);
+  }, [classId]);
 
-  // Marks are never cached — two people marking the same subject must not be
+  // Marks are never cached: two people marking the same subject must not be
   // shown a roster that predates the other's save.
   useEffect(() => {
     setRoster([]);
     setTotalMarks(null);
     setValues({});
     setMessage(null);
-    if (!testExamId || !selected) return;
+    if (!testExamId || !subjectId) return;
     let alive = true;
     setLoadingRoster(true);
     api
-      .get(`/test-exams/${testExamId}/marks?subjectId=${selected.subjectId}`)
+      .get(`/test-exams/${encodeURIComponent(testExamId)}/marks?subjectId=${encodeURIComponent(subjectId)}`)
       .then((res: any) => {
         if (!alive) return;
         const rows: RosterRow[] = res?.roster ?? [];
@@ -124,7 +123,7 @@ export default function TeacherMarksPage() {
     return () => {
       alive = false;
     };
-  }, [testExamId, selected?.subjectId]);
+  }, [testExamId, subjectId]);
 
   const rowError = (studentId: string): string | null => {
     const raw = values[studentId];
@@ -139,7 +138,7 @@ export default function TeacherMarksPage() {
   const hasAnyValue = roster.some((r) => (values[r.studentId] ?? "") !== "");
 
   const save = async () => {
-    if (!testExamId || !selected) return;
+    if (!testExamId || !subjectId) return;
     const marks = roster
       .filter((r) => (values[r.studentId] ?? "") !== "")
       .map((r) => ({ studentId: r.studentId, marksObtained: Number(values[r.studentId]) }));
@@ -149,8 +148,8 @@ export default function TeacherMarksPage() {
     setMessage(null);
     setError(null);
     try {
-      const result: any = await api.post(`/test-exams/${testExamId}/marks/bulk`, {
-        subjectId: selected.subjectId,
+      const result: any = await api.post(`/test-exams/${encodeURIComponent(testExamId)}/marks/bulk`, {
+        subjectId: Number(subjectId),
         marks,
       });
       setMessage(
@@ -170,46 +169,50 @@ export default function TeacherMarksPage() {
       <div className="mb-8">
         <h1 className="text-3xl mb-2">Enter Marks</h1>
         <p className="text-gray-600">
-          Pick one of your subjects and a test or exam, then enter each student's score
+          Choose a class, then a test or exam and a subject, and enter each student's score
         </p>
       </div>
 
       <Card className="p-6 mb-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
-            <Label>Class &amp; Subject</Label>
-            <Select value={assignmentKey} onValueChange={setAssignmentKey}>
+            <Label>Class</Label>
+            <Select value={classId} onValueChange={setClassId}>
               <SelectTrigger>
                 <SelectValue
                   placeholder={
-                    loadingAssignments
+                    loadingClasses
                       ? "Loading..."
-                      : subjectAssignments.length
-                        ? "Select class and subject"
-                        : "No subjects assigned to you"
+                      : teachingClasses.length
+                        ? "Select class"
+                        : "No classes assigned to you"
                   }
                 />
               </SelectTrigger>
               <SelectContent>
-                {subjectAssignments.map((a) => (
-                  <SelectItem key={`${a.classId}:${a.subjectId}`} value={`${a.classId}:${a.subjectId}`}>
-                    {a.className ?? `Class ${a.classId}`} — {a.subjectName ?? `Subject ${a.subjectId}`}
+                {teachingClasses.map((c) => (
+                  <SelectItem key={c.id} value={String(c.id)}>
+                    {c.name}
+                    {c.isClassTeacher ? " (class teacher)" : ""}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
+
           <div>
             <Label>Test/Exam</Label>
-            <Select value={testExamId} onValueChange={setTestExamId} disabled={!selected}>
+            <Select value={testExamId} onValueChange={setTestExamId} disabled={!classId}>
               <SelectTrigger>
                 <SelectValue
                   placeholder={
-                    loadingExams
-                      ? "Loading..."
-                      : testExams.length
-                        ? "Select test/exam"
-                        : "None for this class"
+                    !classId
+                      ? "Select a class first"
+                      : loadingExams
+                        ? "Loading..."
+                        : testExams.length
+                          ? "Select test/exam"
+                          : "None for this class"
                   }
                 />
               </SelectTrigger>
@@ -222,16 +225,52 @@ export default function TeacherMarksPage() {
               </SelectContent>
             </Select>
           </div>
+
+          <div>
+            <Label>Subject</Label>
+            <Select value={subjectId} onValueChange={setSubjectId} disabled={!classId}>
+              <SelectTrigger>
+                <SelectValue
+                  placeholder={
+                    !classId
+                      ? "Select a class first"
+                      : subjects.length
+                        ? "Select subject"
+                        : "No subjects for this class"
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {subjects.map((s) => (
+                  <SelectItem key={s.id} value={String(s.id)}>
+                    {s.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-        {error && <p className="text-sm text-red-600 mt-3">{error}</p>}
+        {selectedClass && (
+          <p className="text-xs text-gray-500 mt-2">
+            {selectedClass.isClassTeacher
+              ? `You are the class teacher of ${selectedClass.name}, so you can mark all ${subjects.length} of its subjects.`
+              : `You teach ${subjects.length} subject${subjects.length === 1 ? "" : "s"} in ${selectedClass.name}.`}
+          </p>
+        )}
+        {(error || classesError) && (
+          <p className="text-sm text-red-600 mt-2">{error || classesError}</p>
+        )}
       </Card>
 
-      {!subjectAssignments.length && !loadingAssignments ? (
+      {!teachingClasses.length && !loadingClasses ? (
         <Card className="p-6 text-gray-500">
-          You have no subject assignments yet. Your school admin assigns these.
+          You are not the class teacher of any class and have no subject assignments yet. Your
+          school admin sets these up.
         </Card>
-      ) : !testExamId ? (
-        <Card className="p-6 text-gray-500">Select a class, subject, and test/exam to enter marks.</Card>
+      ) : !testExamId || !subjectId ? (
+        <Card className="p-6 text-gray-500">
+          Select a class, test/exam, and subject to enter marks.
+        </Card>
       ) : loadingRoster ? (
         <Card className="p-6 text-gray-500">Loading roster...</Card>
       ) : roster.length === 0 ? (
