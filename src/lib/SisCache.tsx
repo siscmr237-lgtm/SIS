@@ -129,7 +129,12 @@ const INVALIDATES: Record<WriteEvent, readonly KeyPattern[]> = {
   'test-exam:write': ['test-exams:*', 'subject-totals:*'],
   // A charge or payment changes the paymentStatus and firstInstallmentMet that
   // the student list now carries, so the roster is no longer accurate.
-  'ledger:write': ['students'],
+  //
+  // The STAFF roster too: it carries outstandingCharges, which is what the red
+  // dot beside a staff member's name reads. A fine raised or netted off payroll
+  // changes it, and without this the dot would keep showing the figure from
+  // before the write.
+  'ledger:write': ['students', 'staff'],
   'expense:write': [],
 };
 

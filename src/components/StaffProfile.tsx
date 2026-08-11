@@ -26,6 +26,8 @@ import {
   SelectValue,
 } from './ui/select';
 import { StaffForm, StaffFormPayload } from './StaffForm';
+import { RecordPayrollDialog } from './RecordPayrollDialog';
+import { StaffChargeDot } from './StaffChargeStatus';
 
 interface LedgerEntry {
   id: string;
@@ -37,11 +39,37 @@ interface LedgerEntry {
   category?: { name: string } | null;
 }
 
+interface OutstandingCharge {
+  id: string;
+  category: string | null;
+  description: string;
+  note: string | null;
+  amount: number;
+  settled: number;
+  outstanding: number;
+  entryDate: string;
+}
+
 interface LedgerData {
   entries: LedgerEntry[];
+  /**
+   * The two directions of staff money, kept apart.
+   *
+   * `balance` is what the SCHOOL still owes this person — salary accrued less
+   * salary paid. It deliberately excludes fines: a broken window is money owed
+   * the other way, and folding it in here would read as the school owing them
+   * more for having broken something.
+   *
+   * `outstandingCharges` is that other direction — what they owe the school and
+   * have not yet had netted off their pay. It is what the red dot reads.
+   */
   totalCharged: number;
   totalPaid: number;
   balance: number;
+  chargesOwed: number;
+  chargesSettled: number;
+  outstandingCharges: number;
+  charges: OutstandingCharge[];
 }
 
 interface ChargeCategory {
@@ -49,6 +77,8 @@ interface ChargeCategory {
   name: string;
   limit: number;
   isBuiltIn: boolean;
+  /** True for the categories that mean the staff member owes the SCHOOL. */
+  staffOwes?: boolean;
 }
 
 interface StaffProfileProps {
@@ -57,8 +87,6 @@ interface StaffProfileProps {
 }
 
 type Tab = 'general' | 'finance' | 'attendance';
-
-const PAYMENT_METHODS = ['Cash', 'Bank Transfer', 'Mobile Money', 'Cheque'];
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'general', label: 'General Info' },
@@ -169,7 +197,7 @@ export function StaffProfile({ staff, onNavigate }: StaffProfileProps) {
   const [categories, setCategories] = useState<ChargeCategory[]>([]);
 
   const [showCharge, setShowCharge] = useState(false);
-  const [showPayment, setShowPayment] = useState(false);
+  const [showPayroll, setShowPayroll] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -178,11 +206,20 @@ export function StaffProfile({ staff, onNavigate }: StaffProfileProps) {
 
   const today = new Date().toISOString().split('T')[0];
   const [chargeForm, setChargeForm] = useState({
-    categoryId: '', description: '', amount: '', entryDate: today, paymentMethod: '',
+    categoryId: '', description: '', note: '', amount: '', entryDate: today,
   });
-  const [paymentForm, setPaymentForm] = useState({
-    description: '', amount: '', entryDate: today, paymentMethod: '',
-  });
+
+  /**
+   * Only the categories that mean "this staff member owes the school" — broken
+   * property, late coming, uniform, misconduct, other.
+   *
+   * The rest (Salary, Bonus, Transportation Allowance, Staff Expense) run the
+   * other way: they are money the school owes THEM. Offering those here would
+   * invite a charge that increases what the school appears to owe someone for
+   * having broken something, and the server refuses them for that reason —
+   * so the form should not be offering what the server will reject.
+   */
+  const chargeCategories = categories.filter((c) => c.staffOwes);
 
   useEffect(() => {
     if (!showActionsMenu) return;
@@ -234,38 +271,18 @@ export function StaffProfile({ staff, onNavigate }: StaffProfileProps) {
         staffId: staff.code,
         categoryId: parseInt(chargeForm.categoryId),
         description: chargeForm.description,
+        ...(chargeForm.note.trim() ? { note: chargeForm.note.trim() } : {}),
         amount: parseInt(chargeForm.amount),
         entryDate: chargeForm.entryDate,
-        ...(chargeForm.paymentMethod ? { paymentMethod: chargeForm.paymentMethod } : {}),
       });
+      // Refreshes the staff roster the red dot reads — see INVALIDATES in
+      // lib/SisCache.tsx — as well as this page's own figures below.
       cache.invalidateOn('ledger:write');
       setShowCharge(false);
-      setChargeForm({ categoryId: '', description: '', amount: '', entryDate: new Date().toISOString().split('T')[0], paymentMethod: '' });
+      setChargeForm({ categoryId: '', description: '', note: '', amount: '', entryDate: new Date().toISOString().split('T')[0] });
       await refreshLedger();
     } catch (e: any) {
       setSubmitError(e.message || 'Failed to record charge');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handlePaymentSubmit = async () => {
-    setSubmitting(true);
-    setSubmitError(null);
-    try {
-      await api.post('/ledger/staff-payment', {
-        staffId: staff.code,
-        description: paymentForm.description,
-        amount: parseInt(paymentForm.amount),
-        entryDate: paymentForm.entryDate,
-        paymentMethod: paymentForm.paymentMethod,
-      });
-      cache.invalidateOn('ledger:write');
-      setShowPayment(false);
-      setPaymentForm({ description: '', amount: '', entryDate: new Date().toISOString().split('T')[0], paymentMethod: '' });
-      await refreshLedger();
-    } catch (e: any) {
-      setSubmitError(e.message || 'Failed to record payment');
     } finally {
       setSubmitting(false);
     }
@@ -379,7 +396,13 @@ export function StaffProfile({ staff, onNavigate }: StaffProfileProps) {
       </button>
 
       <div className="mb-6">
-        <h1 className="text-3xl">{displayInfo.firstName} {displayInfo.lastName}</h1>
+        {/* The dot reads the figure the SERVER computed: from the ledger once
+            the Finance tab has loaded it, otherwise from the record this page
+            was opened with. Never recalculated here — see StaffChargeStatus. */}
+        <h1 className="text-3xl">
+          {displayInfo.firstName} {displayInfo.lastName}
+          <StaffChargeDot outstanding={ledgerData?.outstandingCharges ?? (staff as any).outstandingCharges} />
+        </h1>
         <p className="text-gray-500 mt-1">{staff.code} · {displayInfo.isTeacher ? 'Teacher' : displayInfo.role}</p>
       </div>
 
@@ -528,9 +551,9 @@ export function StaffProfile({ staff, onNavigate }: StaffProfileProps) {
                   </button>
                   <button
                     className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
-                    onClick={() => { setSubmitError(null); setShowPayment(true); setShowActionsMenu(false); }}
+                    onClick={() => { setSubmitError(null); setShowPayroll(true); setShowActionsMenu(false); }}
                   >
-                    Record Payment
+                    Record Payroll
                   </button>
                 </div>
               )}
@@ -546,9 +569,9 @@ export function StaffProfile({ staff, onNavigate }: StaffProfileProps) {
               <Plus size={16} className="mr-1" />
               Record Charge
             </Button>
-            <Button onClick={() => { setSubmitError(null); setShowPayment(true); }}>
+            <Button onClick={() => { setSubmitError(null); setShowPayroll(true); }}>
               <Plus size={16} className="mr-1" />
-              Record Payment
+              Record Payroll
             </Button>
           </div>
 
@@ -577,13 +600,47 @@ export function StaffProfile({ staff, onNavigate }: StaffProfileProps) {
                     {ledgerData.totalPaid.toLocaleString()} FCFA
                   </p>
                 </Card>
-                <Card className={`p-2 md:p-4 ${ledgerData.balance > 0 ? 'bg-red-50 border-red-200' : ''}`}>
-                  <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Balance Owed</p>
-                  <p className={`text-xs md:text-xl font-medium ${ledgerData.balance > 0 ? 'text-red-600' : 'text-gray-900'}`}>
-                    {ledgerData.balance.toLocaleString()} FCFA
+                {/* What THEY owe the school, kept as its own figure. It is not
+                    folded into Balance Owed above, which means the opposite
+                    thing: what the school still owes them. */}
+                <Card className={`p-2 md:p-4 ${ledgerData.outstandingCharges > 0 ? 'bg-red-50 border-red-200' : ''}`}>
+                  <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Owes School</p>
+                  <p className={`text-xs md:text-xl font-medium ${ledgerData.outstandingCharges > 0 ? 'text-red-600' : 'text-gray-900'}`}>
+                    {ledgerData.outstandingCharges.toLocaleString()} FCFA
                   </p>
                 </Card>
               </div>
+
+              {ledgerData.charges.length > 0 && (
+                <Card className="p-4">
+                  <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Outstanding charges</p>
+                  <p className="text-xs text-gray-500" style={{ marginBottom: '0.6rem' }}>
+                    Cleared by deducting them from a month&apos;s pay — open Record Payroll and
+                    tick the ones being settled.
+                  </p>
+                  {ledgerData.charges.map((c) => (
+                    <div
+                      key={c.id}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '0.75rem',
+                        padding: '0.4rem 0', borderTop: '1px solid #F3F4F6',
+                      }}
+                    >
+                      <span style={{ flex: 1, minWidth: 0 }}>
+                        <span className="text-sm" style={{ display: 'block' }}>{c.description}</span>
+                        <span className="text-xs" style={{ color: '#6B7280' }}>
+                          {c.category ?? 'Charge'}
+                          {c.note ? ` · ${c.note}` : ''}
+                          {c.settled > 0 ? ` · ${c.settled.toLocaleString()} of ${c.amount.toLocaleString()} already settled` : ''}
+                        </span>
+                      </span>
+                      <span className="text-sm font-medium" style={{ whiteSpace: 'nowrap', color: '#DC2626' }}>
+                        {c.outstanding.toLocaleString()} FCFA
+                      </span>
+                    </div>
+                  ))}
+                </Card>
+              )}
 
               <Card>
                 {ledgerData.entries.length === 0 ? (
@@ -634,60 +691,73 @@ export function StaffProfile({ staff, onNavigate }: StaffProfileProps) {
             </>
           )}
 
+          {/* Record Charge — a fine against the staff member. No payment method
+              is asked for: nothing changes hands when a fine is raised, and it
+              is settled only by being netted off a payroll run. */}
           <Dialog open={showCharge} onOpenChange={(open) => { setShowCharge(open); if (!open) setSubmitError(null); }}>
-            <DialogContent className="max-w-md">
+            <DialogContent>
               <DialogHeader>
                 <DialogTitle>Record Charge</DialogTitle>
-                <DialogDescription>Add a charge to this staff member's account.</DialogDescription>
+                <DialogDescription>
+                  Charge {displayInfo.firstName} for something they owe the school. It stays on
+                  their account until it is deducted from a month's pay.
+                </DialogDescription>
               </DialogHeader>
-              <div className="space-y-4 py-2">
-                <div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem', paddingTop: '0.25rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                   <Label>Category</Label>
                   <Select value={chargeForm.categoryId} onValueChange={(v) => setChargeForm(f => ({ ...f, categoryId: v }))}>
                     <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+                    {/* Only the categories that mean "the staff member owes the
+                        school". Salary, Bonus and the allowances run the other
+                        way and the server refuses a charge under them. */}
                     <SelectContent>
-                      {categories.map(cat => (
+                      {chargeCategories.map(cat => (
                         <SelectItem key={cat.id} value={String(cat.id)}>{cat.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-                <div>
-                  <Label>Description</Label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                    <Label>Amount (FCFA)</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      value={chargeForm.amount}
+                      onChange={e => setChargeForm(f => ({ ...f, amount: e.target.value }))}
+                      placeholder="0"
+                    />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                    <Label>Date</Label>
+                    <Input
+                      type="date"
+                      value={chargeForm.entryDate}
+                      onChange={e => setChargeForm(f => ({ ...f, entryDate: e.target.value }))}
+                    />
+                  </div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                  <Label>Reason</Label>
                   <Input
                     value={chargeForm.description}
                     onChange={e => setChargeForm(f => ({ ...f, description: e.target.value }))}
-                    placeholder="e.g. Monthly salary"
+                    placeholder="e.g. Broken projector"
                   />
+                  <span className="text-xs" style={{ color: '#6B7280' }}>
+                    Shown wherever this charge is listed.
+                  </span>
                 </div>
-                <div>
-                  <Label>Amount (FCFA)</Label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                  <Label>Note <span className="text-gray-400 font-normal">(optional)</span></Label>
                   <Input
-                    type="number"
-                    min="1"
-                    value={chargeForm.amount}
-                    onChange={e => setChargeForm(f => ({ ...f, amount: e.target.value }))}
-                    placeholder="0"
+                    value={chargeForm.note}
+                    onChange={e => setChargeForm(f => ({ ...f, note: e.target.value }))}
+                    placeholder="Any detail behind it"
                   />
                 </div>
-                <div>
-                  <Label>Date</Label>
-                  <Input
-                    type="date"
-                    value={chargeForm.entryDate}
-                    onChange={e => setChargeForm(f => ({ ...f, entryDate: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <Label>Payment Method <span className="text-gray-400 font-normal">(optional)</span></Label>
-                  <Select value={chargeForm.paymentMethod} onValueChange={(v) => setChargeForm(f => ({ ...f, paymentMethod: v }))}>
-                    <SelectTrigger><SelectValue placeholder="Select method" /></SelectTrigger>
-                    <SelectContent>
-                      {PAYMENT_METHODS.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                {submitError && <p className="text-sm text-red-600">{submitError}</p>}
+                {submitError && <p className="text-sm" style={{ color: '#e0552e' }}>{submitError}</p>}
               </div>
               <div className="flex justify-end gap-2">
                 <DialogClose asChild>
@@ -700,60 +770,15 @@ export function StaffProfile({ staff, onNavigate }: StaffProfileProps) {
             </DialogContent>
           </Dialog>
 
-          <Dialog open={showPayment} onOpenChange={(open) => { setShowPayment(open); if (!open) setSubmitError(null); }}>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle>Record Payment</DialogTitle>
-                <DialogDescription>Record a payment for this staff member.</DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-2">
-                <div>
-                  <Label>Description</Label>
-                  <Input
-                    value={paymentForm.description}
-                    onChange={e => setPaymentForm(f => ({ ...f, description: e.target.value }))}
-                    placeholder="e.g. June salary payment"
-                  />
-                </div>
-                <div>
-                  <Label>Amount (FCFA)</Label>
-                  <Input
-                    type="number"
-                    min="1"
-                    value={paymentForm.amount}
-                    onChange={e => setPaymentForm(f => ({ ...f, amount: e.target.value }))}
-                    placeholder="0"
-                  />
-                </div>
-                <div>
-                  <Label>Date</Label>
-                  <Input
-                    type="date"
-                    value={paymentForm.entryDate}
-                    onChange={e => setPaymentForm(f => ({ ...f, entryDate: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <Label>Payment Method</Label>
-                  <Select value={paymentForm.paymentMethod} onValueChange={(v) => setPaymentForm(f => ({ ...f, paymentMethod: v }))}>
-                    <SelectTrigger><SelectValue placeholder="Select method" /></SelectTrigger>
-                    <SelectContent>
-                      {PAYMENT_METHODS.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                {submitError && <p className="text-sm text-red-600">{submitError}</p>}
-              </div>
-              <div className="flex justify-end gap-2">
-                <DialogClose asChild>
-                  <Button variant="outline" disabled={submitting}>Cancel</Button>
-                </DialogClose>
-                <Button onClick={handlePaymentSubmit} disabled={submitting}>
-                  {submitting ? 'Saving...' : 'Record Payment'}
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+          {/* Replaces Record Payment. Staff money now goes out one month at a
+              time, against the month it pays for, with charges netted off it. */}
+          <RecordPayrollDialog
+            open={showPayroll}
+            onOpenChange={setShowPayroll}
+            staffCode={staff.code}
+            staffName={`${displayInfo.firstName} ${displayInfo.lastName}`}
+            onRecorded={refreshLedger}
+          />
         </div>
       )}
 

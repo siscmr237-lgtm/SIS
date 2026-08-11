@@ -36,6 +36,15 @@ export interface Staff {
    */
   hasLogin?: boolean;
   /**
+   * What this staff member currently owes the school in unsettled charges —
+   * broken property, late coming, uniform, misconduct. Computed server-side by
+   * withOutstandingCharges() in sis-backend/src/routes/staff.js as the charge
+   * amounts less whatever has been netted off them at payroll, so it is never
+   * recalculated here. Anything above zero shows the red dot beside their name.
+   * Optional because the mock fixtures predate it.
+   */
+  outstandingCharges?: number;
+  /**
    * The admin's revoke switch: false disables sign-in without deleting the
    * record. Read as `=== false` rather than `!isActive`, matching the backend
    * (see loadTeacherActor in sis-backend/src/auth.js), so a missing value means

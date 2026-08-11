@@ -15,6 +15,8 @@ import { api } from '@/lib/api';
 import { useCachedResource, useSisCache } from '@/lib/SisCache';
 import { RevalidatingBadge, useResourceError } from './ResourceStatus';
 import { StaffForm, StaffFormPayload } from './StaffForm';
+import { RecordPayrollDialog } from './RecordPayrollDialog';
+import { StaffChargeDot } from './StaffChargeStatus';
 
 interface StaffManagementProps {
   onNavigate?: (page: NavigationPage) => void;
@@ -41,6 +43,9 @@ export function StaffManagement({ onNavigate, onViewStaff }: StaffManagementProp
   useResourceError(workRecordsError, 'work records', workRecordsData !== null);
   const [searchTerm, setSearchTerm] = useState('');
   const [openAddStaff, setOpenAddStaff] = useState(false);
+  // The staff member payroll is being recorded for. Held as the row rather than
+  // a code so the dialog can be addressed and titled without a second lookup.
+  const [payrollFor, setPayrollFor] = useState<Staff | null>(null);
   const [openWork, setOpenWork] = useState(false);
   const [workSubmitting, setWorkSubmitting] = useState(false);
   const [workForm, setWorkForm] = useState({
@@ -134,14 +139,23 @@ export function StaffManagement({ onNavigate, onViewStaff }: StaffManagementProp
                       >
                         {member.firstName} {member.lastName}
                       </button>
+                      {/* Red while they owe the school something unsettled. It
+                          clears itself when the debt is netted off payroll,
+                          because 'ledger:write' re-reads this roster. */}
+                      <StaffChargeDot outstanding={member.outstandingCharges} />
                     </TableCell>
                     <TableCell>{member.isTeacher ? 'Teacher' : member.role}</TableCell>
                     <TableCell>{member.phone}</TableCell>
                     <TableCell>{member.email}</TableCell>
                     <TableCell>
-                      <Button variant="outline" size="sm" onClick={() => onViewStaff?.(member)}>
-                        Details
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm" onClick={() => onViewStaff?.(member)}>
+                          Details
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => setPayrollFor(member)}>
+                          Record Payroll
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -295,6 +309,19 @@ export function StaffManagement({ onNavigate, onViewStaff }: StaffManagementProp
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* One dialog for whichever row asked for it, rather than one per row. */}
+      {payrollFor && (
+        <RecordPayrollDialog
+          open
+          onOpenChange={(open) => { if (!open) setPayrollFor(null); }}
+          staffCode={payrollFor.code}
+          staffName={`${payrollFor.firstName} ${payrollFor.lastName}`}
+          // The dialog has already reported 'ledger:write'; this re-reads the
+          // roster so the row's red dot reflects anything netted off the run.
+          onRecorded={refreshStaff}
+        />
+      )}
     </div>
   );
 }
