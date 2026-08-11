@@ -63,7 +63,7 @@ export default function App() {
   const renderPage = () => {
     switch (currentPage) {
       case 'dashboard':
-        return <Dashboard />;
+        return <Dashboard onNavigate={navigate} />;
       case 'students':
         return <StudentsManagement onNavigate={navigate} onViewStudent={viewStudent} />;
       case 'student-profile':
@@ -103,7 +103,7 @@ export default function App() {
       case 'settings':
         return <SchoolSettings />;
       default:
-        return <Dashboard />;
+        return <Dashboard onNavigate={navigate} />;
     }
   };
 

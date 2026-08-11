@@ -3,6 +3,8 @@
 import { DollarSign, TrendingUp, UserCheck, Users } from "lucide-react";
 import { useAcademicYear } from '@/lib/academicYear';
 import { AcademicYearNotices } from './AcademicYearNotices';
+import { SetupChecklist } from './SetupChecklist';
+import { NavigationPage } from '../App';
 import { useEffect, useState } from "react";
 import { api, BASE_URL } from "../../src/lib/api";
 import { useCachedResource, useSisCache } from "../../src/lib/SisCache";
@@ -10,7 +12,10 @@ import { formatTermLabel, resolveSchoolTerm } from "../../src/utils/academicTerm
 import { computeSchoolAbbreviation } from "../../src/utils/schoolAbbreviation";
 import { Card } from "./ui/card";
 
-export function Dashboard() {
+// onNavigate is optional so the existing `<Dashboard />` call sites keep
+// working; without it the setup card still lists what is outstanding, it just
+// has nowhere to send you.
+export function Dashboard({ onNavigate }: { onNavigate?: (page: NavigationPage) => void }) {
   // Reading the status IS the app-load half of the rollover: the endpoint runs
   // the same advanceYearIfDue() the cron runs, so a missed cron self-corrects here.
   const { status: yearStatus, advance: advanceYear, acknowledge: ackYear } = useAcademicYear();
@@ -146,6 +151,10 @@ export function Dashboard() {
           </div>
         </div>
       </Card>
+
+      {/* Sits above the metrics while there is setup left, and removes itself
+          entirely once there is not. It blocks nothing either way. */}
+      <SetupChecklist onNavigate={onNavigate} />
 
       <div className="mb-8">
         <h2 className="text-2xl mb-2">Dashboard Overview</h2>
