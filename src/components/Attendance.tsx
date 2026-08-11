@@ -14,6 +14,7 @@ import { generateAttendanceSheet } from '../utils/pdfGenerator';
 import { api } from '@/lib/api';
 import { useCachedResource } from '@/lib/SisCache';
 import { useSchoolClassNames } from "@/lib/classes";
+import { AttendanceSheet } from './AttendanceSheet';
 
 export function Attendance() {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -164,62 +165,17 @@ export function Attendance() {
           <TabsTrigger value="staff">Staff Attendance</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="students">
-          <Card className="mb-4 p-4">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-              <p className="text-sm text-gray-600">Mark attendance for {selectedClass} on {selectedDate}</p>
-              <Button size="sm" variant="outline" className="ml-auto flex items-center gap-2" onClick={saveStudentAttendance} disabled={savingStudentAttendance}>
-                <Save size={16} />
-                {savingStudentAttendance ? 'Saving...' : 'Save Attendance'}
-              </Button>
-            </div>
-          </Card>
+        {/* The student register is now the shared AttendanceSheet, which the
+            teacher portal renders too — one implementation, so the two cannot
+            drift. It brings class/term/date-range filtering, section awareness
+            and per-day marking against the idempotent /attendance/mark endpoint,
+            replacing the single-day status dropdowns that lived here.
 
-          <Card>
-            <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Student ID</TableHead>
-                  <TableHead>Student Name</TableHead>
-                  <TableHead>Class</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Remarks</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {students.filter((s: any) => s.class === selectedClass).map((student: any) => {
-                  const record = studentAttendance.find(a => a.personId === student.id);
-                  const status = record?.status || 'present';
-                  
-                  return (
-                    <TableRow key={student.id}>
-                      <TableCell>{student.id}</TableCell>
-                      <TableCell>{student.firstName} {student.lastName}<PaymentStatusDot status={student.paymentStatus} /><ZeroMarkDot hasZero={(student as any).hasZeroMark} /></TableCell>
-                      <TableCell>{student.class}</TableCell>
-                      <TableCell>{getStatusBadge(studentStatus[student.id] || status)}</TableCell>
-                      <TableCell>{record?.remarks || '-'}</TableCell>
-                      <TableCell>
-                        <Select value={studentStatus[student.id] || status} onValueChange={(v:string)=>setStudentStatus(s=>({...s, [student.id]: v}))}>
-                          <SelectTrigger className="w-32">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="present">Present</SelectItem>
-                            <SelectItem value="absent">Absent</SelectItem>
-                            <SelectItem value="late">Late</SelectItem>
-                            <SelectItem value="excused">Excused</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-            </div>
-          </Card>
+            Staff attendance below is untouched: it is a different register with
+            its own statuses and no class or section, and folding it into the
+            student sheet would have meant inventing both. */}
+        <TabsContent value="students">
+          <AttendanceSheet audience="admin" />
         </TabsContent>
 
         <TabsContent value="staff">

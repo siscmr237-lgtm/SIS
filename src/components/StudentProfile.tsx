@@ -11,6 +11,7 @@ import { StudentFlagNotices } from './StudentFlagNotices';
 import { AcademicYearSelect, useAcademicYear } from '../lib/academicYear';
 import { formatTermLabel } from '../utils/academicTerm';
 import { StudentFeeOverrideDialog } from './StudentFeeOverrideDialog';
+import { StudentAttendancePanel } from './StudentAttendancePanel';
 import { NavigationPage } from '../App';
 import { Student } from '../types';
 import { Card } from './ui/card';
@@ -1845,7 +1846,11 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
       )}
 
       {activeTab === 'attendance' && (
-        <Card className="p-6 text-gray-500">Coming soon</Card>
+        <StudentAttendancePanel
+          studentCode={String(student.id)}
+          studentName={`${displayInfo.firstName} ${displayInfo.lastName}`}
+          className={displayInfo.class}
+        />
       )}
     </div>
   );

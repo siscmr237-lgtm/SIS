@@ -183,6 +183,161 @@ interface LedgerPdfEntry {
   category?: { name: string } | null;
 }
 
+/**
+ * One class's register over a date range.
+ *
+ * Landscape, because a range is a grid of days and portrait runs out of width
+ * after a fortnight. Days are chunked across pages rather than squeezed: a tick
+ * nobody can read is worse than a second page.
+ *
+ * A cell is one of three things, and they are deliberately distinguishable in
+ * print as well as on screen — P present, A absent, and a dash for a day nobody
+ * took the register, which is NOT an absence.
+ */
+export function generateClassAttendanceSheet(sheet: {
+  className: string;
+  academicYear?: string | null;
+  term?: string | null;
+  from: string;
+  to: string;
+  days: string[];
+  students: Array<{
+    studentId: string;
+    firstName: string;
+    lastName: string;
+    cells: Array<{ date: string; present: boolean | null }>;
+    present: number;
+    recorded: number;
+    percentage: number | null;
+    label: string;
+  }>;
+}) {
+  const doc = new jsPDF({ orientation: 'landscape' });
+
+  doc.setFillColor(15, 35, 69);
+  doc.rect(0, 0, 297, 30, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(16);
+  doc.text('Attendance Register', 14, 13);
+  doc.setFontSize(10);
+  doc.text(
+    [sheet.className, sheet.term, sheet.academicYear].filter(Boolean).join('  ·  '),
+    14, 21,
+  );
+  doc.text(
+    sheet.from === sheet.to ? sheet.from : `${sheet.from}  to  ${sheet.to}`,
+    283, 21, { align: 'right' },
+  );
+
+  // A day column needs about 7mm to stay legible; the name and summary columns
+  // take the rest. Beyond that the range is split across pages.
+  const PER_PAGE = 24;
+  const chunks: string[][] = [];
+  for (let i = 0; i < sheet.days.length; i += PER_PAGE) chunks.push(sheet.days.slice(i, i + PER_PAGE));
+  if (!chunks.length) chunks.push([]);
+
+  chunks.forEach((chunk, page) => {
+    if (page > 0) doc.addPage();
+    const head = ['#', 'Student', ...chunk.map((d) => d.slice(8)), '%'];
+    const body = sheet.students.map((s, i) => {
+      const byDate = new Map(s.cells.map((c) => [c.date, c.present]));
+      return [
+        String(i + 1),
+        `${s.firstName} ${s.lastName}`,
+        ...chunk.map((d) => {
+          const v = byDate.get(d);
+          return v === true ? 'P' : v === false ? 'A' : '–';
+        }),
+        s.percentage == null ? '–' : `${s.percentage}%`,
+      ];
+    });
+
+    autoTable(doc, {
+      head: [head],
+      body,
+      startY: page === 0 ? 36 : 14,
+      styles: { fontSize: 7, cellPadding: 1.5, halign: 'center' },
+      headStyles: { fillColor: [15, 35, 69], fontSize: 7 },
+      columnStyles: { 0: { cellWidth: 8 }, 1: { cellWidth: 46, halign: 'left' } },
+      // Which month the day numbers belong to, since the header shows only DD.
+      didDrawPage: () => {
+        if (chunk.length) {
+          doc.setTextColor(120, 120, 120);
+          doc.setFontSize(7);
+          doc.text(`Days ${chunk[0]} to ${chunk[chunk.length - 1]}`, 14, page === 0 ? 34 : 12);
+          doc.setTextColor(0, 0, 0);
+        }
+      },
+    });
+  });
+
+  doc.setFontSize(8);
+  doc.setTextColor(120, 120, 120);
+  doc.text('P present · A absent · – no register taken that day', 14, doc.internal.pageSize.getHeight() - 8);
+
+  window.open(doc.output('bloburl'), '_blank');
+}
+
+/**
+ * One student's own attendance over a range, with the per-term consistency
+ * verdict the report card uses. Portrait: a single student is a list, not a grid.
+ */
+export function generateStudentAttendanceSheet(sheet: {
+  studentName: string;
+  studentId: string;
+  className?: string | null;
+  academicYear?: string | null;
+  term?: string | null;
+  from: string;
+  to: string;
+  rows: Array<{ date: string; present: boolean | null }>;
+  present: number;
+  recorded: number;
+  percentage: number | null;
+  label: string;
+}) {
+  const doc = new jsPDF();
+
+  doc.setFillColor(15, 35, 69);
+  doc.rect(0, 0, 210, 32, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(16);
+  doc.text('Attendance', 14, 13);
+  doc.setFontSize(10);
+  doc.text(`${sheet.studentName}  (${sheet.studentId})`, 14, 21);
+  doc.text(
+    [sheet.className, sheet.term, sheet.academicYear].filter(Boolean).join('  ·  '),
+    14, 27,
+  );
+
+  doc.setTextColor(0, 0, 0);
+  doc.setFontSize(10);
+  doc.text(
+    sheet.from === sheet.to ? `Date: ${sheet.from}` : `From ${sheet.from} to ${sheet.to}`,
+    14, 42,
+  );
+  doc.text(
+    sheet.percentage == null
+      ? 'No register taken in this period'
+      : `Present ${sheet.present} of ${sheet.recorded} recorded days — ${sheet.percentage}% (${sheet.label})`,
+    14, 48,
+  );
+
+  autoTable(doc, {
+    head: [['Date', 'Status']],
+    // Only days that were actually recorded: a day nobody took the register is
+    // not an absence, and listing it as a blank row would imply it was.
+    body: sheet.rows
+      .filter((r) => r.present !== null)
+      .map((r) => [r.date, r.present ? 'Present' : 'Absent']),
+    startY: 54,
+    styles: { fontSize: 9, cellPadding: 2 },
+    headStyles: { fillColor: [15, 35, 69] },
+  });
+
+  window.open(doc.output('bloburl'), '_blank');
+}
+
 export async function generateFinancialSheet(
   student: Student,
   ledgerData: { entries: LedgerPdfEntry[]; totalCharged: number; totalPaid: number; balance: number },
