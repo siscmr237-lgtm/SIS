@@ -1,6 +1,4 @@
 import { useEffect, useState } from 'react';
-import { PaymentStatusDot } from './PaymentStatus';
-import { ZeroMarkDot } from './MarkStatus';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -9,51 +7,42 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Badge } from './ui/badge';
-import { Calendar, FileText, Save } from 'lucide-react';
-import { generateAttendanceSheet } from '../utils/pdfGenerator';
+import { Calendar, Save } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useCachedResource } from '@/lib/SisCache';
-import { useSchoolClassNames } from "@/lib/classes";
 import { AttendanceSheet } from './AttendanceSheet';
 
 export function Attendance() {
+  // Still here because STAFF attendance is a single-day register and this is the
+  // only control that picks its date. It used to live in a panel above the tabs,
+  // alongside a class picker and a Generate Sheet button that the student
+  // register replaced; those are gone, so the date moved down into the tab that
+  // still needs it rather than floating above a tab it no longer applies to.
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
 
-  // The rosters are reference data and are cached. The attendance records are
+  // The staff roster is reference data and is cached. The attendance records are
   // not: they are what this screen is actively writing, and a stale copy would
   // mean marking someone against a register that has already moved on.
-  const { data: studentsData } = useCachedResource<any[]>('students', () => api.get('/students'));
   const { data: staffData } = useCachedResource<any[]>('staff', () => api.get('/staff'));
   const { data: attendanceData, refresh: refreshAttendance } = useCachedResource<any[]>(
     null,
     () => api.get(`/attendance?date=${encodeURIComponent(selectedDate)}`),
     { policy: 'fresh', deps: [selectedDate] },
   );
-  const students = studentsData ?? [];
   const staff = staffData ?? [];
   const attendance = attendanceData ?? [];
-  const [selectedClass, setSelectedClass] = useState<string>('Class 3');
-  const [studentStatus, setStudentStatus] = useState<Record<string, string>>({});
   const [staffStatus, setStaffStatus] = useState<Record<string, string>>({});
-  const [savingStudentAttendance, setSavingStudentAttendance] = useState(false);
   const [savingStaffAttendance, setSavingStaffAttendance] = useState(false);
 
-  // This school's real classes — see src/lib/classes.ts.
-  const { classNames: classes } = useSchoolClassNames();
-
-  const studentAttendance = attendance.filter(record => record.type === 'student' && record.date?.startsWith(selectedDate));
   const staffAttendance = attendance.filter(record => record.type === 'staff' && record.date?.startsWith(selectedDate));
 
   // Seed the per-person dropdowns from whatever is on record for this date.
   useEffect(() => {
     if (!attendanceData) return;
-    const stuMap: Record<string, string> = {};
     const stfMap: Record<string, string> = {};
     attendanceData.forEach((a: any) => {
-      if (a.type === 'student') stuMap[a.personId] = a.status;
       if (a.type === 'staff') stfMap[a.personId] = a.status;
     });
-    setStudentStatus(stuMap);
     setStaffStatus(stfMap);
   }, [attendanceData]);
 
@@ -69,32 +58,6 @@ export function Attendance() {
         return <Badge className="bg-blue-500">Excused</Badge>;
       default:
         return <Badge>Unknown</Badge>;
-    }
-  };
-
-  const handleGenerateAttendanceSheet = () => {
-    const classStudents = students.filter((student: any) => student.class === selectedClass);
-    generateAttendanceSheet(selectedDate, selectedClass, classStudents);
-  };
-
-  const saveStudentAttendance = async () => {
-    if (savingStudentAttendance) return;
-    setSavingStudentAttendance(true);
-    try {
-      const classStudents = students.filter((s: any) => s.class === selectedClass);
-      const records = classStudents.map((s: any) => {
-        const existing = attendance.find(
-          a => a.type === 'student' && a.personId === s.id && a.date?.startsWith(selectedDate)
-        );
-        return existing
-          ? { existingCode: existing.id, status: studentStatus[s.id] || 'present' }
-          : { date: selectedDate, type: 'student', personId: s.id, personName: `${s.firstName} ${s.lastName}`, status: studentStatus[s.id] || 'present' };
-      });
-      await api.post('/attendance/bulk', { records });
-      await refreshAttendance();
-    } catch {
-    } finally {
-      setSavingStudentAttendance(false);
     }
   };
 
@@ -125,64 +88,41 @@ export function Attendance() {
         <p className="text-gray-600">Track daily attendance for students and staff</p>
       </div>
 
-      <Card className="p-6 mb-6">
-        <div className="flex flex-col sm:flex-row sm:items-end gap-3">
-          <div className="flex-1">
-            <Label>Select Date</Label>
-            <div className="relative">
-              <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-              <Input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-          </div>
-          <div className="flex-1">
-            <Label>Class (for students)</Label>
-            <Select value={selectedClass} onValueChange={setSelectedClass}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select class" />
-              </SelectTrigger>
-              <SelectContent>
-                {classes.map(cls => (
-                  <SelectItem key={cls} value={cls}>{cls}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <Button onClick={handleGenerateAttendanceSheet} className="flex items-center gap-2">
-            <FileText size={20} />
-            Generate Sheet
-          </Button>
-        </div>
-      </Card>
-
       <Tabs defaultValue="students" className="w-full">
         <TabsList className="mb-6">
           <TabsTrigger value="students">Student Attendance</TabsTrigger>
           <TabsTrigger value="staff">Staff Attendance</TabsTrigger>
         </TabsList>
 
-        {/* The student register is now the shared AttendanceSheet, which the
-            teacher portal renders too — one implementation, so the two cannot
-            drift. It brings class/term/date-range filtering, section awareness
-            and per-day marking against the idempotent /attendance/mark endpoint,
-            replacing the single-day status dropdowns that lived here.
+        {/* The student register is the shared AttendanceSheet, which the teacher
+            portal renders too — one implementation, so the two cannot drift. It
+            carries its own class, section, term and date-range filters and its
+            own Download, which is what made the panel that used to sit above
+            these tabs redundant for students.
 
-            Staff attendance below is untouched: it is a different register with
-            its own statuses and no class or section, and folding it into the
-            student sheet would have meant inventing both. */}
+            Staff attendance below is deliberately untouched: it is a different
+            register with its own statuses and no class or section, and folding
+            it into the student sheet would have meant inventing both. */}
         <TabsContent value="students">
           <AttendanceSheet audience="admin" />
         </TabsContent>
 
         <TabsContent value="staff">
           <Card className="mb-4 p-4">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-              <p className="text-sm text-gray-600">Mark staff attendance for {selectedDate}</p>
-              <Button size="sm" variant="outline" className="ml-auto flex items-center gap-2" onClick={saveStaffAttendance} disabled={savingStaffAttendance}>
+            <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+              <div className="flex-1">
+                <Label>Select Date</Label>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                  <Input
+                    type="date"
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+              <Button size="sm" variant="outline" className="flex items-center gap-2" onClick={saveStaffAttendance} disabled={savingStaffAttendance}>
                 <Save size={16} />
                 {savingStaffAttendance ? 'Saving...' : 'Save Attendance'}
               </Button>
@@ -206,7 +146,7 @@ export function Attendance() {
                 {staff.map((staff: any) => {
                   const record = staffAttendance.find(a => a.personId === String(staff.id));
                   const status = record?.status || 'present';
-                  
+
                   return (
                     <TableRow key={staff.id}>
                       <TableCell>{staff.code}</TableCell>
