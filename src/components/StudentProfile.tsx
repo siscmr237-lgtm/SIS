@@ -211,9 +211,44 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
   // This student's class-level fee categories, for the 'fee' path.
   const [levelFees, setLevelFees] = useState<Array<{ id: number; name: string; amount: number }>>([]);
   const [levelFeesLoading, setLevelFeesLoading] = useState(false);
+  /**
+   * What this student still owes, per category — the list the Record Payment
+   * dialog offers and the ceiling it enforces.
+   *
+   * Read live from GET /ledger/student/:id/owing every time the dialog opens,
+   * never cached: it changes with every charge and payment, and a stale figure
+   * here would cap a payment against an amount that is no longer owed.
+   */
+  const [owingCategories, setOwingCategories] = useState<Array<{
+    key: string; kind: string; name: string; charged: number; paid: number;
+    owing: number; payable: boolean;
+  }>>([]);
+  const [owingLoading, setOwingLoading] = useState(false);
   const [paymentForm, setPaymentForm] = useState({
-    description: '', amount: '', entryDate: today, paymentMethod: '',
+    feeKey: '', description: '', amount: '', entryDate: today, paymentMethod: '',
   });
+
+  /** The category currently selected, and therefore the cap that applies. */
+  const selectedOwing = owingCategories.find((c) => c.key === paymentForm.feeKey) ?? null;
+
+  const loadOwing = async () => {
+    setOwingLoading(true);
+    try {
+      const res: any = await api.get(`/ledger/student/${encodeURIComponent(String(student.id))}/owing`);
+      setOwingCategories(Array.isArray(res?.categories) ? res.categories : []);
+    } catch {
+      setOwingCategories([]);
+    } finally {
+      setOwingLoading(false);
+    }
+  };
+
+  const openPaymentDialog = async () => {
+    setSubmitError(null);
+    setPaymentForm({ feeKey: '', description: '', amount: '', entryDate: new Date().toISOString().split('T')[0], paymentMethod: '' });
+    setShowPayment(true);
+    await loadOwing();
+  };
 
   const tabs: { id: Tab; label: string }[] = [
     { id: 'general', label: 'General Info' },
@@ -510,19 +545,37 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
   };
 
   const handlePaymentSubmit = async () => {
-    setSubmitting(true);
     setSubmitError(null);
+    // Validated here for a quick answer, and again on the server, which is the
+    // authority — this dialog is not the only thing that can reach the endpoint.
+    if (!selectedOwing) {
+      setSubmitError('Choose which fee this payment is for.');
+      return;
+    }
+    const amt = Number(paymentForm.amount);
+    if (!Number.isFinite(amt) || amt <= 0) {
+      setSubmitError('Enter an amount greater than zero.');
+      return;
+    }
+    if (amt > selectedOwing.owing) {
+      setSubmitError(`That is more than the ${selectedOwing.owing.toLocaleString()} FCFA still owed for ${selectedOwing.name}.`);
+      return;
+    }
+    setSubmitting(true);
     try {
       await api.post('/ledger/payment', {
         studentId: student.id,
-        description: paymentForm.description,
-        amount: parseInt(paymentForm.amount),
+        // What ties the money to the category it settles, so paying Tuition
+        // clears Tuition instead of the oldest charge on the account.
+        feeKey: selectedOwing.key,
+        description: paymentForm.description || `${selectedOwing.name} payment`,
+        amount: Math.round(amt),
         entryDate: paymentForm.entryDate,
         paymentMethod: paymentForm.paymentMethod,
       });
       cache.invalidateOn('ledger:write');
       setShowPayment(false);
-      setPaymentForm({ description: '', amount: '', entryDate: new Date().toISOString().split('T')[0], paymentMethod: '' });
+      setPaymentForm({ feeKey: '', description: '', amount: '', entryDate: new Date().toISOString().split('T')[0], paymentMethod: '' });
       await refreshLedger();
     } catch (e: any) {
       setSubmitError(e.message || 'Failed to record payment');
@@ -1291,7 +1344,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                   </button>
                   <button
                     className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
-                    onClick={() => { setSubmitError(null); setShowPayment(true); setShowActionsMenu(false); }}
+                    onClick={() => { openPaymentDialog(); setShowActionsMenu(false); }}
                   >
                     Record Payment
                   </button>
@@ -1313,7 +1366,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
             <Button variant="outline" onClick={() => setShowFeeOverride(true)}>
               Edit This Student's Fees
             </Button>
-            <Button onClick={() => { setSubmitError(null); setShowPayment(true); }}>
+            <Button onClick={openPaymentDialog}>
               <Plus size={16} className="mr-1" />
               Record Payment
             </Button>
@@ -1719,23 +1772,79 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                 <DialogTitle>Record Payment</DialogTitle>
                 <DialogDescription>Record a payment received from this student.</DialogDescription>
               </DialogHeader>
-              <div className="space-y-4 py-2">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', paddingTop: '0.5rem' }}>
+                {/* Category FIRST: the amount has no meaning, and no ceiling,
+                    until we know which fee the money is for. */}
                 <div>
-                  <Label>Description</Label>
-                  <Input
-                    value={paymentForm.description}
-                    onChange={e => setPaymentForm(f => ({ ...f, description: e.target.value }))}
-                    placeholder="e.g. Term 1 payment"
-                  />
+                  <Label>Paying for</Label>
+                  <Select
+                    value={paymentForm.feeKey}
+                    onValueChange={(v) => {
+                      const cat = owingCategories.find((c) => c.key === v);
+                      setSubmitError(null);
+                      setPaymentForm(f => ({
+                        ...f,
+                        feeKey: v,
+                        // Pre-filled with the full outstanding amount, which is
+                        // the common case; still editable downwards.
+                        amount: cat ? String(cat.owing) : '',
+                        description: f.description || (cat ? `${cat.name} payment` : ''),
+                      }));
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={owingLoading ? 'Loading…' : 'Select fee'} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {owingCategories.filter(c => c.payable && c.owing > 0).map(c => (
+                        <SelectItem key={c.key} value={c.key}>
+                          {c.name} — {c.owing.toLocaleString()} owing
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {!owingLoading && owingCategories.filter(c => c.payable && c.owing > 0).length === 0 && (
+                    <p className="text-sm text-gray-500" style={{ marginTop: 4 }}>
+                      Nothing outstanding to pay against.
+                    </p>
+                  )}
+                  {/* Charges that exist but cannot yet be targeted individually —
+                      shown so the total makes sense, not offered as options. */}
+                  {owingCategories.some(c => !c.payable && c.owing > 0) && (
+                    <p className="text-xs text-gray-400" style={{ marginTop: 4 }}>
+                      Also outstanding, not individually payable yet:{' '}
+                      {owingCategories.filter(c => !c.payable && c.owing > 0).map(c => c.name).join(', ')}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <Label>Amount (FCFA)</Label>
                   <Input
                     type="number"
                     min="1"
+                    max={selectedOwing ? selectedOwing.owing : undefined}
                     value={paymentForm.amount}
                     onChange={e => setPaymentForm(f => ({ ...f, amount: e.target.value }))}
                     placeholder="0"
+                    disabled={!selectedOwing}
+                  />
+                  {selectedOwing && (
+                    <p
+                      className="text-xs"
+                      style={{ marginTop: 4, color: Number(paymentForm.amount) > selectedOwing.owing ? '#B91C1C' : '#6B7280' }}
+                    >
+                      {Number(paymentForm.amount) > selectedOwing.owing
+                        ? `Above the ${selectedOwing.owing.toLocaleString()} owing for ${selectedOwing.name}`
+                        : `${selectedOwing.owing.toLocaleString()} still owing for ${selectedOwing.name} (charged ${selectedOwing.charged.toLocaleString()}, paid ${selectedOwing.paid.toLocaleString()})`}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <Label>Description</Label>
+                  <Input
+                    value={paymentForm.description}
+                    onChange={e => setPaymentForm(f => ({ ...f, description: e.target.value }))}
+                    placeholder="e.g. Term 1 payment"
                   />
                 </div>
                 <div>
@@ -1761,7 +1870,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                 <DialogClose asChild>
                   <Button variant="outline" disabled={submitting}>Cancel</Button>
                 </DialogClose>
-                <Button onClick={handlePaymentSubmit} disabled={submitting}>
+                <Button onClick={handlePaymentSubmit} disabled={submitting || !selectedOwing}>
                   {submitting ? 'Saving...' : 'Record Payment'}
                 </Button>
               </div>
