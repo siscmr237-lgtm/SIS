@@ -1,4 +1,4 @@
-import { AlertTriangle, Calendar, Filter, Receipt, Search } from 'lucide-react';
+import { AlertTriangle, Calendar, Filter, Receipt, Search, Trash2 } from 'lucide-react';
 import { AcademicYearSelect, useAcademicYear } from '@/lib/academicYear';
 import { PaymentStatusDot, useStudentPaymentStatuses } from './PaymentStatus';
 import { ZeroMarkDot, useStudentsWithZeroMarks } from './MarkStatus';
@@ -39,6 +39,10 @@ interface Transaction {
   amount: number;
   entryDate: string;
   paymentMethod: string | null;
+  // True for the charges billed from a class level's fee structure. They are
+  // owned by syncLevelFeeCharges, so deleting one is undone the next time that
+  // level's fees are saved — the confirmation says so rather than pretending.
+  isFeeStructureCharge?: boolean;
 }
 
 interface StudentQuery {
@@ -108,6 +112,11 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [transactionsLoading, setTransactionsLoading] = useState(true);
   const [txTotalPages, setTxTotalPages] = useState(1);
+  // The row a delete has been asked for but not yet confirmed. The whole row is
+  // held, not just its id, so the confirmation can name the amount and party.
+  const [txPendingDelete, setTxPendingDelete] = useState<Transaction | null>(null);
+  const [txDeleting, setTxDeleting] = useState(false);
+  const [txDeleteError, setTxDeleteError] = useState<string | null>(null);
 
   const today = new Date().toISOString().split('T')[0];
   const [openDamage, setOpenDamage] = useState(false);
@@ -262,6 +271,52 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
       setDamageError(e.message || 'Failed to record damage');
     } finally {
       setDamageSubmitting(false);
+    }
+  };
+
+  /**
+   * Deleting one row out of the School Transactions table.
+   *
+   * The table is a UNION of two different tables, so the row id carries which
+   * one it came from — 'ledger-<code>' or 'expense-<code>' — and the delete has
+   * to be routed accordingly. Guessing wrong would 404, and hardcoding one
+   * endpoint would make the Others bucket (where both kinds sit side by side)
+   * half-broken.
+   *
+   * The refresh afterwards is the same set the damage dialog does, for the same
+   * reason: a deleted row moves the stat cards, the per-student balances, and —
+   * via the invalidated students roster — the payment-status and zero-mark dots.
+   * Nothing is patched locally, so nothing can disagree with the server.
+   */
+  const txTarget = (t: Transaction): { path: string; kind: 'ledger' | 'expense' } | null => {
+    if (t.id.startsWith('ledger-')) return { path: `/ledger/${encodeURIComponent(t.id.slice(7))}`, kind: 'ledger' };
+    if (t.id.startsWith('expense-')) return { path: `/expenses/${encodeURIComponent(t.id.slice(8))}`, kind: 'expense' };
+    return null;
+  };
+
+  const confirmTxDelete = async () => {
+    if (!txPendingDelete) return;
+    const target = txTarget(txPendingDelete);
+    if (!target) {
+      setTxDeleteError('This row cannot be deleted from here.');
+      return;
+    }
+    setTxDeleting(true);
+    setTxDeleteError(null);
+    try {
+      await api.delete(target.path);
+      // Both events, as the damage dialog does: a ledger delete moves a
+      // student's balance and an expense delete moves the school's outgoings,
+      // and this table mixes the two, so reporting both is cheaper than
+      // reasoning about which screens each one feeds.
+      cache.invalidateOn('ledger:write');
+      cache.invalidateOn('expense:write');
+      setTxPendingDelete(null);
+      await Promise.all([fetchDashboard(), fetchStudentPage(studentQuery), fetchTransactionsPage(txQuery)]);
+    } catch (e: any) {
+      setTxDeleteError(e?.message || 'Failed to delete this record.');
+    } finally {
+      setTxDeleting(false);
     }
   };
 
@@ -499,12 +554,17 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
                   <th className="px-4 py-3 font-medium">Type</th>
                   <th className="px-4 py-3 font-medium text-right">Amount</th>
                   <th className="px-4 py-3 font-medium">Method</th>
+                  <th className="px-4 py-3 font-medium">
+                    <span style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)', whiteSpace: 'nowrap' }}>
+                      Actions
+                    </span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {transactions.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-4 py-6 text-center text-gray-500">
+                    <td colSpan={8} className="px-4 py-6 text-center text-gray-500">
                       No {BUCKETS.find(b => b.id === txQuery.bucket)?.label.toLowerCase()} transactions found.
                     </td>
                   </tr>
@@ -531,6 +591,28 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
                       {t.type === 'PAYMENT' ? '+' : ''}{t.amount.toLocaleString()} FCFA
                     </td>
                     <td className="px-4 py-3 text-gray-500">{t.paymentMethod ?? '—'}</td>
+                    {/* Icon-only, inline-styled: src/index.css is a pre-compiled
+                        Tailwind build, so a colour utility that isn't already in
+                        it renders as nothing at all. */}
+                    <td className="px-4 py-3">
+                      {txTarget(t) && (
+                        <button
+                          type="button"
+                          title="Delete this record"
+                          aria-label={`Delete ${t.description}, ${t.amount.toLocaleString()} FCFA`}
+                          onClick={() => { setTxDeleteError(null); setTxPendingDelete(t); }}
+                          disabled={txDeleting}
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                            padding: 4, borderRadius: 6, border: 'none', background: 'transparent',
+                            color: '#DC2626', cursor: txDeleting ? 'default' : 'pointer',
+                            opacity: txDeleting ? 0.5 : 1,
+                          }}
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -654,6 +736,55 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
               </div>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete confirmation for a School Transactions row. Not window.confirm:
+          what the deletion costs depends on the row, and saying so is the whole
+          reason for asking. */}
+      <Dialog
+        open={txPendingDelete !== null}
+        onOpenChange={(open) => {
+          if (!open && !txDeleting) { setTxPendingDelete(null); setTxDeleteError(null); }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              Delete this {txPendingDelete?.type === 'PAYMENT' ? 'payment' : txPendingDelete?.type === 'EXPENSE' ? 'expense' : 'charge'}?
+            </DialogTitle>
+            <DialogDescription>
+              {txPendingDelete && (
+                <>
+                  <strong>{txPendingDelete.description}</strong>{' '}
+                  — {txPendingDelete.amount.toLocaleString()} FCFA on{' '}
+                  {formatDate(txPendingDelete.entryDate)}
+                  {txPendingDelete.partyName ? `, ${txPendingDelete.partyName}` : ''}.{' '}
+                  {txPendingDelete.type === 'PAYMENT'
+                    ? 'Removing it means the money is treated as never received, so the balance it settled goes back up and the fee status may change.'
+                    : txPendingDelete.type === 'EXPENSE'
+                    ? 'Removing it takes the amount back out of the school’s recorded spending.'
+                    : 'Removing it takes the amount off what was owed.'}
+                  {' '}This cannot be undone.
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          {/* Honest about the one case where "deleted" does not mean gone. */}
+          {txPendingDelete?.isFeeStructureCharge && (
+            <p className="text-sm" style={{ color: '#e0552e' }}>
+              This charge is billed from the class level&apos;s fee structure. Deleting it here
+              un-bills the student for now, but it will be re-created the next time that level&apos;s
+              fees are saved. To stop billing it, change the fee structure instead.
+            </p>
+          )}
+          {txDeleteError && <p className="text-sm" style={{ color: '#e0552e' }}>{txDeleteError}</p>}
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" disabled={txDeleting} onClick={() => setTxPendingDelete(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={confirmTxDelete} disabled={txDeleting}>
+              {txDeleting ? 'Deleting...' : 'Delete'}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

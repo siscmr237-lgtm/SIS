@@ -6,7 +6,7 @@ import { api } from '../lib/api';
 import { useSisCache } from '../lib/SisCache';
 import { useSchoolClassNames } from '../lib/classes';
 import { PaymentStatusDot, useStudentPaymentStatuses } from './PaymentStatus';
-import { ZeroMarkDot, ZERO_MARK_COLOR } from './MarkStatus';
+import { ZeroMarkDot, ZERO_MARK_COLOR, useStudentsWithZeroMarks } from './MarkStatus';
 import { StudentFlagNotices } from './StudentFlagNotices';
 import { AcademicYearSelect, useAcademicYear } from '../lib/academicYear';
 import { formatTermLabel } from '../utils/academicTerm';
@@ -95,16 +95,24 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
   // src/lib/classes.ts for why a hardcoded level list can't work here.
   const { classNames: schoolClassNames } = useSchoolClassNames();
 
-  // The status the server computed. Normally it arrives on the student itself,
-  // whether this page was reached from the list or fetched directly by code;
-  // the roster lookup is a fallback for any caller that passes a leaner object.
+  // The status the server computed. The SHARED ROSTER is consulted first and the
+  // student prop is the fallback — deliberately that order. The prop is a
+  // snapshot taken when this page was opened and never changes again, so reading
+  // it first meant a charge or payment recorded here left the dot showing the
+  // status from before the write. The roster is a cached resource that
+  // 'ledger:write' invalidates, so it re-reads and the dot follows the money.
+  // The prop still covers the first paint, before the roster has loaded.
   const paymentStatuses = useStudentPaymentStatuses();
-  const feeStatus = (student as any).paymentStatus ?? paymentStatuses.get(String(student.id));
+  const zeroMarkStudents = useStudentsWithZeroMarks();
+  const feeStatus = paymentStatuses.get(String(student.id)) ?? (student as any).paymentStatus;
 
   // Both come from GET /students/:id, which is what this page always loads.
   // zeroMarkSubjects is detail-only — the list endpoint returns just the boolean,
   // so a caller passing a lean student gets no banner rather than a wrong one.
-  const hasZeroMark = (student as any).hasZeroMark === true;
+  // Same roster-first ordering as feeStatus, for the same staleness reason.
+  const hasZeroMark = zeroMarkStudents.size
+    ? zeroMarkStudents.has(String(student.id))
+    : (student as any).hasZeroMark === true;
   const zeroMarkSubjects: string[] | undefined = (student as any).zeroMarkSubjects;
 
   // Editable info — local state so updates appear immediately after save
@@ -159,7 +167,6 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
   const [ledgerData, setLedgerData] = useState<LedgerData | null>(null);
   const [ledgerLoading, setLedgerLoading] = useState(false);
   const [ledgerError, setLedgerError] = useState<string | null>(null);
-  const [showCharge, setShowCharge] = useState(false);
   const [showFeeOverride, setShowFeeOverride] = useState(false);
   // Whether this student is detached from their class level's fee structure.
   // Seeded from the record we were handed and refreshed after an override edit.
@@ -172,6 +179,10 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
   const [entryEditForm, setEntryEditForm] = useState({ description: '', amount: '' });
   const [entryBusy, setEntryBusy] = useState(false);
   const [entryError, setEntryError] = useState<string | null>(null);
+  // The record a delete has been asked for but not yet confirmed. Holding the
+  // whole entry rather than an id lets the confirmation name the amount and say
+  // what removing it will do to the balance.
+  const [entryPendingDelete, setEntryPendingDelete] = useState<LedgerEntry | null>(null);
   // The "Custom fees" explanation, which used to be a permanent banner.
   const [feeInfoOpen, setFeeInfoOpen] = useState(false);
   const [reportCardOpen, setReportCardOpen] = useState(false);
@@ -198,19 +209,6 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
   }, [showActionsMenu]);
 
   const today = new Date().toISOString().split('T')[0];
-  // Two kinds of charge, held apart in the form as well as on the server, so a
-  // fine can't be logged as a fee-structure category or the reverse:
-  //   'fee'    — an extra charge in one of this student's class-level categories;
-  //              counts toward that category's first-installment requirement.
-  //   'oneOff' — outside the fee structure; raises what they owe but is never
-  //              part of first-installment maths.
-  const [chargeKind, setChargeKind] = useState<'fee' | 'oneOff'>('fee');
-  const [chargeForm, setChargeForm] = useState({
-    classLevelFeeId: '', description: '', amount: '', entryDate: today, paymentMethod: '',
-  });
-  // This student's class-level fee categories, for the 'fee' path.
-  const [levelFees, setLevelFees] = useState<Array<{ id: number; name: string; amount: number }>>([]);
-  const [levelFeesLoading, setLevelFeesLoading] = useState(false);
   /**
    * What this student still owes, per category — the list the Record Payment
    * dialog offers and the ceiling it enforces.
@@ -357,23 +355,14 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
       setLedgerLoading(true);
       setLedgerError(null);
       try {
-        // The student's own class LEVEL supplies the fee categories now —
-        // there is no per-school student category list any more.
-        const level = (student as any).classLevel || (student as any).class;
-        setLevelFeesLoading(true);
-        const [ledgerRes, feesRes] = await Promise.allSettled([
-          api.get(`/ledger/student/${encodeURIComponent(student.id)}`),
-          level
-            ? api.get(`/classes/levels/${encodeURIComponent(level)}/fees`)
-            : Promise.resolve({ fees: [] }),
-        ]);
-        if (!cancelled) {
-          if (ledgerRes.status === 'fulfilled') setLedgerData(ledgerRes.value);
-          else setLedgerError(ledgerRes.reason?.message || 'Failed to load finance data');
-          if (feesRes.status === 'fulfilled') setLevelFees((feesRes.value as any)?.fees || []);
-          else setLevelFees([]);
-          setLevelFeesLoading(false);
-        }
+        // Only the ledger now. The class level's fee list used to be fetched
+        // alongside it for the Record Charge dialog's category picker; charges
+        // are raised from the fee-structure dialog instead, which loads its own.
+        const data = await api.get(`/ledger/student/${encodeURIComponent(student.id)}`).catch((e: any) => {
+          if (!cancelled) setLedgerError(e?.message || 'Failed to load finance data');
+          return null;
+        });
+        if (!cancelled && data) setLedgerData(data);
       } finally {
         if (!cancelled) setLedgerLoading(false);
       }
@@ -436,15 +425,49 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
     [ledgerData],
   );
 
+  /**
+   * Hover-intent for the "Custom fees" popover.
+   *
+   * The popover sits 6px below the badge, so the pointer leaves the badge before
+   * it arrives at the popover. Closing on mouseleave therefore made the "Review
+   * or remove" button inside it effectively unclickable — it vanished while the
+   * pointer was crossing the gap.
+   *
+   * So closing is always deferred by a grace period, and anything that counts as
+   * intent to interact — re-entering the badge, entering the popover itself,
+   * focusing either — cancels a close already in flight. ONE timer ref holds both
+   * the close delay and the show-on-load auto-hide, which is what makes hovering
+   * during those first seconds cancel the auto-hide instead of racing it.
+   */
+  const feeInfoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const clearFeeInfoTimer = () => {
+    if (feeInfoTimer.current) {
+      clearTimeout(feeInfoTimer.current);
+      feeInfoTimer.current = null;
+    }
+  };
+  const openFeeInfo = () => {
+    clearFeeInfoTimer();
+    setFeeInfoOpen(true);
+  };
+  const closeFeeInfoSoon = (delay = 400) => {
+    clearFeeInfoTimer();
+    feeInfoTimer.current = setTimeout(() => {
+      feeInfoTimer.current = null;
+      setFeeInfoOpen(false);
+    }, delay);
+  };
+
   // Surfaces the custom-fee explanation once per page load, then gets out of the
   // way. It replaced a permanent banner: the fact matters when you arrive at the
   // page, not on every subsequent glance, and it stays reachable by hovering the
   // badge.
   useEffect(() => {
     if (!feesOverridden) return;
-    setFeeInfoOpen(true);
-    const timer = setTimeout(() => setFeeInfoOpen(false), 7000);
-    return () => clearTimeout(timer);
+    openFeeInfo();
+    closeFeeInfoSoon(7000);
+    return clearFeeInfoTimer;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [feesOverridden]);
 
   const beginEditEntry = (entry: LedgerEntry) => {
@@ -480,16 +503,39 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
     }
   };
 
-  const handleEntryDelete = async (entry: LedgerEntry) => {
-    if (!window.confirm(`Remove "${entry.description}" (${entry.amount.toLocaleString()} FCFA)? This cannot be undone.`)) return;
+  const requestEntryDelete = (entry: LedgerEntry) => {
+    setEntryError(null);
+    setEntryPendingDelete(entry);
+  };
+
+  /**
+   * Removing one record from the account.
+   *
+   * Everything money-derived is recomputed from the server afterwards rather than
+   * patched locally, because a deletion moves more than the row that vanished:
+   * deleting a PAYMENT pushes the student back toward owing and can change their
+   * status dot, and deleting a CHARGE reduces what was owed. Adjusting the totals
+   * by hand here would be a second implementation of allocation rules that live
+   * in feesStatus.js.
+   *
+   *  - refreshLedger()          re-reads totalCharged / totalPaid / balance and the rows
+   *  - loadOwing()              re-reads the per-category owing the payment dialog caps against
+   *  - invalidateOn('ledger:write')  drops the cached students roster, which is where the
+   *                             payment-status and zero-mark dots read from — so they
+   *                             re-fetch instead of serving the pre-deletion value
+   */
+  const confirmEntryDelete = async () => {
+    const entry = entryPendingDelete;
+    if (!entry) return;
     setEntryBusy(true);
     setEntryError(null);
     try {
       await api.delete(`/ledger/${encodeURIComponent(entry.id)}`);
       cache.invalidateOn('ledger:write');
-      await refreshLedger();
+      setEntryPendingDelete(null);
+      await Promise.all([refreshLedger(), loadOwing()]);
     } catch (e: any) {
-      setEntryError(e?.message || 'Failed to remove the charge.');
+      setEntryError(e?.message || 'Failed to remove this record.');
     } finally {
       setEntryBusy(false);
     }
@@ -501,47 +547,6 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
     setShowChargeBreakdown(false);
     setActiveTab('finance');
     setShowFeeOverride(true);
-  };
-
-  const handleChargeSubmit = async () => {
-    setSubmitError(null);
-    const amt = Number(chargeForm.amount);
-    if (!Number.isFinite(amt) || amt <= 0) {
-      setSubmitError('Enter an amount greater than zero.');
-      return;
-    }
-    if (chargeKind === 'fee' && !chargeForm.classLevelFeeId) {
-      setSubmitError('Choose a fee category, or switch to a one-off charge.');
-      return;
-    }
-    if (chargeKind === 'oneOff' && !chargeForm.description.trim()) {
-      setSubmitError('Give the one-off charge a description.');
-      return;
-    }
-    setSubmitting(true);
-    try {
-      // classLevelFeeId is what tells the server which kind this is: present
-      // means it counts toward that category's first-installment requirement,
-      // absent means it is a standalone line outside the fee structure.
-      await api.post('/ledger/charge', {
-        studentId: student.id,
-        ...(chargeKind === 'fee'
-          ? { classLevelFeeId: parseInt(chargeForm.classLevelFeeId, 10) }
-          : {}),
-        description: chargeForm.description.trim(),
-        amount: Math.round(amt),
-        entryDate: chargeForm.entryDate,
-        ...(chargeForm.paymentMethod ? { paymentMethod: chargeForm.paymentMethod } : {}),
-      });
-      cache.invalidateOn('ledger:write');
-      setShowCharge(false);
-      setChargeForm({ classLevelFeeId: '', description: '', amount: '', entryDate: new Date().toISOString().split('T')[0], paymentMethod: '' });
-      await refreshLedger();
-    } catch (e: any) {
-      setSubmitError(e.message || 'Failed to record charge');
-    } finally {
-      setSubmitting(false);
-    }
   };
 
   const handlePaymentSubmit = async () => {
@@ -693,16 +698,18 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                   inside a <p>, where a <div> would be invalid. */}
               <span
                 style={{ position: 'relative', display: 'inline-block' }}
-                onMouseEnter={() => setFeeInfoOpen(true)}
-                onMouseLeave={() => setFeeInfoOpen(false)}
+                onMouseEnter={openFeeInfo}
+                onMouseLeave={() => closeFeeInfoSoon()}
               >
                 <span
                   role="button"
                   tabIndex={0}
                   aria-describedby="custom-fees-info"
-                  onFocus={() => setFeeInfoOpen(true)}
-                  onBlur={() => setFeeInfoOpen(false)}
-                  onClick={() => setFeeInfoOpen((v) => !v)}
+                  onFocus={openFeeInfo}
+                  // Deferred, so tabbing (or clicking) into the popover's button
+                  // does not close the popover out from under the click.
+                  onBlur={() => closeFeeInfoSoon()}
+                  onClick={() => (feeInfoOpen ? closeFeeInfoSoon(0) : openFeeInfo())}
                   style={{
                     color: '#5B21B6', backgroundColor: '#F5F3FF',
                     border: '1px solid #C4B5FD', borderRadius: 999,
@@ -715,6 +722,10 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                 <span
                   id="custom-fees-info"
                   role="tooltip"
+                  // Entering the popover cancels the close the gap-crossing
+                  // started; leaving it starts a fresh one.
+                  onMouseEnter={openFeeInfo}
+                  onMouseLeave={() => closeFeeInfoSoon()}
                   style={{
                     position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 30,
                     display: 'block', width: 300, padding: '0.7rem 0.8rem',
@@ -1440,6 +1451,11 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                           <th className="px-4 py-3 font-medium">Description</th>
                           <th className="px-4 py-3 font-medium text-right">Amount</th>
                           <th className="px-4 py-3 font-medium">Payment Method</th>
+                          <th className="px-4 py-3 font-medium">
+                            <span style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)', whiteSpace: 'nowrap' }}>
+                              Actions
+                            </span>
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1468,6 +1484,26 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                             </td>
                             <td className="px-4 py-3 text-gray-500">
                               {entry.paymentMethod ?? '—'}
+                            </td>
+                            {/* Icon-only, and styled inline: src/index.css is a
+                                pre-compiled Tailwind build, so a colour utility
+                                that isn't already in it renders as nothing. */}
+                            <td className="px-4 py-3">
+                              <button
+                                type="button"
+                                title={`Delete this ${entry.type === 'CHARGE' ? 'charge' : 'payment'}`}
+                                aria-label={`Delete ${entry.description}, ${entry.amount.toLocaleString()} FCFA`}
+                                onClick={() => requestEntryDelete(entry)}
+                                disabled={entryBusy}
+                                style={{
+                                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                  padding: 4, borderRadius: 6, border: 'none', background: 'transparent',
+                                  color: '#DC2626', cursor: entryBusy ? 'default' : 'pointer',
+                                  opacity: entryBusy ? 0.5 : 1,
+                                }}
+                              >
+                                <Trash2 size={15} />
+                              </button>
                             </td>
                           </tr>
                         ))}
@@ -1573,7 +1609,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                           <Button variant="outline" size="sm" onClick={() => beginEditEntry(entry)} disabled={entryBusy}>
                             Edit
                           </Button>
-                          <Button variant="outline" size="sm" onClick={() => handleEntryDelete(entry)} disabled={entryBusy}>
+                          <Button variant="outline" size="sm" onClick={() => requestEntryDelete(entry)} disabled={entryBusy}>
                             Remove
                           </Button>
                         </>
@@ -1624,142 +1660,41 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
             }}
           />
 
-          {/* Record Charge dialog */}
-          <Dialog open={showCharge} onOpenChange={(open) => { setShowCharge(open); if (!open) setSubmitError(null); }}>
-            <DialogContent className="max-w-md">
+          {/* Delete-a-record confirmation. Deliberately not window.confirm: what
+              deleting costs differs by row kind, and saying so is the point of
+              asking at all. */}
+          <Dialog
+            open={entryPendingDelete !== null}
+            onOpenChange={(open) => {
+              if (!open && !entryBusy) { setEntryPendingDelete(null); setEntryError(null); }
+            }}
+          >
+            <DialogContent>
               <DialogHeader>
-                <DialogTitle>Record Charge</DialogTitle>
-                <DialogDescription>Add a charge to this student's account.</DialogDescription>
+                <DialogTitle>
+                  Delete this {entryPendingDelete?.type === 'CHARGE' ? 'charge' : 'payment'}?
+                </DialogTitle>
+                <DialogDescription>
+                  {entryPendingDelete && (
+                    <>
+                      <strong>{entryPendingDelete.description}</strong>{' '}
+                      — {entryPendingDelete.amount.toLocaleString()} FCFA on{' '}
+                      {formatDate(entryPendingDelete.entryDate)}.{' '}
+                      {entryPendingDelete.type === 'PAYMENT'
+                        ? `Removing it means ${displayInfo.firstName} is treated as never having paid it, so the balance goes back up and the fee status may change.`
+                        : `Removing it takes that amount off what ${displayInfo.firstName} owes.`}
+                      {' '}This cannot be undone.
+                    </>
+                  )}
+                </DialogDescription>
               </DialogHeader>
-              <div className="space-y-4 py-2">
-                {/* The two kinds are picked FIRST and shown as mutually
-                    exclusive cards, so it is not possible to fill in a fee
-                    category and a free-form fine at the same time and be unsure
-                    which one was recorded. */}
-                <div className="space-y-2">
-                  {([
-                    {
-                      kind: 'fee' as const,
-                      title: 'Charge a fee category',
-                      blurb: `Adds to one of ${student.firstName}'s class-level fee categories and counts toward that category's first installment.`,
-                    },
-                    {
-                      kind: 'oneOff' as const,
-                      title: 'One-off charge',
-                      blurb: 'A fine, trip or replacement — outside the fee structure. Increases what they owe but never counts toward first installment.',
-                    },
-                  ]).map(opt => {
-                    const active = chargeKind === opt.kind;
-                    return (
-                      <button
-                        key={opt.kind}
-                        type="button"
-                        onClick={() => { setChargeKind(opt.kind); setSubmitError(null); }}
-                        style={{
-                          display: 'block',
-                          width: '100%',
-                          textAlign: 'left',
-                          padding: '0.625rem 0.75rem',
-                          borderRadius: 8,
-                          border: `1.5px solid ${active ? '#2563EB' : '#E5E7EB'}`,
-                          backgroundColor: active ? '#EFF6FF' : '#FFFFFF',
-                          cursor: 'pointer',
-                        }}
-                        aria-pressed={active}
-                      >
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span
-                            style={{
-                              width: 14, height: 14, borderRadius: '50%', flexShrink: 0,
-                              border: `1.5px solid ${active ? '#2563EB' : '#9CA3AF'}`,
-                              backgroundColor: active ? '#2563EB' : 'transparent',
-                            }}
-                          />
-                          <span className="text-sm" style={{ fontWeight: 500, color: '#0F172A' }}>{opt.title}</span>
-                        </span>
-                        <span className="text-sm" style={{ display: 'block', color: '#6B7280', marginTop: 4, marginLeft: 22 }}>
-                          {opt.blurb}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {chargeKind === 'fee' ? (
-                  <div>
-                    <Label>Fee Category</Label>
-                    <Select
-                      value={chargeForm.classLevelFeeId}
-                      onValueChange={(v) => setChargeForm(f => ({ ...f, classLevelFeeId: v }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder={levelFeesLoading ? 'Loading...' : 'Select fee category'} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {levelFees.map(fee => (
-                          <SelectItem key={fee.id} value={String(fee.id)}>{fee.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {!levelFeesLoading && levelFees.length === 0 && (
-                      <p className="text-sm text-gray-500 mt-1">
-                        No fee categories for {(student as any).classLevel || student.class} yet — set them up on the Classes page.
-                      </p>
-                    )}
-                    <div style={{ marginTop: '0.75rem' }}>
-                      <Label>Description <span className="text-gray-400 font-normal">(optional)</span></Label>
-                      <Input
-                        value={chargeForm.description}
-                        onChange={e => setChargeForm(f => ({ ...f, description: e.target.value }))}
-                        placeholder="Defaults to the category name"
-                      />
-                    </div>
-                  </div>
-                ) : (
-                  <div>
-                    <Label>What is this charge for?</Label>
-                    <Input
-                      value={chargeForm.description}
-                      onChange={e => setChargeForm(f => ({ ...f, description: e.target.value }))}
-                      placeholder="e.g. Replaced library book"
-                    />
-                  </div>
-                )}
-                <div>
-                  <Label>Amount (FCFA)</Label>
-                  <Input
-                    type="number"
-                    min="1"
-                    value={chargeForm.amount}
-                    onChange={e => setChargeForm(f => ({ ...f, amount: e.target.value }))}
-                    placeholder="0"
-                  />
-                </div>
-                <div>
-                  <Label>Date</Label>
-                  <Input
-                    type="date"
-                    value={chargeForm.entryDate}
-                    onChange={e => setChargeForm(f => ({ ...f, entryDate: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <Label>Payment Method <span className="text-gray-400 font-normal">(optional)</span></Label>
-                  <Select value={chargeForm.paymentMethod} onValueChange={(v) => setChargeForm(f => ({ ...f, paymentMethod: v }))}>
-                    <SelectTrigger><SelectValue placeholder="Select method" /></SelectTrigger>
-                    <SelectContent>
-                      {PAYMENT_METHODS.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                {submitError && <p className="text-sm text-red-600">{submitError}</p>}
-              </div>
+              {entryError && <p className="text-sm" style={{ color: '#e0552e' }}>{entryError}</p>}
               <div className="flex justify-end gap-2">
                 <DialogClose asChild>
-                  <Button variant="outline" disabled={submitting}>Cancel</Button>
+                  <Button variant="outline" disabled={entryBusy}>Cancel</Button>
                 </DialogClose>
-                <Button onClick={handleChargeSubmit} disabled={submitting}>
-                  {submitting ? 'Saving...' : 'Record Charge'}
+                <Button variant="destructive" onClick={confirmEntryDelete} disabled={entryBusy}>
+                  {entryBusy ? 'Deleting...' : 'Delete'}
                 </Button>
               </div>
             </DialogContent>
