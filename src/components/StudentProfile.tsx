@@ -12,6 +12,8 @@ import { AcademicYearSelect, useAcademicYear } from '../lib/academicYear';
 import { formatTermLabel } from '../utils/academicTerm';
 import { StudentFeeOverrideDialog } from './StudentFeeOverrideDialog';
 import { StudentAttendancePanel } from './StudentAttendancePanel';
+import { ReportCardTermDialog } from './ReportCardTermDialog';
+import { downloadReportCard } from '@/lib/reportCard';
 import { NavigationPage } from '../App';
 import { Student } from '../types';
 import { Card } from './ui/card';
@@ -172,6 +174,9 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
   const [entryError, setEntryError] = useState<string | null>(null);
   // The "Custom fees" explanation, which used to be a permanent banner.
   const [feeInfoOpen, setFeeInfoOpen] = useState(false);
+  const [reportCardOpen, setReportCardOpen] = useState(false);
+  const [reportCardBusy, setReportCardBusy] = useState(false);
+  const [reportCardError, setReportCardError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [showActionsMenu, setShowActionsMenu] = useState(false);
@@ -1767,6 +1772,46 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
 
       {activeTab === 'marks' && (
         <Card className="p-6">
+          {/* The same report card the Report Cards page produces, reachable from
+              the marks it is generated from. */}
+          <div className="flex items-center justify-end" style={{ marginBottom: '0.75rem' }}>
+            <Button
+              variant="outline"
+              className="flex items-center gap-2"
+              onClick={() => setReportCardOpen(true)}
+            >
+              <FileText size={16} />
+              Download report card
+            </Button>
+          </div>
+          <ReportCardTermDialog
+            open={reportCardOpen}
+            onOpenChange={(v) => { if (!v) { setReportCardOpen(false); setReportCardError(null); } }}
+            busy={reportCardBusy}
+            progress={reportCardError}
+            title={`Report card — ${displayInfo.firstName} ${displayInfo.lastName}`}
+            onConfirm={async (terms) => {
+              setReportCardBusy(true);
+              setReportCardError(null);
+              try {
+                await downloadReportCard(
+                  {
+                    code: String(student.id),
+                    firstName: displayInfo.firstName,
+                    lastName: displayInfo.lastName,
+                    class: displayInfo.class,
+                  },
+                  terms,
+                  marksYear || yearStatus?.activeYear || '',
+                );
+                setReportCardOpen(false);
+              } catch (e: any) {
+                setReportCardError(e?.message || 'Could not generate the report card.');
+              } finally {
+                setReportCardBusy(false);
+              }
+            }}
+          />
           <div className="flex items-end gap-3" style={{ marginBottom: '1rem', flexWrap: 'wrap' }}>
             <div style={{ minWidth: 160 }}>
               <Label>Academic Year</Label>

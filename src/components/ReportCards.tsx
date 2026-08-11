@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { AcademicYearSelect, useAcademicYear } from '@/lib/academicYear';
 import { EnterMarksDialog } from './EnterMarksDialog';
 import { ManageTestsExamsDialog } from './ManageTestsExamsDialog';
+import { ReportCardTermDialog } from './ReportCardTermDialog';
+import { downloadReportCard, downloadAllReportCards } from '@/lib/reportCard';
 import { PaymentStatusDot } from './PaymentStatus';
 import { ZeroMarkDot } from './MarkStatus';
 import { NavigationPage } from '../App';
@@ -43,6 +45,13 @@ export function ReportCards({ onNavigate }: ReportCardsProps) {
   const students = studentsData ?? [];
   const classes = classesData ?? [];
   const [searchTerm, setSearchTerm] = useState('');
+  // The table is now a filter surface over STUDENTS: a report card is generated
+  // from marks on demand, so there is no stored record to list.
+  const [filterClass, setFilterClass] = useState('__all');
+  const [cardFor, setCardFor] = useState<{ code: string; firstName: string; lastName: string; class?: string | null } | null>(null);
+  const [bulkTerms, setBulkTerms] = useState(false);
+  const [cardBusy, setCardBusy] = useState(false);
+  const [cardProgress, setCardProgress] = useState<string | null>(null);
   const [openCreate, setOpenCreate] = useState(false);
   const [openEnterMarks, setOpenEnterMarks] = useState(false);
   const [openManageTests, setOpenManageTests] = useState(false);
@@ -57,6 +66,59 @@ export function ReportCards({ onNavigate }: ReportCardsProps) {
     headTeacherComment: '',
     subjects: [] as { name: string; score: string; grade: string; teacherComment: string }[],
   }));
+
+  // Who the download buttons act on: every student matching the filters.
+  const filteredStudents = (studentsData ?? []).filter((s: any) => {
+    const q = searchTerm.toLowerCase();
+    const matchesSearch = !q
+      || `${s.firstName} ${s.lastName}`.toLowerCase().includes(q)
+      || String(s.id ?? '').toLowerCase().includes(q)
+      || String(s.class ?? '').toLowerCase().includes(q);
+    const matchesClass = filterClass === '__all' || s.class === filterClass;
+    return matchesSearch && matchesClass;
+  });
+
+  const asCardStudent = (s: any) => ({
+    code: String(s.id),
+    firstName: s.firstName,
+    lastName: s.lastName,
+    class: s.class ?? null,
+  });
+
+  const activeYear = yearStatus?.activeYear || form.academicYear || '';
+
+  const runSingle = async (terms: string[]) => {
+    if (!cardFor) return;
+    setCardBusy(true);
+    setCardProgress(null);
+    try {
+      await downloadReportCard(cardFor, terms, activeYear);
+      setCardFor(null);
+    } catch (e: any) {
+      setCardProgress(e?.message || 'Could not generate the report card.');
+    } finally {
+      setCardBusy(false);
+    }
+  };
+
+  const runBulk = async (terms: string[]) => {
+    setCardBusy(true);
+    setCardProgress(`Preparing ${filteredStudents.length} report cards...`);
+    try {
+      await downloadAllReportCards(
+        filteredStudents.map(asCardStudent),
+        terms,
+        activeYear,
+        (done, total) => setCardProgress(`Generated ${done} of ${total}...`),
+      );
+      setBulkTerms(false);
+      setCardProgress(null);
+    } catch (e: any) {
+      setCardProgress(e?.message || 'Could not generate the report cards.');
+    } finally {
+      setCardBusy(false);
+    }
+  };
 
   const filteredReportCards = reportCards.filter(report => {
     const searchLower = searchTerm.toLowerCase();
@@ -119,13 +181,18 @@ export function ReportCards({ onNavigate }: ReportCardsProps) {
             <Trophy size={20} />
             Class Ranking
           </Button>
+          {/* Report cards are generated from the marks that already exist, so
+              there is nothing to "create" by hand any more. The dialog below is
+              left in place but no longer reachable — its trigger is gone. */}
+          <Button
+            className="flex items-center gap-2"
+            onClick={() => { setBulkTerms(true); }}
+            disabled={!filteredStudents.length}
+          >
+            <FileText size={20} />
+            Download all ({filteredStudents.length})
+          </Button>
         <Dialog open={openCreate} onOpenChange={setOpenCreate}>
-          <DialogTrigger asChild>
-            <Button className="flex items-center gap-2">
-              <Plus size={20} />
-              Create Report Card
-            </Button>
-          </DialogTrigger>
           <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Create Student Report Card</DialogTitle>
@@ -269,22 +336,75 @@ export function ReportCards({ onNavigate }: ReportCardsProps) {
 
       <Card>
         <div className="overflow-x-auto">
+        {/* Students, not stored report cards: the card is generated from marks
+            when asked for, so this table is the filter that decides who gets
+            one. */}
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Report ID</TableHead>
+              <TableHead>Student ID</TableHead>
               <TableHead>Student Name</TableHead>
               <TableHead>Class</TableHead>
-              <TableHead>Term</TableHead>
-              <TableHead>Academic Year</TableHead>
-              <TableHead>Average Score</TableHead>
-              <TableHead>Position</TableHead>
-              <TableHead>Attendance</TableHead>
-              <TableHead>Actions</TableHead>
+              <TableHead>Report card</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredReportCards.map((report) => (
+            {filteredStudents.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={4} className="text-gray-500">
+                  No students match these filters.
+                </TableCell>
+              </TableRow>
+            ) : filteredStudents.map((s: any) => (
+              <TableRow key={s.id}>
+                <TableCell>{s.id}</TableCell>
+                <TableCell>
+                  {s.firstName} {s.lastName}
+                  <PaymentStatusDot status={s.paymentStatus} />
+                  <ZeroMarkDot hasZero={s.hasZeroMark} />
+                </TableCell>
+                <TableCell>{s.class}</TableCell>
+                <TableCell>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center gap-2"
+                    onClick={() => setCardFor(asCardStudent(s))}
+                  >
+                    <FileText size={14} />
+                    Download report card
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+        </div>
+      </Card>
+
+      {/* Terms are chosen at download time — see ReportCardTermDialog. */}
+      <ReportCardTermDialog
+        open={Boolean(cardFor)}
+        onOpenChange={(v) => { if (!v) { setCardFor(null); setCardProgress(null); } }}
+        onConfirm={runSingle}
+        title={cardFor ? `Report card — ${cardFor.firstName} ${cardFor.lastName}` : 'Report card'}
+        busy={cardBusy}
+        progress={cardProgress}
+      />
+      <ReportCardTermDialog
+        open={bulkTerms}
+        onOpenChange={(v) => { if (!v) { setBulkTerms(false); setCardProgress(null); } }}
+        onConfirm={runBulk}
+        title={`Download ${filteredStudents.length} report cards`}
+        busy={cardBusy}
+        progress={cardProgress}
+      />
+
+      <Card style={{ display: 'none' }}>
+        <div className="overflow-x-auto">
+        <Table>
+          <TableBody>
+            {[].map((report: any) => (
               <TableRow key={report.id}>
                 <TableCell>{report.id}</TableCell>
                 <TableCell>{report.studentName}</TableCell>

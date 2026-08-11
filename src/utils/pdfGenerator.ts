@@ -544,6 +544,190 @@ export async function generateStaffFinancialSheet(
   window.open(url, '_blank');
 }
 
+/** One assessment's line within a subject, for one term. */
+export interface ReportCardAssessment {
+  name: string;
+  state: string;
+  marksObtained: number | null;
+  totalMarks: number | null;
+}
+
+export interface ReportCardSubject {
+  subjectId: number;
+  subjectName: string;
+  marksObtained: number;
+  totalMarks: number;
+  counted: number;
+  exempt: number;
+  unmarked: number;
+  testExams: ReportCardAssessment[];
+}
+
+export interface ReportCardData {
+  student: { code: string; firstName: string; lastName: string; class?: string | null };
+  academicYear: string;
+  terms: string[];
+  termData: Array<{ term: string; subjects: ReportCardSubject[] }>;
+  attendance: Array<{ term: string; percentage: number | null; label: string; consistent: boolean | null }>;
+}
+
+/**
+ * The overall verdict.
+ *
+ * Computed on the student's combined percentage across every selected term, from
+ * the same obtained/possible pair the rest of the app scores on — which already
+ * excludes EXEMPT assessments from BOTH sides, so an excused paper neither adds
+ * a zero nor inflates the denominator. Term-end zeros are real marks and count.
+ *
+ * Null when nothing counted: a student with no marks in the selected terms has
+ * no result, and printing FAILED against them would assert something the marks
+ * do not say.
+ */
+export function reportCardResult(obtained: number, possible: number) {
+  if (!possible) return { percentage: null as number | null, result: 'NO RESULT', color: [107, 114, 128] as [number, number, number] };
+  const percentage = Math.round((obtained / possible) * 1000) / 10;
+  if (percentage >= 60) return { percentage, result: 'PASSED', color: [5, 96, 61] as [number, number, number] };
+  if (percentage >= 40) return { percentage, result: 'AVERAGE', color: [230, 196, 130] as [number, number, number] };
+  return { percentage, result: 'FAILED', color: [224, 85, 46] as [number, number, number] };
+}
+
+/**
+ * Report cards as one document — a page per student, so a single card and a
+ * whole class share one code path and cannot render differently.
+ *
+ * Opened in a new tab via a blob URL, the same as the financial sheet.
+ */
+export async function generateReportCards(
+  cards: ReportCardData[],
+  schoolInfo?: { name?: string; logo?: string; motto?: string },
+) {
+  const doc = new jsPDF();
+  const logo = schoolInfo?.logo ? await getLogoDataUrl(schoolInfo.logo) : null;
+
+  cards.forEach((card, index) => {
+    if (index > 0) doc.addPage();
+
+    doc.setFillColor(15, 35, 69);
+    doc.rect(0, 0, 210, 46, 'F');
+
+    if (logo) {
+      const fmt = logo.includes('image/png') ? 'PNG' : 'JPEG';
+      try { doc.addImage(logo, fmt, 8, 6, 26, 26); } catch { /* a bad logo must not lose the card */ }
+    }
+
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(15);
+    doc.text(schoolInfo?.name || 'School', logo ? 40 : 14, 15);
+    if (schoolInfo?.motto) {
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'italic');
+      doc.text(schoolInfo.motto, logo ? 40 : 14, 22);
+      doc.setFont('helvetica', 'normal');
+    }
+    doc.setFontSize(12);
+    doc.text('STUDENT REPORT CARD', logo ? 40 : 14, 32);
+    doc.setFontSize(9);
+    doc.text(
+      `Academic Year ${card.academicYear}  ·  ${card.terms.map(formatTermLabel).join(', ')}`,
+      logo ? 40 : 14, 39,
+    );
+
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(11);
+    doc.text(`${card.student.firstName} ${card.student.lastName}`, 14, 56);
+    doc.setFontSize(9);
+    doc.setTextColor(90, 90, 90);
+    doc.text(
+      [card.student.code, card.student.class].filter(Boolean).join('  ·  '),
+      14, 62,
+    );
+    doc.setTextColor(0, 0, 0);
+
+    let y = 70;
+    let grandObtained = 0;
+    let grandPossible = 0;
+
+    for (const block of card.termData) {
+      // Columns are this term's assessments, so a term with a different set
+      // prints its own shape rather than being forced into a shared grid.
+      const assessmentNames: string[] = [];
+      for (const s of block.subjects) {
+        for (const t of s.testExams) if (!assessmentNames.includes(t.name)) assessmentNames.push(t.name);
+      }
+
+      const body = block.subjects.map((s) => {
+        grandObtained += s.marksObtained;
+        grandPossible += s.totalMarks;
+        const cells = assessmentNames.map((n) => {
+          const t = s.testExams.find((x) => x.name === n);
+          if (!t) return '–';
+          if (t.state === 'EXEMPT') return 'Ex';
+          if (t.marksObtained == null) return '–';
+          return `${t.marksObtained}${t.totalMarks != null ? `/${t.totalMarks}` : ''}`;
+        });
+        const pct = s.totalMarks > 0 ? `${Math.round((s.marksObtained / s.totalMarks) * 1000) / 10}%` : '–';
+        return [s.subjectName, ...cells, `${s.marksObtained}/${s.totalMarks}`, pct];
+      });
+
+      doc.setFontSize(10);
+      doc.text(formatTermLabel(block.term), 14, y);
+      y += 2;
+
+      autoTable(doc, {
+        head: [['Subject', ...assessmentNames, 'Total', '%']],
+        body: body.length ? body : [['No marks recorded for this term', ...assessmentNames.map(() => ''), '', '']],
+        startY: y,
+        styles: { fontSize: 8, cellPadding: 1.6 },
+        headStyles: { fillColor: [15, 35, 69], fontSize: 8 },
+        columnStyles: { 0: { cellWidth: 46 } },
+        margin: { left: 14, right: 14 },
+      });
+      y = (doc as any).lastAutoTable.finalY + 8;
+    }
+
+    // Attendance, per term, from the same endpoint the app shows on screen.
+    const att = card.attendance.filter((a) => card.terms.includes(a.term));
+    doc.setFontSize(9);
+    doc.text('Attendance', 14, y);
+    y += 5;
+    for (const a of att) {
+      doc.setTextColor(90, 90, 90);
+      doc.text(
+        a.percentage == null
+          ? `${formatTermLabel(a.term)}: no register taken`
+          : `${formatTermLabel(a.term)}: ${a.percentage}% — ${a.label}`,
+        18, y,
+      );
+      y += 5;
+    }
+    doc.setTextColor(0, 0, 0);
+
+    const verdict = reportCardResult(grandObtained, grandPossible);
+    y += 4;
+    doc.setFillColor(verdict.color[0], verdict.color[1], verdict.color[2]);
+    doc.rect(14, y, 182, 14, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(11);
+    doc.text(
+      verdict.percentage == null
+        ? 'OVERALL: NO RESULT'
+        : `OVERALL: ${verdict.result}  —  ${grandObtained}/${grandPossible}  (${verdict.percentage}%)`,
+      18, y + 9,
+    );
+    doc.setTextColor(0, 0, 0);
+
+    doc.setFontSize(7);
+    doc.setTextColor(130, 130, 130);
+    doc.text(
+      'Ex = exempt (excluded from the percentage)   ·   – = not marked   ·   PASSED 60-100%, AVERAGE 40-59%, FAILED 0-39%',
+      14, 288,
+    );
+    doc.setTextColor(0, 0, 0);
+  });
+
+  window.open(doc.output('bloburl'), '_blank');
+}
+
 export function generateWorkRecord(record: WorkRecord) {
   const doc = new jsPDF();
   
