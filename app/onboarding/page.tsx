@@ -4,7 +4,7 @@ import { Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { api, BASE_URL } from "../../src/lib/api";
-import { sectionName } from "../../src/lib/classes";
+import { clampSectionCount, expandClassSections, MAX_SECTIONS } from "../../src/lib/classes";
 import { compressImageForUpload } from "../../src/lib/imageResize";
 import { EMPTY_UNIFORM_COLORS, UniformColors } from "../../src/lib/uniformColors";
 import { UniformColorPicker } from "../../src/components/onboarding/UniformColorPicker";
@@ -203,20 +203,14 @@ export default function OnboardingPage() {
     );
 
   const setSectionsForClass = (name: string, raw: string) => {
-    const parsed = parseInt(raw, 10);
-    const sections = Math.max(1, Math.min(26, Number.isFinite(parsed) ? parsed : 1));
-    setSectionsByClass((prev) => ({ ...prev, [name]: sections }));
+    setSectionsByClass((prev) => ({ ...prev, [name]: clampSectionCount(raw) }));
   };
 
   // Expand each selected class into its sections (e.g. 2 sections of "Class 1"
   // becomes "Class 1 A"/"Class 1 B"); a single section stays as the plain name.
-  // The separator lives in sectionName() because these strings are stored on
-  // Student.class and matched by exact text — see src/lib/classes.ts.
-  const expandedClassNames = selectedClasses.flatMap((name) => {
-    const sections = sectionsByClass[name] ?? 1;
-    if (sections <= 1) return [name];
-    return Array.from({ length: sections }, (_, i) => sectionName(name, i));
-  });
+  // Shared with the Classes page's Add Class dialog, which creates the same rows
+  // after onboarding and has to name them identically — see src/lib/classes.ts.
+  const expandedClassNames = expandClassSections(selectedClasses, sectionsByClass);
 
   const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const input = e.target;
@@ -537,7 +531,7 @@ export default function OnboardingPage() {
                           <input
                             type="number"
                             min={1}
-                            max={26}
+                            max={MAX_SECTIONS}
                             value={sections}
                             onChange={(e) => setSectionsForClass(cls.name, e.target.value)}
                             onClick={(e) => e.stopPropagation()}

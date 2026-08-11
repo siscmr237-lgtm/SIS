@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { NavigationPage } from '../App';
 import { api } from '@/lib/api';
+import {
+  clampSectionCount, expandClassSections, hasClassLevel, MAX_SECTIONS,
+} from '@/lib/classes';
 import { useCachedResource, useSisCache } from '@/lib/SisCache';
 import { RevalidatingBadge, useResourceError } from './ResourceStatus';
 import { BookOpen, DollarSign, Plus, Trash2 } from 'lucide-react';
@@ -28,6 +31,8 @@ interface CreateOutcome {
   alreadyExisted: string[];
   failed: string[];
   message?: string;
+  /** Which run produced this, so Retry repeats THAT run and not the other one. */
+  source: 'standard' | 'add';
 }
 
 /**
@@ -147,6 +152,14 @@ export function ClassesManagement({ onNavigate }: ClassesManagementProps) {
   const [openFees, setOpenFees] = useState(false);
   const [openSubjects, setOpenSubjects] = useState(false);
   const [newClassName, setNewClassName] = useState('');
+  // The Add Class dialog mirrors onboarding: tick levels, say how many sections
+  // each has, create the lot in one go. `customLevels` holds names typed into
+  // the field at the top — a school that teaches something the catalog has
+  // never heard of should not have to leave the dialog to add it.
+  const [customLevels, setCustomLevels] = useState<string[]>([]);
+  const [selectedLevels, setSelectedLevels] = useState<string[]>([]);
+  const [sectionsByLevel, setSectionsByLevel] = useState<Record<string, number>>({});
+  const [addError, setAddError] = useState<string | null>(null);
   const [addSubmitting, setAddSubmitting] = useState(false);
   const [deletingClassId, setDeletingClassId] = useState<number | null>(null);
   const [addingTeacherSubjectId, setAddingTeacherSubjectId] = useState<number | null>(null);
@@ -241,7 +254,7 @@ export function ClassesManagement({ onNavigate }: ClassesManagementProps) {
       await refresh();
       const created: string[] = res?.created ?? [];
       const alreadyExisted: string[] = res?.alreadyExisted ?? [];
-      setCreateOutcome({ created, alreadyExisted, failed: [] });
+      setCreateOutcome({ created, alreadyExisted, failed: [], source: 'standard' });
       toast.success(
         created.length
           ? `Created ${created.length} ${created.length === 1 ? 'class' : 'classes'}${
@@ -260,6 +273,7 @@ export function ClassesManagement({ onNavigate }: ClassesManagementProps) {
         alreadyExisted: e?.body?.alreadyExisted ?? [],
         failed,
         message: e?.message || 'Could not create the standard classes.',
+        source: 'standard',
       });
       toast.error(
         failed.length
@@ -271,19 +285,119 @@ export function ClassesManagement({ onNavigate }: ClassesManagementProps) {
     }
   };
 
-  const handleAdd = async () => {
+  const existingNames: string[] = classes.map((c: any) => c.name);
+  // Only levels this school TYPE allows and does not already have: a
+  // Daycare–Nursery school is never offered Class 1–6, and no level is offered
+  // twice, whether it exists as a bare class or as sections of one.
+  const availableCatalogLevels = catalogNames.filter((name) => !hasClassLevel(existingNames, name));
+  const offeredLevels = [...customLevels, ...availableCatalogLevels];
+  const plannedNames = expandClassSections(selectedLevels, sectionsByLevel);
+
+  const resetAddDialog = () => {
+    setNewClassName('');
+    setCustomLevels([]);
+    setSelectedLevels([]);
+    setSectionsByLevel({});
+    setAddError(null);
+  };
+
+  const toggleLevel = (level: string) =>
+    setSelectedLevels(prev => (prev.includes(level) ? prev.filter(l => l !== level) : [...prev, level]));
+
+  const setSectionsForLevel = (level: string, raw: string) =>
+    setSectionsByLevel(prev => ({ ...prev, [level]: clampSectionCount(raw) }));
+
+  // A name typed into the field at the top. It joins the list ticked rather than
+  // being created straight away, so it takes a section count like everything
+  // else and one Save creates the whole selection.
+  const handleAddCustomLevel = () => {
     const name = newClassName.trim();
-    if (!name) return;
-    if (addSubmitting) return;
+    if (!name || addSubmitting) return;
+    // Case-insensitively, unlike the catalog filter above: class names are
+    // matched as exact text everywhere else, so "class 7" alongside "Class 7"
+    // would be two classes that read as one.
+    const clash = existingNames.find(n => n.toLowerCase() === name.toLowerCase());
+    if (clash || hasClassLevel(existingNames, name)) {
+      setAddError(`This school already has ${clash ?? name}.`);
+      return;
+    }
+    const already = offeredLevels.find(l => l.toLowerCase() === name.toLowerCase());
+    if (already) {
+      // The catalog already offers it — tick that row instead of standing a
+      // second, near-identical entry next to it.
+      setSelectedLevels(prev => (prev.includes(already) ? prev : [...prev, already]));
+    } else {
+      setCustomLevels(prev => [name, ...prev]);
+      setSelectedLevels(prev => [...prev, name]);
+    }
+    setNewClassName('');
+    setAddError(null);
+  };
+
+  /**
+   * Creates each name in turn, classifying rather than swallowing failures: a
+   * 409 means the class is already there, which is not a problem worth
+   * reporting as one. The previous `catch {}` reported success no matter what.
+   */
+  const createClasses = async (names: string[]) => {
+    const created: string[] = [];
+    const alreadyExisted: string[] = [];
+    const failed: string[] = [];
+    let lastError = '';
+    for (const name of names) {
+      try {
+        await api.post('/classes', { name });
+        created.push(name);
+      } catch (e: any) {
+        if (e?.status === 409) alreadyExisted.push(name);
+        else { failed.push(name); lastError = e?.message || lastError; }
+      }
+    }
+    return { created, alreadyExisted, failed, lastError };
+  };
+
+  const runAdd = async (names: string[]) => {
+    if (!names.length || addSubmitting) return;
     setAddSubmitting(true);
+    setAddError(null);
     try {
-      await api.post('/classes', { name });
+      const { created, alreadyExisted, failed, lastError } = await createClasses(names);
       await refresh();
-      setNewClassName('');
+      if (failed.length) {
+        // Reported outside the dialog, which closes: a partial run is something
+        // to act on afterwards, and the panel behind the modal is where the
+        // standard-classes run reports the same thing.
+        setCreateOutcome({
+          created,
+          alreadyExisted,
+          failed,
+          message: lastError || `${failed.length} of ${names.length} classes could not be created.`,
+          source: 'add',
+        });
+        toast.error(`${failed.length} of ${names.length} classes could not be created`);
+      } else {
+        setCreateOutcome(null);
+        toast.success(
+          created.length
+            ? `Created ${created.length} ${created.length === 1 ? 'class' : 'classes'}${
+                alreadyExisted.length ? ` (${alreadyExisted.length} already existed)` : ''
+              }`
+            : 'Those classes already exist',
+        );
+      }
       setOpenAdd(false);
-    } catch {} finally {
+      resetAddDialog();
+    } finally {
       setAddSubmitting(false);
     }
+  };
+
+  const handleAdd = async () => {
+    if (!plannedNames.length) {
+      setAddError('Pick at least one class, or type a name and press Add.');
+      return;
+    }
+    await runAdd(plannedNames);
   };
 
   const handleDelete = async (cls: any) => {
@@ -324,33 +438,160 @@ export function ClassesManagement({ onNavigate }: ClassesManagementProps) {
             <DollarSign size={20} />
             Fee Categories
           </Button>
-          <Dialog open={openAdd} onOpenChange={setOpenAdd}>
+          <Dialog
+            open={openAdd}
+            onOpenChange={open => {
+              setOpenAdd(open);
+              if (!open) resetAddDialog();
+            }}
+          >
             <DialogTrigger asChild>
               <Button className="flex items-center gap-2">
                 <Plus size={20} />
                 Add Class
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent style={{ maxWidth: 620 }}>
               <DialogHeader>
                 <DialogTitle>Add New Class</DialogTitle>
-                <DialogDescription>Enter the class name below</DialogDescription>
+                <DialogDescription>
+                  Pick from the standard classes for this school, or type one of your own.
+                </DialogDescription>
               </DialogHeader>
-              <div className="py-4">
-                <Label>Class Name</Label>
-                <Input
-                  placeholder="e.g., Class 7"
-                  value={newClassName}
-                  onChange={e => setNewClassName(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') handleAdd(); }}
-                />
+
+              <div className="py-2">
+                <Label htmlFor="new-class-name">Class name</Label>
+                <div className="flex items-center gap-2" style={{ marginTop: 6 }}>
+                  <Input
+                    id="new-class-name"
+                    placeholder="e.g., Class 7"
+                    value={newClassName}
+                    onChange={e => setNewClassName(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') { e.preventDefault(); handleAddCustomLevel(); }
+                    }}
+                    style={{ flex: 1 }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleAddCustomLevel}
+                    disabled={!newClassName.trim() || addSubmitting}
+                    className="flex items-center gap-2"
+                  >
+                    <Plus size={16} />
+                    Add
+                  </Button>
+                </div>
               </div>
+
+              {/* Inline styles throughout, as elsewhere on this page: src/index.css
+                  is a pre-compiled Tailwind build and an arbitrary utility would
+                  render as nothing. */}
+              <div style={{ maxHeight: 300, overflowY: 'auto', borderTop: '1px solid #E5E7EB', paddingTop: 12 }}>
+                {offeredLevels.length === 0 ? (
+                  <p className="text-sm text-gray-500">
+                    {catalogNames.length
+                      ? 'Every standard class for this school has been added — type a name above to add one of your own.'
+                      : 'Loading the standard classes for this school type...'}
+                  </p>
+                ) : (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                    {offeredLevels.map(level => {
+                      const checked = selectedLevels.includes(level);
+                      const sections = sectionsByLevel[level] ?? 1;
+                      return (
+                        <div
+                          key={level}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 12,
+                            padding: '8px 14px',
+                            borderRadius: 8,
+                            border: `1.5px solid ${checked ? '#1e3a8a' : '#E5E7EB'}`,
+                            background: checked ? '#EFF6FF' : 'white',
+                          }}
+                        >
+                          <label
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 8,
+                              cursor: 'pointer',
+                              fontSize: '0.875rem',
+                              fontWeight: checked ? 600 : 400,
+                              color: checked ? '#1e3a8a' : '#374151',
+                              userSelect: 'none',
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => toggleLevel(level)}
+                              disabled={addSubmitting}
+                              style={{ accentColor: '#1e3a8a', width: 15, height: 15 }}
+                            />
+                            {level}
+                          </label>
+                          {checked && (
+                            <label
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 6,
+                                fontSize: '0.78rem',
+                                color: '#6B7280',
+                                whiteSpace: 'nowrap',
+                                paddingLeft: 10,
+                                borderLeft: '1px solid #DBEAFE',
+                              }}
+                            >
+                              Sections
+                              <input
+                                type="number"
+                                min={1}
+                                max={MAX_SECTIONS}
+                                value={sections}
+                                onChange={e => setSectionsForLevel(level, e.target.value)}
+                                disabled={addSubmitting}
+                                style={{
+                                  width: 48,
+                                  height: 26,
+                                  borderRadius: 6,
+                                  border: '1px solid #D1D5DB',
+                                  padding: '0 6px',
+                                  fontSize: '0.8rem',
+                                  textAlign: 'center',
+                                  color: '#111827',
+                                }}
+                              />
+                            </label>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {plannedNames.length > 0 && (
+                <p className="text-sm text-gray-500">
+                  Will create: {plannedNames.join(', ')}
+                </p>
+              )}
+              {addError && <p className="text-sm" style={{ color: '#B91C1C' }}>{addError}</p>}
+
               <div className="flex justify-end gap-2">
                 <DialogClose asChild>
                   <Button variant="outline" disabled={addSubmitting}>Cancel</Button>
                 </DialogClose>
-                <Button onClick={handleAdd} disabled={addSubmitting}>
-                  {addSubmitting ? 'Saving...' : 'Save Class'}
+                <Button onClick={handleAdd} disabled={addSubmitting || plannedNames.length === 0}>
+                  {addSubmitting
+                    ? 'Saving...'
+                    : plannedNames.length > 1
+                      ? `Save ${plannedNames.length} classes`
+                      : 'Save Class'}
                 </Button>
               </div>
             </DialogContent>
@@ -370,9 +611,12 @@ export function ClassesManagement({ onNavigate }: ClassesManagementProps) {
 
       <CreateStandardOutcome
         outcome={createOutcome}
-        onRetry={handleCreateStandard}
+        onRetry={() => {
+          if (createOutcome?.source === 'add') runAdd(createOutcome.failed);
+          else handleCreateStandard();
+        }}
         onDismiss={() => setCreateOutcome(null)}
-        retrying={creating}
+        retrying={creating || addSubmitting}
       />
 
       {loading ? (
