@@ -1336,11 +1336,15 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                   >
                     Download Financial Sheet
                   </button>
+                  {/* Record Charge lived here. Charges are now raised inside
+                      Edit This Student's Fees, which is where their money is
+                      arranged — one place instead of two entry points that
+                      created different kinds of charge. */}
                   <button
                     className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
-                    onClick={() => { setSubmitError(null); setShowCharge(true); setShowActionsMenu(false); }}
+                    onClick={() => { setShowFeeOverride(true); setShowActionsMenu(false); }}
                   >
-                    Record Charge
+                    Edit Fees / Add Charge
                   </button>
                   <button
                     className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
@@ -1359,12 +1363,8 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
               <FileText size={16} className="mr-1" />
               Financial Sheet
             </Button>
-            <Button variant="outline" onClick={() => { setSubmitError(null); setShowCharge(true); }}>
-              <Plus size={16} className="mr-1" />
-              Record Charge
-            </Button>
             <Button variant="outline" onClick={() => setShowFeeOverride(true)}>
-              Edit This Student's Fees
+              Edit This Student&apos;s Fees
             </Button>
             <Button onClick={openPaymentDialog}>
               <Plus size={16} className="mr-1" />
