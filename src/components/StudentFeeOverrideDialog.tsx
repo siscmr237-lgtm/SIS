@@ -163,13 +163,6 @@ export function StudentFeeOverrideDialog({
       seen.add(name.toLowerCase());
       const amt = Number(r.amount);
       if (!Number.isFinite(amt) || amt < 0) { setError(`"${name}": amount must be 0 or more.`); return; }
-      if (r.included) {
-        const p = Number(r.percent);
-        if (!r.percent.trim() || !Number.isFinite(p) || p < 0 || p > 100) {
-          setError(`"${name}": first installment % must be between 0 and 100.`);
-          return;
-        }
-      }
     }
     setSaving(true);
     try {
@@ -177,7 +170,15 @@ export function StudentFeeOverrideDialog({
         fees: rows.map(r => ({
           name: r.name.trim(),
           amount: Math.round(Number(r.amount)),
-          firstInstallmentPercent: r.included ? Math.round(Number(r.percent)) : null,
+          // Sent back exactly as it was loaded. This dialog no longer EDITS the
+          // first-installment rule — that lives only in the Fee Categories
+          // dialog under Classes now — but it must still carry the existing
+          // value through, or saving an amount here would silently wipe a rule
+          // set somewhere else. A row added here has no rule yet, which is
+          // correct: null means "not configured", not "0%".
+          firstInstallmentPercent: r.included && r.percent.trim() !== ''
+            ? Math.round(Number(r.percent))
+            : null,
         })),
       });
       dirty.current = false;
@@ -217,37 +218,23 @@ export function StudentFeeOverrideDialog({
       <DialogContent style={{ maxWidth: 680 }}>
         <DialogHeader>
           <DialogTitle>{wasOverridden ? 'Custom fees' : 'Edit this student’s fees'}</DialogTitle>
-          <DialogDescription>
-            {wasOverridden
-              ? `${studentName} is on a custom fee structure and does not follow ${classLevel} fee changes.`
-              : `Saving detaches ${studentName} from standard ${classLevel} fees. Their fees become their own, and later ${classLevel} changes will not apply to them automatically.`}
-          </DialogDescription>
+          {wasOverridden && (
+            <DialogDescription>
+              {studentName} is on a custom fee structure and does not follow {classLevel} fee changes.
+            </DialogDescription>
+          )}
         </DialogHeader>
 
         {loading ? (
           <p className="text-sm text-gray-500 py-4">Loading fees...</p>
         ) : (
           <>
-            {!wasOverridden && (
-              <div
-                style={{
-                  padding: '0.625rem 0.75rem', borderRadius: 8,
-                  border: '1px solid #BFDBFE', backgroundColor: '#EFF6FF',
-                  color: '#1E3A8A', fontSize: '0.8125rem',
-                }}
-              >
-                Pre-filled with the current {classLevel} fees — adjust the amounts down, or
-                remove categories this student should not pay.
-              </div>
-            )}
-
             <div
               className="flex items-center gap-2 text-sm text-gray-500"
               style={{ paddingBottom: 6, borderBottom: '1px solid #E5E7EB', marginTop: 12 }}
             >
               <span style={{ flex: 1 }}>Fee</span>
               <span style={{ width: 120, textAlign: 'right' }}>Amount</span>
-              <span style={{ width: 150, textAlign: 'center' }}>First installment</span>
               <span style={{ width: 32 }} />
             </div>
 
@@ -272,26 +259,6 @@ export function StudentFeeOverrideDialog({
                     value={r.amount}
                     onChange={e => edit(i, { amount: e.target.value })}
                   />
-                  <div className="flex items-center gap-1" style={{ width: 150, justifyContent: 'center' }}>
-                    <input
-                      type="checkbox"
-                      checked={r.included}
-                      onChange={e => edit(i, { included: e.target.checked })}
-                      style={{ width: 16, height: 16, cursor: 'pointer' }}
-                      aria-label={`Include ${r.name || 'this fee'} in first installment`}
-                    />
-                    <Input
-                      type="number"
-                      min={0}
-                      max={100}
-                      value={r.included ? r.percent : ''}
-                      onChange={e => edit(i, { percent: e.target.value })}
-                      disabled={!r.included}
-                      placeholder="—"
-                      style={{ width: 72, textAlign: 'right' }}
-                    />
-                    <span className="text-sm text-gray-500">%</span>
-                  </div>
                   <Button
                     variant="ghost"
                     size="sm"

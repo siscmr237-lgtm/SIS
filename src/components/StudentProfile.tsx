@@ -1705,7 +1705,6 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
             <DialogContent className="max-w-md">
               <DialogHeader>
                 <DialogTitle>Record Payment</DialogTitle>
-                <DialogDescription>Record a payment received from this student.</DialogDescription>
               </DialogHeader>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', paddingTop: '0.5rem' }}>
                 {/* Category FIRST: the amount has no meaning, and no ceiling,
@@ -1715,40 +1714,50 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                   <Select
                     value={paymentForm.feeKey}
                     onValueChange={(v) => {
-                      const cat = owingCategories.find((c) => c.key === v);
                       setSubmitError(null);
-                      setPaymentForm(f => ({
-                        ...f,
-                        feeKey: v,
-                        // Pre-filled with the full outstanding amount, which is
-                        // the common case; still editable downwards.
-                        amount: cat ? String(cat.owing) : '',
-                        description: f.description || (cat ? `${cat.name} payment` : ''),
-                      }));
+                      // Deliberately does NOT pre-fill the amount. A pre-filled
+                      // figure gets accepted without being read, and "the whole
+                      // outstanding balance" is a guess about what was handed
+                      // over. The amount owed is shown as guidance instead.
+                      setPaymentForm(f => ({ ...f, feeKey: v, amount: '' }));
                     }}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder={owingLoading ? 'Loading…' : 'Select fee'} />
                     </SelectTrigger>
+                    {/* EVERY category in this student's fee structure is listed,
+                        including the ones with nothing to pay. Hiding those was
+                        what made a class of five categories show three, with no
+                        way to tell "already paid" from "never charged" from
+                        "this class has no such fee". The ones that cannot take
+                        money are greyed and explain themselves when picked
+                        rather than being disabled, since a row that does not
+                        respond to a click reads as broken. */}
                     <SelectContent>
-                      {owingCategories.filter(c => c.payable && c.owing > 0).map(c => (
-                        <SelectItem key={c.key} value={c.key}>
-                          {c.name} — {c.owing.toLocaleString()} owing
+                      {owingCategories.map(c => (
+                        <SelectItem
+                          key={c.key}
+                          value={c.key}
+                          style={c.owing > 0 ? undefined : { color: '#9CA3AF' }}
+                        >
+                          {c.owing > 0
+                            ? `${c.name} — ${c.owing.toLocaleString()} owing`
+                            : `${c.name} — ${c.charged > 0 ? 'fully paid' : 'nothing charged'}`}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  {!owingLoading && owingCategories.filter(c => c.payable && c.owing > 0).length === 0 && (
+                  {!owingLoading && owingCategories.length === 0 && (
                     <p className="text-sm text-gray-500" style={{ marginTop: 4 }}>
-                      Nothing outstanding to pay against.
+                      This student has no fee categories yet.
                     </p>
                   )}
-                  {/* Charges that exist but cannot yet be targeted individually —
-                      shown so the total makes sense, not offered as options. */}
-                  {owingCategories.some(c => !c.payable && c.owing > 0) && (
-                    <p className="text-xs text-gray-400" style={{ marginTop: 4 }}>
-                      Also outstanding, not individually payable yet:{' '}
-                      {owingCategories.filter(c => !c.payable && c.owing > 0).map(c => c.name).join(', ')}
+                  {/* Why the category that was just picked cannot take money. */}
+                  {selectedOwing && selectedOwing.owing <= 0 && (
+                    <p className="text-sm" style={{ marginTop: 4, color: '#e0552e' }}>
+                      {selectedOwing.charged > 0
+                        ? `${displayInfo.firstName} has fully paid ${selectedOwing.name}. There is nothing left to pay against it.`
+                        : `${selectedOwing.name} does not have a charged amount, so there is nothing to pay toward it yet.`}
                     </p>
                   )}
                 </div>
@@ -1760,26 +1769,24 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                     max={selectedOwing ? selectedOwing.owing : undefined}
                     value={paymentForm.amount}
                     onChange={e => setPaymentForm(f => ({ ...f, amount: e.target.value }))}
-                    placeholder="0"
-                    disabled={!selectedOwing}
+                    // The owed figure lives here, as guidance rather than as a
+                    // value that would be submitted unread.
+                    placeholder={selectedOwing && selectedOwing.owing > 0
+                      ? `${selectedOwing.owing.toLocaleString()} still owing for ${selectedOwing.name}`
+                      : '0'}
+                    disabled={!selectedOwing || selectedOwing.owing <= 0}
                   />
-                  {selectedOwing && (
-                    <p
-                      className="text-xs"
-                      style={{ marginTop: 4, color: Number(paymentForm.amount) > selectedOwing.owing ? '#B91C1C' : '#6B7280' }}
-                    >
-                      {Number(paymentForm.amount) > selectedOwing.owing
-                        ? `Above the ${selectedOwing.owing.toLocaleString()} owing for ${selectedOwing.name}`
-                        : `${selectedOwing.owing.toLocaleString()} still owing for ${selectedOwing.name} (charged ${selectedOwing.charged.toLocaleString()}, paid ${selectedOwing.paid.toLocaleString()})`}
+                  {selectedOwing && selectedOwing.owing > 0 && Number(paymentForm.amount) > selectedOwing.owing && (
+                    <p className="text-xs" style={{ marginTop: 4, color: '#B91C1C' }}>
+                      Above the {selectedOwing.owing.toLocaleString()} owing for {selectedOwing.name}
                     </p>
                   )}
                 </div>
                 <div>
-                  <Label>Description</Label>
+                  <Label>Notes</Label>
                   <Input
                     value={paymentForm.description}
                     onChange={e => setPaymentForm(f => ({ ...f, description: e.target.value }))}
-                    placeholder="e.g. Term 1 payment"
                   />
                 </div>
                 <div>
@@ -1805,7 +1812,12 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                 <DialogClose asChild>
                   <Button variant="outline" disabled={submitting}>Cancel</Button>
                 </DialogClose>
-                <Button onClick={handlePaymentSubmit} disabled={submitting || !selectedOwing}>
+                {/* A category with nothing owing is listed and selectable so it
+                    can explain itself, but it can never be paid against. */}
+                <Button
+                  onClick={handlePaymentSubmit}
+                  disabled={submitting || !selectedOwing || selectedOwing.owing <= 0}
+                >
                   {submitting ? 'Saving...' : 'Record Payment'}
                 </Button>
               </div>
