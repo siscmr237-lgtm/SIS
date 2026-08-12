@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Button } from "./ui/button";
+import { SUPPORT_PHONE_DISPLAY, whatsappLink } from "../lib/supportContact";
 
 // ---------------------------------------------------------------------------
 // OTP box grid
@@ -266,7 +267,7 @@ export function OtpVerifyScreen({
           </p>
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
             <a
-              href="https://wa.me/237679379134"
+              href={whatsappLink()}
               target="_blank"
               rel="noreferrer"
               style={{
@@ -284,7 +285,7 @@ export function OtpVerifyScreen({
               }}
             >
               <span style={{ fontSize: "1rem" }}>📱</span>
-              WhatsApp / Call: +237 679 379 134
+              {`WhatsApp / Call: ${SUPPORT_PHONE_DISPLAY}`}
             </a>
             <a
               href="mailto:siscmr237@gmail.com"

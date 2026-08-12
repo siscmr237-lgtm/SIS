@@ -1,14 +1,9 @@
 /**
  * Where a user in trouble can reach a human.
  *
- * ⚠️ THESE VALUES ARE ALSO HARDCODED IN src/components/OtpVerifyScreen.tsx
- * (the "Having trouble receiving your code?" block, ~line 249). That file is
- * part of the live OTP flow for /verify-email and /password-reset and was
- * deliberately left untouched, so the two copies are not linked. If the number
- * or email ever changes, IT MUST BE CHANGED IN BOTH PLACES.
- *
- * Everything else — the floating support button on every other page — reads
- * from here and nowhere else.
+ * The only place the support number is written down. Both callers read from
+ * here: the floating support button, and the "Having trouble receiving your
+ * code?" block on the two OTP screens.
  */
 
 /** Digits only, no '+' and no spaces: the form wa.me expects in its path. */
@@ -19,6 +14,16 @@ export const SUPPORT_PHONE_E164 = '+237679379134';
 
 /** How the number is shown to a human. */
 export const SUPPORT_PHONE_DISPLAY = '+237 679 379 134';
+
+/**
+ * A plain WhatsApp chat link, with no prefilled message.
+ *
+ * Used where the surrounding copy already says what the conversation is about —
+ * the OTP screens' "Having trouble receiving your code?" block, for one.
+ */
+export function whatsappLink(): string {
+  return `https://wa.me/${SUPPORT_WHATSAPP_NUMBER}`;
+}
 
 /**
  * A WhatsApp deep link carrying the page the user was on when they asked for
@@ -32,7 +37,7 @@ export const SUPPORT_PHONE_DISPLAY = '+237 679 379 134';
 export function whatsappSupportLink(currentPath: string): string {
   const where = currentPath && currentPath.trim() ? currentPath : 'unknown page';
   const message = `Hello, I need help with the School Information System.\n\nPage: ${where}`;
-  return `https://wa.me/${SUPPORT_WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
+  return `${whatsappLink()}?text=${encodeURIComponent(message)}`;
 }
 
 /** A tel: link the OS dialler picks up. */
