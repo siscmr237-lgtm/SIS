@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Check } from 'lucide-react';
 import { api } from '../lib/api';
 import { useCachedResource, useSisCache } from '../lib/SisCache';
@@ -93,12 +93,8 @@ export function SetupWizard({ onNavigate }: { onNavigate?: (page: NavigationPage
   const [index, setIndex] = useState(0);
   const [tool, setTool] = useState<ToolId | null>(null);
   const [exited, setExited] = useState(false);
-
-  if (loading || !data?.show || exited) return null;
-
-  const steps = data.steps;
-  const step = steps[Math.min(index, steps.length - 1)];
-  const isLast = index >= steps.length - 1;
+  /** Set when a tool closes, so the refresh it triggers is allowed to advance. */
+  const cameBackFromTool = useRef(false);
 
   /**
    * Leaving the wizard, by finishing or by skipping out of the last step.
@@ -108,7 +104,7 @@ export function SetupWizard({ onNavigate }: { onNavigate?: (page: NavigationPage
    * the write fails the wizard simply reappears next time, which is a better
    * failure than a wizard that will not close.
    */
-  const exit = async (goTo?: NavigationPage) => {
+  const exit = useCallback(async (goTo?: NavigationPage) => {
     setExited(true);
     setTool(null);
     try {
@@ -117,7 +113,37 @@ export function SetupWizard({ onNavigate }: { onNavigate?: (page: NavigationPage
       // Deliberately swallowed — see above.
     }
     if (goTo && onNavigate) onNavigate(goTo);
-  };
+  }, [onNavigate]);
+
+  /**
+   * Auto-advance, on GENUINE completion only.
+   *
+   * The condition is the server's `done` for the step just worked on — the same
+   * every-level rule the dashboard checklist is ticked by, re-read live after
+   * the tool closed. Nothing is judged here: a per-level step is done only when
+   * EVERY level has the thing, so saving one level out of five leaves `done`
+   * false and the wizard stays put for the rest of them.
+   *
+   * Gated on having just come back from a tool, so this never fires on the
+   * initial load and cannot skip a step the admin has not looked at yet.
+   */
+  useEffect(() => {
+    if (!cameBackFromTool.current) return;
+    const steps = data?.steps;
+    if (!steps?.length) return;
+    cameBackFromTool.current = false;
+
+    const at = Math.min(index, steps.length - 1);
+    if (!steps[at]?.done) return;          // partial save — stay on this step
+    if (at >= steps.length - 1) void exit();
+    else setIndex(at + 1);
+  }, [data, index, exit]);
+
+  if (loading || !data?.show || exited) return null;
+
+  const steps = data.steps;
+  const step = steps[Math.min(index, steps.length - 1)];
+  const isLast = index >= steps.length - 1;
 
   const next = () => {
     if (isLast) void exit();
@@ -131,9 +157,12 @@ export function SetupWizard({ onNavigate }: { onNavigate?: (page: NavigationPage
   };
 
   // Re-reads the live state so the tick and the per-level list reflect whatever
-  // was just set up, without the wizard recomputing any of it itself.
+  // was just set up, without the wizard recomputing any of it itself. The flag
+  // is what licenses the effect above to advance off this step if it is now
+  // genuinely complete.
   const closeTool = async () => {
     setTool(null);
+    cameBackFromTool.current = true;
     await refresh();
   };
 
@@ -213,7 +242,15 @@ export function SetupWizard({ onNavigate }: { onNavigate?: (page: NavigationPage
       {/* The existing tools, opened in place. The wizard shell hides itself
           while one is up (open={!tool} above) rather than stacking two modals. */}
       {tool === 'fees' && (
-        <LevelFeesDialog open onOpenChange={(o) => { if (!o) void closeTool(); }} />
+        <LevelFeesDialog
+          open
+          onOpenChange={(o) => { if (!o) void closeTool(); }}
+          // Presence of this callback is what tells the dialog it is inside the
+          // wizard. It hands back once the last outstanding level is saved,
+          // rather than announcing completion itself, so the step's own
+          // auto-advance re-checks the live condition and moves on.
+          onAllLevelsDone={() => void closeTool()}
+        />
       )}
       {tool === 'subjects' && (
         <LevelSubjectsDialog

@@ -38,6 +38,17 @@ interface FeeRow {
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /**
+   * Supplied by the setup wizard, absent when the Classes page opens this
+   * directly — and it is the ONLY thing that tells the two contexts apart. Both
+   * pass the same open/onOpenChange otherwise.
+   *
+   * Called when the last level that still needed fees has been saved, so the
+   * wizard can hand back and let its own step auto-advance re-check the live
+   * condition. Standalone, there is nobody to hand back to, so the dialog says
+   * so itself instead.
+   */
+  onAllLevelsDone?: () => void;
 }
 
 /** A student on custom fees, who therefore did not receive this change. */
@@ -54,10 +65,33 @@ interface ChangedFee {
   to: number;
 }
 
-export function LevelFeesDialog({ open, onOpenChange }: Props) {
+export function LevelFeesDialog({ open, onOpenChange, onAllLevelsDone }: Props) {
   const cache = useSisCache();
   const [levels, setLevels] = useState<string[]>([]);
   const [level, setLevel] = useState('');
+  /**
+   * The levels that still had no fees when this dialog OPENED, in catalog order.
+   *
+   * A snapshot on purpose, and this is the subtle part. Opening a level's fee
+   * structure SEEDS it — GET /classes/levels/:level/fees calls
+   * ensureLevelFeeDefaults, which writes five zero-amount categories the first
+   * time a level is viewed. So a level counts as "has fees" the moment you look
+   * at it, and re-asking the server mid-walk would report every level you had
+   * merely paged through as already done, ending the walk after one step.
+   *
+   * The worklist is therefore fixed at open, and progress through it is tracked
+   * by what the user actually SAVED, below.
+   */
+  const [worklist, setWorklist] = useState<string[]>([]);
+  const [savedInWalk, setSavedInWalk] = useState<Set<string>>(new Set());
+  /** The walk finished and there is nobody to hand back to (standalone only). */
+  const [allDone, setAllDone] = useState(false);
+  /**
+   * An advance held back because the save raised the detached-students notice.
+   * Moving levels underneath that notice would leave it describing a level the
+   * dialog is no longer showing, so it waits until the notice is dismissed.
+   */
+  const pendingAdvance = useRef(false);
   const [sections, setSections] = useState<string[]>([]);
   const [rows, setRows] = useState<FeeRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -74,12 +108,31 @@ export function LevelFeesDialog({ open, onOpenChange }: Props) {
   useEffect(() => {
     if (!open) return;
     setError(null);
-    api
-      .get('/classes/levels')
-      .then((r: any) => {
-        const ls: string[] = r?.levels ?? [];
+    setAllDone(false);
+    setSavedInWalk(new Set());
+    pendingAdvance.current = false;
+
+    // Which levels still need fees comes from the SETUP CHECKLIST, not from a
+    // rule written here: it is the same every-level condition the dashboard card
+    // and the wizard are ticked by, so the walk cannot decide a level is done
+    // when the checklist disagrees. It also reads the fee rows without touching
+    // the seeding endpoint, which is what keeps the snapshot honest.
+    Promise.all([
+      api.get('/classes/levels'),
+      api.get('/dashboard/setup-checklist').catch(() => null),
+    ])
+      .then(([lv, checklist]: any[]) => {
+        const ls: string[] = lv?.levels ?? [];
         setLevels(ls);
-        setLevel(prev => (prev && ls.includes(prev) ? prev : ls[0] ?? ''));
+        const outstanding: string[] = (checklist?.steps ?? [])
+          .find((s: any) => s.id === 'fees')?.missingLevels ?? [];
+        // Guard against a level that has since disappeared from the class list.
+        const work = outstanding.filter(l => ls.includes(l));
+        setWorklist(work);
+        // Start where there is work to do. With nothing outstanding this is the
+        // dialog exactly as it was — a plain editor opened on the first level,
+        // which is what the Classes page wants when tweaking a configured level.
+        setLevel(prev => work[0] ?? (prev && ls.includes(prev) ? prev : ls[0] ?? ''));
       })
       .catch((e: any) => setError(e?.message || 'Could not load class levels.'));
   }, [open]);
@@ -127,6 +180,42 @@ export function LevelFeesDialog({ open, onOpenChange }: Props) {
   };
 
   const total = rows.reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+
+  /**
+   * Move to the next level that still needs fees, or finish the walk.
+   *
+   * "Still needs fees" means still in the opening snapshot and not yet saved in
+   * this session — deliberately not a fresh server check, for the seeding reason
+   * on `worklist` above.
+   *
+   * Does nothing when the dialog opened with no outstanding levels: that is the
+   * Classes page editing a configured level, and jumping it somewhere else after
+   * a save would be taking the screen away from someone who came to change one
+   * number.
+   */
+  const advanceLevel = (justSaved: string) => {
+    const saved = new Set(savedInWalk).add(justSaved);
+    setSavedInWalk(saved);
+    if (!worklist.length) return;
+
+    const next = worklist.find(l => !saved.has(l));
+    if (next) {
+      setLevel(next);
+      return;
+    }
+    // Every outstanding level has now been saved.
+    if (onAllLevelsDone) onAllLevelsDone();   // wizard: hand back so its step re-checks
+    else setAllDone(true);                    // standalone: say so and offer to close
+  };
+
+  /** Clears the detached-students notice, running any advance it held back. */
+  const dismissNotice = () => {
+    setNotice(null);
+    if (pendingAdvance.current) {
+      pendingAdvance.current = false;
+      advanceLevel(level);
+    }
+  };
 
   const save = async () => {
     if (saving) return;
@@ -186,8 +275,11 @@ export function LevelFeesDialog({ open, onOpenChange }: Props) {
       if (detached.length && changed.length) {
         setNotice({ detached, changed });
         setSelectedStudents(new Set());
+        // Held until the notice is dealt with — see pendingAdvance.
+        pendingAdvance.current = true;
       } else {
         setNotice(null);
+        advanceLevel(level);
       }
     } catch (e: any) {
       setError(e?.message || 'Could not save these fees.');
@@ -223,6 +315,33 @@ export function LevelFeesDialog({ open, onOpenChange }: Props) {
             <p className="text-sm text-gray-500 mt-2">
               Applies to: {sections.join(', ')}
             </p>
+          )}
+          {/* Only while there is a walk in progress. The picker still lists every
+              level, so any of them stays editable — this says where saving next
+              will take you, it does not restrict anything. */}
+          {worklist.length > 0 && !allDone && (
+            <p className="text-xs mt-2" style={{ color: '#6B7280' }}>
+              {(() => {
+                const remaining = worklist.filter(l => !savedInWalk.has(l));
+                const position = worklist.length - remaining.length + 1;
+                return remaining.length > 1
+                  ? `Level ${position} of ${worklist.length} still needing fees — saving moves on to ${remaining.find(l => l !== level) ?? remaining[0]}.`
+                  : `Last level still needing fees.`;
+              })()}
+            </p>
+          )}
+          {allDone && (
+            <div
+              style={{
+                marginTop: 10, padding: '0.6rem 0.75rem', borderRadius: 8,
+                border: '1px solid #A7F3D0', backgroundColor: '#ECFDF5', color: '#05603d',
+              }}
+            >
+              <p className="text-sm">Every class level now has fees.</p>
+              <p className="text-xs" style={{ marginTop: 2 }}>
+                You can keep editing any level from the picker above, or close this.
+              </p>
+            </div>
           )}
         </div>
 
@@ -377,7 +496,7 @@ export function LevelFeesDialog({ open, onOpenChange }: Props) {
                         : `Apply ${f.name} (${f.from === null ? 'new' : f.from.toLocaleString()} → ${f.to.toLocaleString()})`}
                     </Button>
                   ))}
-                  <Button size="sm" variant="ghost" onClick={() => setNotice(null)} disabled={applying !== null}>
+                  <Button size="sm" variant="ghost" onClick={dismissNotice} disabled={applying !== null}>
                     Dismiss
                   </Button>
                 </div>
