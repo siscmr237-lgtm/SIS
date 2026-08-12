@@ -39,6 +39,12 @@ import { StaffForm, StaffFormPayload } from './StaffForm';
  * reads as outstanding on the dashboard checklist, which is the same live query
  * this screen is driven by. The wizard guides once; the checklist catches the
  * rest.
+ *
+ * MOVEMENT IS ALWAYS THE USER'S. The wizard opens on the first step that is not
+ * done and then never changes step by itself — not on mount, not on a refresh
+ * landing while someone is reading. When a step becomes complete through work
+ * done in this session it offers a prominent Continue, and waits. A screen that
+ * moves on its own leaves people unsure whether what they just did worked.
  */
 
 type ToolId = 'fees' | 'subjects' | 'assessment-totals' | 'staff' | 'students';
@@ -93,8 +99,18 @@ export function SetupWizard({ onNavigate }: { onNavigate?: (page: NavigationPage
   const [index, setIndex] = useState(0);
   const [tool, setTool] = useState<ToolId | null>(null);
   const [exited, setExited] = useState(false);
-  /** Set when a tool closes, so the refresh it triggers is allowed to advance. */
-  const cameBackFromTool = useRef(false);
+  /** Whether the opening step has been chosen yet — see the landing effect. */
+  const landed = useRef(false);
+  /** The done/not-done the wizard opened with, to spot what changes under it. */
+  const doneAtStart = useRef<Set<ToolId> | null>(null);
+  /**
+   * Steps that went from outstanding to done while this wizard was open.
+   *
+   * The trigger for offering Continue, and the reason it is a set rather than a
+   * flag: someone can go back to an earlier step, and the offer should still be
+   * there for the one they actually finished.
+   */
+  const [completedHere, setCompletedHere] = useState<Set<ToolId>>(new Set());
 
   /**
    * Leaving the wizard, by finishing or by skipping out of the last step.
@@ -116,34 +132,55 @@ export function SetupWizard({ onNavigate }: { onNavigate?: (page: NavigationPage
   }, [onNavigate]);
 
   /**
-   * Auto-advance, on GENUINE completion only.
+   * Where to open: the first step that is not done.
    *
-   * The condition is the server's `done` for the step just worked on — the same
-   * every-level rule the dashboard checklist is ticked by, re-read live after
-   * the tool closed. Nothing is judged here: a per-level step is done only when
-   * EVERY level has the thing, so saving one level out of five leaves `done`
-   * false and the wizard stays put for the rest of them.
-   *
-   * Gated on having just come back from a tool, so this never fires on the
-   * initial load and cannot skip a step the admin has not looked at yet.
+   * Runs exactly once, on the first load that brings steps. Deliberately NOT on
+   * every load — a returning admin who completes step 2 must stay on step 2 and
+   * be offered the move, not be yanked forward by a refresh landing under them.
+   * The wizard never moves the user; only the user does.
    */
   useEffect(() => {
-    if (!cameBackFromTool.current) return;
     const steps = data?.steps;
-    if (!steps?.length) return;
-    cameBackFromTool.current = false;
+    if (landed.current || !steps?.length) return;
+    landed.current = true;
+    doneAtStart.current = new Set(steps.filter((s) => s.done).map((s) => s.id));
+    const firstOutstanding = steps.findIndex((s) => !s.done);
+    setIndex(firstOutstanding === -1 ? 0 : firstOutstanding);
+  }, [data]);
 
-    const at = Math.min(index, steps.length - 1);
-    if (!steps[at]?.done) return;          // partial save — stay on this step
-    if (at >= steps.length - 1) void exit();
-    else setIndex(at + 1);
-  }, [data, index, exit]);
+  /**
+   * Notice a step becoming complete, WITHOUT acting on it.
+   *
+   * Completion is the server's `done` — the same every-level rule the dashboard
+   * checklist is ticked by, re-read live after a tool closes. Nothing is judged
+   * here: a per-level step is done only when EVERY level has the thing, so
+   * saving one level out of five leaves `done` false and no Continue appears.
+   *
+   * A step already done when the wizard opened is not "completed here": the
+   * admin did not just do it, so pushing them onward off the back of it would be
+   * the jump this exists to avoid.
+   */
+  useEffect(() => {
+    const steps = data?.steps;
+    const before = doneAtStart.current;
+    if (!steps?.length || !before) return;
+    const freshlyDone = steps.filter((s) => s.done && !before.has(s.id)).map((s) => s.id);
+    if (!freshlyDone.length) return;
+    setCompletedHere((prev) => {
+      if (freshlyDone.every((id) => prev.has(id))) return prev;
+      const next = new Set(prev);
+      freshlyDone.forEach((id) => next.add(id));
+      return next;
+    });
+  }, [data]);
 
   if (loading || !data?.show || exited) return null;
 
   const steps = data.steps;
   const step = steps[Math.min(index, steps.length - 1)];
   const isLast = index >= steps.length - 1;
+  /** This step was finished just now, in this session — offer the move on. */
+  const justCompleted = step.done && completedHere.has(step.id);
 
   const next = () => {
     if (isLast) void exit();
@@ -157,12 +194,11 @@ export function SetupWizard({ onNavigate }: { onNavigate?: (page: NavigationPage
   };
 
   // Re-reads the live state so the tick and the per-level list reflect whatever
-  // was just set up, without the wizard recomputing any of it itself. The flag
-  // is what licenses the effect above to advance off this step if it is now
-  // genuinely complete.
+  // was just set up, without the wizard recomputing any of it itself. Closing a
+  // tool never changes which step is showing — the refresh may turn this one
+  // green and put a Continue button up, and that is as far as it goes.
   const closeTool = async () => {
     setTool(null);
-    cameBackFromTool.current = true;
     await refresh();
   };
 
@@ -213,7 +249,7 @@ export function SetupWizard({ onNavigate }: { onNavigate?: (page: NavigationPage
               <p className="text-xs" style={{ color: MUTED, marginTop: 2 }}>{step.description}</p>
               {step.done ? (
                 <p className="text-xs" style={{ color: DONE, marginTop: 6 }}>
-                  Done — nothing outstanding here.
+                  {justCompleted ? 'All set — nothing left outstanding here.' : 'Done — nothing outstanding here.'}
                 </p>
               ) : (
                 <p className="text-xs" style={{ color: MUTED, marginTop: 6 }}>
@@ -223,18 +259,40 @@ export function SetupWizard({ onNavigate }: { onNavigate?: (page: NavigationPage
             </div>
           </div>
 
+          {/* Finished in this session: the move on is OFFERED, never taken. The
+              wizard jumping by itself is disorienting — the screen changes under
+              someone who is still reading what they just did — so Continue is
+              prominent and one click away, and nothing happens until it is
+              pressed. */}
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.5rem', flexWrap: 'wrap' }}>
             <Button variant="outline" disabled={index === 0} onClick={() => setIndex((i) => Math.max(0, i - 1))}>
               Back
             </Button>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <Button variant="outline" onClick={next}>
-                {isLast ? 'Finish' : 'Skip for later'}
-              </Button>
-              <Button onClick={openTool}>
-                {step.done ? 'Review' : 'Set up now'}
-              </Button>
-            </div>
+            {justCompleted ? (
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <Button variant="outline" onClick={openTool}>
+                  Review
+                </Button>
+                <Button
+                  onClick={next}
+                  style={{
+                    backgroundColor: DONE, color: '#FFFFFF', borderColor: DONE,
+                    fontWeight: 600, paddingLeft: '1.4rem', paddingRight: '1.4rem',
+                  }}
+                >
+                  {isLast ? 'Finish setup' : `Continue to ${steps[index + 1]?.title ?? 'the next step'}`}
+                </Button>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <Button variant="outline" onClick={next}>
+                  {isLast ? 'Finish' : 'Skip for later'}
+                </Button>
+                <Button onClick={openTool}>
+                  {step.done ? 'Review' : 'Set up now'}
+                </Button>
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>
@@ -245,11 +303,14 @@ export function SetupWizard({ onNavigate }: { onNavigate?: (page: NavigationPage
         <LevelFeesDialog
           open
           onOpenChange={(o) => { if (!o) void closeTool(); }}
-          // Presence of this callback is what tells the dialog it is inside the
-          // wizard. It hands back once the last outstanding level is saved,
-          // rather than announcing completion itself, so the step's own
-          // auto-advance re-checks the live condition and moves on.
-          onAllLevelsDone={() => void closeTool()}
+          // Explicit, and the only thing that turns the level walk on. Not
+          // inferred from the route: this same dialog is reachable from the
+          // Classes page mid-setup, where chaining would be wrong.
+          inWizard
+          // Handed back once every level charges something or has been declared
+          // free. The dialog announces nothing about the STEP — closing it makes
+          // the wizard re-read the live condition, which is what ticks it.
+          onAllLevelsComplete={() => void closeTool()}
         />
       )}
       {tool === 'subjects' && (
