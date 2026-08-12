@@ -4,6 +4,7 @@ import { DollarSign, TrendingUp, UserCheck, Users } from "lucide-react";
 import { useAcademicYear } from '@/lib/academicYear';
 import { AcademicYearNotices } from './AcademicYearNotices';
 import { SetupChecklist } from './SetupChecklist';
+import { SetupWizard } from './SetupWizard';
 import { NavigationPage } from '../App';
 import { useEffect, useState } from "react";
 import { api, BASE_URL } from "../../src/lib/api";
@@ -151,6 +152,11 @@ export function Dashboard({ onNavigate }: { onNavigate?: (page: NavigationPage) 
           </div>
         </div>
       </Card>
+
+      {/* The wizard runs once, immediately after KYC; the checklist below is
+          what catches whatever was skipped, from then on. Both read the same
+          live data, so neither can claim something the other denies. */}
+      <SetupWizard onNavigate={onNavigate} />
 
       {/* Sits above the metrics while there is setup left, and removes itself
           entirely once there is not. It blocks nothing either way. */}
