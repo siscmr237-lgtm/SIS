@@ -31,11 +31,19 @@ export const PAYMENT_STATUS_COLORS: Record<PaymentStatus, string> = {
 
 const KNOWN: PaymentStatus[] = ['No Payment', 'Owing', 'Completed', 'Overpaid'];
 
-function normalise(status: unknown): PaymentStatus | null {
+/**
+ * The server's string, or null when it is anything else — including undefined,
+ * which is what "not loaded yet" looks like. Exported so anything keying on the
+ * status uses this one definition; a second copy would eventually disagree about
+ * what counts as loaded.
+ */
+export function normalisePaymentStatus(status: unknown): PaymentStatus | null {
   return typeof status === 'string' && (KNOWN as string[]).includes(status)
     ? (status as PaymentStatus)
     : null;
 }
+
+const normalise = normalisePaymentStatus;
 
 /**
  * The dot that sits after a student's name, as a superscript.

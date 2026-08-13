@@ -23,8 +23,12 @@ import { ZERO_MARK_COLOR } from './MarkStatus';
 /**
  * What each fee status means in words, and whether it is actionable at all.
  * 'Completed' is absent on purpose — nothing needs addressing, so no banner.
+ *
+ * Exported because the fee-dot popover on the student page shows this same
+ * wording. Shared rather than copied so the two can never drift into saying
+ * slightly different things about the same state.
  */
-const FEE_NOTICES: Partial<Record<PaymentStatus, { title: string; detail: string }>> = {
+export const FEE_NOTICES: Partial<Record<PaymentStatus, { title: string; detail: string }>> = {
   'No Payment': {
     title: 'No payment recorded',
     detail: 'Nothing has been paid towards this student’s fees yet.',

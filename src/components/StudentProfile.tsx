@@ -5,7 +5,8 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { api } from '../lib/api';
 import { useSisCache } from '../lib/SisCache';
 import { useSchoolClassNames } from '../lib/classes';
-import { PaymentStatusDot, useStudentPaymentStatuses } from './PaymentStatus';
+import { useStudentPaymentStatuses } from './PaymentStatus';
+import { StudentFeeStatusPopover } from './StudentFeeStatusPopover';
 import { ZeroMarkDot, ZERO_MARK_COLOR, useStudentsWithZeroMarks } from './MarkStatus';
 import { StudentFlagNotices } from './StudentFlagNotices';
 import { AcademicYearSelect, useAcademicYear } from '../lib/academicYear';
@@ -686,7 +687,10 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
         {/* hasZeroMark comes off the STUDENT, not displayInfo — displayInfo holds
             only the editable identity fields, so reading it here left the dot
             permanently hidden on this page. */}
-        <h1 className="text-3xl">{displayInfo.firstName} {displayInfo.lastName}<PaymentStatusDot status={feeStatus} /><ZeroMarkDot hasZero={hasZeroMark} /></h1>
+        {/* The fees dot carries its own explanation here — tap it. That is why
+            this one is StudentFeeStatusPopover and every other screen keeps the
+            plain PaymentStatusDot. */}
+        <h1 className="text-3xl">{displayInfo.firstName} {displayInfo.lastName}<StudentFeeStatusPopover status={feeStatus} /><ZeroMarkDot hasZero={hasZeroMark} /></h1>
         <p className="text-gray-500 mt-1">
           {student.id} · {displayInfo.class}
           {feesOverridden && (
@@ -1633,15 +1637,11 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
             </DialogContent>
           </Dialog>
 
-          {/* Moved down here from above the tabs — the notice belongs at the end
-              of the tab it describes, not crowding the top of the page. */}
-          <StudentFlagNotices
-            show="fees"
-            paymentStatus={feeStatus}
-            zeroMarkSubjects={zeroMarkSubjects}
-            onViewFinance={() => setActiveTab('finance')}
-            onViewMarks={() => setActiveTab('marks')}
-          />
+          {/* The fee banner that used to close out this tab is gone: its wording
+              is now on the popover attached to the dot beside the student's
+              name, which is where somebody looks when they want to know what the
+              colour means. Saying it in both places would just be saying it
+              twice. The marks banner above the tabs is untouched. */}
 
           <StudentFeeOverrideDialog
             open={showFeeOverride}
