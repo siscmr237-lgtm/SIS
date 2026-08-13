@@ -65,28 +65,49 @@ const DOT_SIZE = 7;
 /** The invisible target around it. A 7px dot cannot be tapped on a phone. */
 const HIT_AREA = 44;
 
-export function StudentFeeStatusPopover({ status }: { status: unknown }) {
+interface Props {
+  status: unknown;
+  /**
+   * Whether the moment this explains has arrived — the Finance tab being open.
+   *
+   * Auto-show used to fire as soon as the payment status loaded, which is on
+   * initial page load, on whatever tab opens first. Since any click dismisses
+   * the popover, the very click that took you to Finance closed it: it opened
+   * and shut again before anybody got to the tab whose banner it replaced.
+   *
+   * So the trigger is the tab, not the data. Both conditions still have to hold
+   * — a resolved status AND the right tab — so this can never open on a null and
+   * flash the wrong state.
+   */
+  autoShowWhen?: boolean;
+}
+
+export function StudentFeeStatusPopover({ status, autoShowWhen = false }: Props) {
   const s = normalisePaymentStatus(status);
   const [open, setOpen] = useState(false);
   /** Auto-show fires once per mount, so dismissing it stays dismissed. */
   const autoShown = useRef(false);
 
   /**
-   * Open once the status has actually ARRIVED — never before.
+   * Open when the status has ARRIVED and the Finance tab is showing.
    *
-   * `s` is null while the roster is still loading, and opening then would show
-   * whichever state resolved first and then change it underneath the reader.
-   * Gating on a resolved status is what stops the popover flashing the wrong
-   * answer.
+   * Not a false→true edge but "first time both are true", so arriving straight
+   * on Finance via ?tab=finance works the same as clicking across to it.
+   *
+   * Latched once per mount: leaving Finance and coming back does not reopen it.
+   * Somebody who dismissed this has read it, and re-popping on every visit to
+   * the tab is how a notice becomes something people swat away unread.
+   *
+   * The click that switches to Finance cannot dismiss what this then opens.
+   * useEffect runs after the click has finished dispatching, and Radix registers
+   * its own outside-pointerdown listener on a setTimeout(0) after that — so by
+   * the time anything is listening, that click is long over.
    */
   useEffect(() => {
-    if (autoShown.current || !s) return;
-    // Latched even for the states that do not auto-open, so that arriving as
-    // Completed and later refreshing to Owing does not pop something open while
-    // somebody is mid-sentence somewhere else on the page.
+    if (autoShown.current || !s || !autoShowWhen) return;
     autoShown.current = true;
     if (AUTO_SHOW.includes(s)) setOpen(true);
-  }, [s]);
+  }, [s, autoShowWhen]);
 
   // Same as the plain dot: nothing at all until the status is known. A grey or
   // guessed colour here would be a claim about this student's fees.
@@ -178,9 +199,13 @@ export function StudentFeeStatusPopover({ status }: { status: unknown }) {
             borderRadius: 6,
             padding: '0.75rem 0.875rem',
             boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)',
-            // Matches the z-index the app's dialogs use, so it is never left
-            // underneath the page chrome.
-            zIndex: 50,
+            // Above EVERYTHING this app stacks, checked rather than assumed:
+            // mobile header z-30, sidebar overlay z-40, sidebar itself z-50,
+            // support button z-60. This started at 50, which tied the sidebar
+            // (leaving DOM order to decide) and sat flatly underneath the
+            // support button. A popover that something else covers is the same
+            // as no popover.
+            zIndex: 70,
           }}
         >
           <p className="text-sm" style={{ color, fontWeight: 600 }}>{notice.title}</p>

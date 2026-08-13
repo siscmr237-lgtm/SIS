@@ -689,8 +689,15 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
             permanently hidden on this page. */}
         {/* The fees dot carries its own explanation here — tap it. That is why
             this one is StudentFeeStatusPopover and every other screen keeps the
-            plain PaymentStatusDot. */}
-        <h1 className="text-3xl">{displayInfo.firstName} {displayInfo.lastName}<StudentFeeStatusPopover status={feeStatus} /><ZeroMarkDot hasZero={hasZeroMark} /></h1>
+            plain PaymentStatusDot.
+
+            It opens itself when the FINANCE tab is showing, not on page load:
+            the banner it replaced lived on that tab, and opening on load meant
+            the first click — the one that goes to Finance — dismissed it before
+            anyone arrived. The dot stays up here rather than moving into the tab
+            because the tab bar is not sticky, so the name is necessarily on
+            screen at the moment a tab is clicked. */}
+        <h1 className="text-3xl">{displayInfo.firstName} {displayInfo.lastName}<StudentFeeStatusPopover status={feeStatus} autoShowWhen={activeTab === 'finance'} /><ZeroMarkDot hasZero={hasZeroMark} /></h1>
         <p className="text-gray-500 mt-1">
           {student.id} · {displayInfo.class}
           {feesOverridden && (
