@@ -34,6 +34,13 @@ const MENU_ITEMS = [
   { href: "/timetable", label: "Timetable", icon: Clock },
 ];
 
+/**
+ * Menu entries whose feature is not shipped. Kept in the list rather than
+ * removed so the app still says the thing is planned — a menu that quietly
+ * loses an item reads as something having broken.
+ */
+const COMING_SOON = ["/timetable"];
+
 export function Sidebar({ open = false, onClose }: SidebarProps) {
   const cache = useSisCache();
   const pathname = usePathname();
@@ -102,6 +109,35 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
         {MENU_ITEMS.map((item) => {
           const Icon = item.icon;
           const active = isActive(item.href);
+
+          // Not built yet. Rendered as a non-link so there is nothing to click,
+          // nothing to focus and no href to middle-click or copy — a Link with a
+          // swallowed onClick would still look and behave like a destination.
+          // It reads as unavailable rather than as broken: dimmed, no hover, a
+          // default cursor and the reason spelled out beside it.
+          if (COMING_SOON.includes(item.href)) {
+            return (
+              <div
+                key={item.href}
+                aria-disabled="true"
+                title={`${item.label} — coming soon`}
+                className="w-full flex items-center gap-3 px-4 py-2 rounded-lg mb-1"
+                style={{ color: '#93B4D8', opacity: 0.55, cursor: 'default' }}
+              >
+                <Icon size={18} />
+                <span>{item.label}</span>
+                <span
+                  className="text-xs"
+                  style={{
+                    marginLeft: 'auto', padding: '1px 6px', borderRadius: 999,
+                    border: '1px solid rgba(255,255,255,0.35)', whiteSpace: 'nowrap',
+                  }}
+                >
+                  Soon
+                </span>
+              </div>
+            );
+          }
 
           return (
             <Link

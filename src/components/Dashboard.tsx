@@ -202,24 +202,54 @@ export function Dashboard({ onNavigate }: { onNavigate?: (page: NavigationPage) 
         <p className="text-gray-600">Key metrics and recent activities</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      {/* Two per row at every width — Students | Staff, then Collected |
+          Outstanding. The pairs are the point: each row is one comparison, and
+          the old 4-across collapsed to a single column on phones, which turned
+          four cards into four full-width slabs and pushed everything below them
+          off the screen.
+
+          The icon moved beside the text instead of sitting on its own line
+          above it. That one change is most of the height saving; the rest is
+          padding, down from 24px to 14/16. */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+          gap: '0.75rem',
+          marginBottom: '1.5rem',
+        }}
+      >
         {stats.map((stat, index) => {
           const Icon = stat.icon;
           return (
-            <Card key={index} className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className={`${stat.color} text-white p-3 rounded-lg`}>
-                  <Icon size={24} />
+            <Card key={index} style={{ padding: '0.875rem 1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div
+                  className={`${stat.color} text-white`}
+                  style={{
+                    flexShrink: 0, width: 36, height: 36, borderRadius: 8,
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  }}
+                >
+                  <Icon size={18} />
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <h3 className="text-gray-600 text-xs" style={{ marginBottom: 1 }}>{stat.title}</h3>
+                  {/* text-xl not text-2xl: at two columns on a 390px screen a
+                      formatted FCFA figure has to fit ~150px without wrapping
+                      the card into two lines. */}
+                  <p className="text-xl" style={{ lineHeight: 1.2, wordBreak: 'break-word' }}>{stat.value}</p>
                 </div>
               </div>
-              <h3 className="text-gray-600 text-sm mb-1">{stat.title}</h3>
-              <p className="text-2xl">{stat.value}</p>
             </Card>
           );
         })}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Full width each, stacked, rather than side by side. Both are lists of
+          label-and-amount rows, and at half width the amounts were being pushed
+          hard against the labels on anything narrower than a laptop. */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         {/* Replaces the old Recent Expenses card. That one showed only outgoing
             money, so the dashboard's "recent activity" was half the story: a
             school could take ten fee payments in a week and this corner of the

@@ -9,7 +9,7 @@ import { Card } from './ui/card';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { Download } from 'lucide-react';
+import { Calendar, Download } from 'lucide-react';
 import { toast } from 'sonner';
 
 /**
@@ -38,6 +38,71 @@ import { toast } from 'sonner';
  */
 
 const TERMS = ['Term 1', 'Term 2', 'Term 3'];
+
+/**
+ * A date filter that wears a calendar instead of a dropdown arrow.
+ *
+ * The browser draws its own picker button inside a date input, and it is a
+ * chevron in Chrome — so From and To read as dropdowns sitting beside two real
+ * dropdowns, saying "pick from a list" when they mean "pick a date".
+ *
+ * The native button is made transparent rather than removed. It is still there
+ * and still clickable in the same spot, so tapping the calendar opens the real
+ * OS picker with no showPicker() call to feature-detect and no chance of the
+ * control becoming unopenable on a browser that does not support it.
+ *
+ * Position is copied from SelectTrigger so the two line up exactly: that trigger
+ * is `h-9 px-3` with the chevron as a 16px `size-4 opacity-50` at the end of a
+ * `justify-between` row, i.e. 12px in from the right edge, centred on 36px. Same
+ * numbers below, so the calendar sits precisely where the arrows beside it do.
+ *
+ * The transparency needs a ::-webkit-calendar-picker-indicator rule, which an
+ * inline style cannot express and src/index.css is frozen against — hence the
+ * one scoped <style> element. It is not Tailwind and touches nothing global.
+ */
+function DateFilterInput({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div style={{ position: 'relative' }}>
+      <style>{`
+        .sis-date-filter::-webkit-calendar-picker-indicator {
+          opacity: 0;
+          cursor: pointer;
+        }
+        .sis-date-filter::-webkit-inner-spin-button { display: none; }
+      `}</style>
+      <Input
+        className="sis-date-filter"
+        type="date"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        disabled={disabled}
+        // Room for the icon, so a long value never runs underneath it.
+        style={{ paddingRight: 34 }}
+      />
+      <Calendar
+        size={16}
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          right: 12,
+          top: '50%',
+          transform: 'translateY(-50%)',
+          opacity: disabled ? 0.25 : 0.5,
+          // Decorative: the invisible native button underneath takes the click.
+          pointerEvents: 'none',
+        }}
+      />
+    </div>
+  );
+}
 
 interface Cell { date: string; status: string | null; present: boolean | null }
 interface SheetStudent {
@@ -206,7 +271,11 @@ export function AttendanceSheet({ audience }: { audience: 'admin' | 'teacher' })
   return (
     <div>
       <Card className="p-6 mb-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Two columns at every width: Class | Term, then From | To. Fixed
+            rather than responsive because the pairing is the meaning — what to
+            look at, then when — and the old 1/2/4 breakpoints reshuffled which
+            filter sat next to which as the window changed. */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '1rem' }}>
           <div>
             <Label>Class</Label>
             <Select value={level} onValueChange={setLevel}>
@@ -219,8 +288,34 @@ export function AttendanceSheet({ audience }: { audience: 'admin' | 'teacher' })
             </Select>
           </div>
 
+          <div>
+            <Label>Term</Label>
+            <Select value={term || '__all'} onValueChange={(v) => setTerm(v === '__all' ? '' : v)}>
+              <SelectTrigger><SelectValue placeholder="Whole year" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all">Whole year to date</SelectItem>
+                {TERMS.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label>From</Label>
+            <DateFilterInput value={from} onChange={setFrom} />
+            <p className="text-xs text-gray-400" style={{ marginTop: 2 }}>
+              A date on its own shows that one day
+            </p>
+          </div>
+
+          <div>
+            <Label>To</Label>
+            <DateFilterInput value={to} onChange={setTo} disabled={!from} />
+          </div>
+
           {/* Offered only when the level genuinely has more than one populated
-              section — the same rule the marks flow uses. */}
+              section — the same rule the marks flow uses. Last rather than
+              second so its coming and going cannot break the Class|Term and
+              From|To pairs above; it simply appears on a row of its own. */}
           {sectionChoices.length > 1 && (
             <div>
               <Label>Section</Label>
@@ -236,30 +331,6 @@ export function AttendanceSheet({ audience }: { audience: 'admin' | 'teacher' })
               </Select>
             </div>
           )}
-
-          <div>
-            <Label>Term</Label>
-            <Select value={term || '__all'} onValueChange={(v) => setTerm(v === '__all' ? '' : v)}>
-              <SelectTrigger><SelectValue placeholder="Whole year" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__all">Whole year to date</SelectItem>
-                {TERMS.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <Label>From</Label>
-            <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
-            <p className="text-xs text-gray-400" style={{ marginTop: 2 }}>
-              A date on its own shows that one day
-            </p>
-          </div>
-
-          <div>
-            <Label>To</Label>
-            <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} disabled={!from} />
-          </div>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap" style={{ marginTop: '0.75rem' }}>
