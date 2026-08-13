@@ -1,6 +1,13 @@
 node_modules/
 backend/node_modules/
 .next/
+
+# TypeScript's incremental build cache. Rewritten by every `tsc` and every
+# `next build`, so a tracked copy is dirty again the moment anyone builds —
+# which makes it permanent noise in `git status` and exactly the kind of file a
+# careless `git add` sweeps into an unrelated commit.
+*.tsbuildinfo
+
 .env
 .env.local
 *.env.*
