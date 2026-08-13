@@ -15,6 +15,28 @@ import { formatTermLabel, resolveSchoolTerm } from "../../src/utils/academicTerm
 import { computeSchoolAbbreviation } from "../../src/utils/schoolAbbreviation";
 import { Card } from "./ui/card";
 
+/**
+ * How big a stat figure can afford to be.
+ *
+ * Two cards per row at 390px leaves roughly 93px for the number: 390 less the
+ * page's 16px gutters, halved, less a 12px gap, less the card's 16px padding and
+ * the 48px the icon and its gap take. A 7-digit "1,939,000" only just fits at
+ * 1.25rem; an 8-digit "10,939,000" does not, and a school that has collected ten
+ * million is not an unusual school.
+ *
+ * So the size steps down with length rather than the number being allowed to
+ * break, truncate, or widen its column. Measured in characters because that is
+ * what actually drives the width — the commas a thousands separator adds count
+ * as much as the digits do.
+ */
+function statValueFontSize(text: string): string {
+  const n = text.length;
+  if (n <= 9) return '1.25rem';    // 1,939,000
+  if (n <= 11) return '1.05rem';   // 10,939,000 · 100,939,000
+  if (n <= 14) return '0.9rem';    // 1,000,939,000
+  return '0.8rem';                 // beyond that, something is very wrong anyway
+}
+
 // onNavigate is optional so the existing `<Dashboard />` call sites keep
 // working; without it the setup card still lists what is outstanding, it just
 // has nowhere to send you.
@@ -131,13 +153,18 @@ export function Dashboard({ onNavigate }: { onNavigate?: (page: NavigationPage) 
     },
     {
       title: "Fees Collected",
-      value: `${(dashboardData?.feesCollected ?? 0).toLocaleString()} FCFA`,
+      // Unit kept OUT of the value. Glued on, "FCFA" is just three more
+      // characters the number has to find room for, and the only place a line
+      // can safely break is between them — see the card body below.
+      value: (dashboardData?.feesCollected ?? 0).toLocaleString(),
+      unit: "FCFA",
       icon: DollarSign,
       color: "bg-purple-500",
     },
     {
       title: "Outstanding Fees",
-      value: `${(dashboardData?.outstandingFees ?? 0).toLocaleString()} FCFA`,
+      value: (dashboardData?.outstandingFees ?? 0).toLocaleString(),
+      unit: "FCFA",
       icon: TrendingUp,
       color: "bg-orange-500",
     },
@@ -233,12 +260,50 @@ export function Dashboard({ onNavigate }: { onNavigate?: (page: NavigationPage) 
                 >
                   <Icon size={18} />
                 </div>
-                <div style={{ minWidth: 0 }}>
+                {/* minWidth 0 is what keeps a long figure inside its column
+                    instead of widening it: without it a flex item refuses to
+                    shrink below its content and the pair stops being equal. */}
+                <div style={{ minWidth: 0, flex: 1 }}>
                   <h3 className="text-gray-600 text-xs" style={{ marginBottom: 1 }}>{stat.title}</h3>
-                  {/* text-xl not text-2xl: at two columns on a 390px screen a
-                      formatted FCFA figure has to fit ~150px without wrapping
-                      the card into two lines. */}
-                  <p className="text-xl" style={{ lineHeight: 1.2, wordBreak: 'break-word' }}>{stat.value}</p>
+                  <p style={{ lineHeight: 1.15, margin: 0, overflow: 'hidden' }}>
+                    {/* nowrap: a money figure must never break mid-number. Split
+                        across lines, "10,939,0 / 00" is not a smaller version of
+                        the truth, it is unreadable. The size steps down instead. */}
+                    <span
+                      style={{
+                        fontSize: statValueFontSize(String(stat.value)),
+                        whiteSpace: 'nowrap',
+                        display: 'inline-block',
+                        maxWidth: '100%',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        verticalAlign: 'bottom',
+                      }}
+                      title={stat.unit ? `${stat.value} ${stat.unit}` : String(stat.value)}
+                    >
+                      {stat.value}
+                    </span>
+                    {/* The one place a break is allowed. FCFA sits beside the
+                        number when there is room and drops beneath it when there
+                        is not, which costs a line only on the cards that need
+                        one. */}
+                    {stat.unit && (
+                      <span
+                        className="text-gray-500"
+                        style={{
+                          fontSize: '0.7rem',
+                          marginLeft: 3,
+                          // Same alignment as the figure, which is inline-block
+                          // for its overflow rules — left on the baseline the
+                          // two would sit a couple of pixels apart.
+                          display: 'inline-block',
+                          verticalAlign: 'bottom',
+                        }}
+                      >
+                        {stat.unit}
+                      </span>
+                    )}
+                  </p>
                 </div>
               </div>
             </Card>

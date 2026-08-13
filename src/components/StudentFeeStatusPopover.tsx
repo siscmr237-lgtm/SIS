@@ -168,8 +168,42 @@ export function StudentFeeStatusPopover({ status, autoShowWhen = false }: Props)
           app/(app)/layout.tsx wraps the page in `overflow-hidden` and the
           scrolling <main> in `overflow-y-auto`, so a popover rendered in place
           would be clipped by both and simply never appear. */}
+      {/* The fade.
+          Radix marks the content [data-state="open"], and an attribute selector
+          is not something an inline style can express — the same reason the
+          attendance date filter needs a rule rather than a style prop. One
+          scoped class, no Tailwind, nothing global.
+
+          KEYFRAMES, NOT A TRANSITION, and that distinction is the whole thing.
+          Radix mounts this element already open, so a transition has no earlier
+          value to move from and would snap straight to opacity 1 with nothing
+          to see. An animation runs on mount, which is what a fade-in needs.
+
+          Entry only. Radix unmounts on close, so there is no closed element left
+          to fade out; forceMount would keep one around, and an invisible layer
+          sitting over the page is exactly what must not happen when the rule is
+          that any click dismisses this.
+
+          Outside the Portal on purpose: Portal passes its children through a
+          Slot that takes exactly one element, so a second child there throws.
+          A <style> applies document-wide once mounted, so where it sits makes
+          no difference to whether the rule reaches the portalled content. */}
+      <style>{`
+        .sis-fee-popover[data-state="open"] {
+          animation: sis-fee-popover-in 140ms ease-out;
+        }
+        @keyframes sis-fee-popover-in {
+          from { opacity: 0; transform: translateY(-4px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .sis-fee-popover[data-state="open"] { animation: none; }
+        }
+      `}</style>
+
       <Popover.Portal>
         <Popover.Content
+          className="sis-fee-popover"
           side="bottom"
           align="start"
           sideOffset={8}
