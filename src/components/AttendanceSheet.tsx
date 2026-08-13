@@ -319,17 +319,31 @@ export function AttendanceSheet({ audience }: { audience: 'admin' | 'teacher' })
                 {sheet.students.map((s) => (
                   <tr key={s.studentId} className="border-b">
                     <td className="px-4 py-3">
-                      {/* Every name is a link to the student, so the register is
-                          a way into the record rather than a dead end. */}
-                      {/* Underlined outright rather than on hover: hover:underline
+                      {/* For an ADMIN every name links to the student, so the
+                          register is a way into the record rather than a dead
+                          end.
+
+                          For a teacher it is plain text. /students/:code is an
+                          admin screen — the auth gate bounces a teacher back to
+                          /teacher — so the link went nowhere, and a name that
+                          looks tappable and then throws you across the app reads
+                          as the app breaking. There is no teacher-facing student
+                          page to point at instead, so the honest answer is not to
+                          offer a link at all rather than to offer a broken one.
+
+                          Underlined outright rather than on hover: hover:underline
                           is not in the pre-compiled stylesheet, so it would style
                           nothing and the name would not read as a link at all. */}
-                      <Link
-                        href={`/students/${encodeURIComponent(s.studentId)}`}
-                        style={{ textDecoration: 'underline' }}
-                      >
-                        {s.firstName} {s.lastName}
-                      </Link>
+                      {audience === 'teacher' ? (
+                        <>{s.firstName} {s.lastName}</>
+                      ) : (
+                        <Link
+                          href={`/students/${encodeURIComponent(s.studentId)}`}
+                          style={{ textDecoration: 'underline' }}
+                        >
+                          {s.firstName} {s.lastName}
+                        </Link>
+                      )}
                     </td>
                     {s.cells.map((c) => (
                       <td key={c.date} className="px-2 py-3" style={{ textAlign: 'center' }}>
