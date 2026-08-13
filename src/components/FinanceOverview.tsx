@@ -1,4 +1,4 @@
-import { AlertTriangle, Calendar, Filter, Receipt, Search, Trash2 } from 'lucide-react';
+import { AlertTriangle, Filter, Info, Receipt, Search, Trash2 } from 'lucide-react';
 import { AcademicYearSelect, useAcademicYear } from '@/lib/academicYear';
 import { PaymentStatusDot, useStudentPaymentStatuses } from './PaymentStatus';
 import { ZeroMarkDot, useStudentsWithZeroMarks } from './MarkStatus';
@@ -14,6 +14,8 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, Di
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { DateFilterInput } from './DateFilterInput';
+import { statValueFontSize } from '../utils/statFigure';
 
 interface FinanceOverviewProps {
   onNavigate: (page: NavigationPage) => void;
@@ -32,13 +34,23 @@ type Bucket = 'fees' | 'payroll' | 'others';
 interface Transaction {
   id: string;
   bucket: Bucket;
-  type: 'CHARGE' | 'PAYMENT' | 'EXPENSE';
+  type: 'CHARGE' | 'PAYMENT' | 'EXPENSE' | 'PAYROLL' | 'STAFF_PAYMENT' | 'STAFF_CHARGE';
   category: string | null;
   description: string;
   partyName: string | null;
   amount: number;
   entryDate: string;
   paymentMethod: string | null;
+  partyType?: 'student' | 'staff' | 'vendor' | null;
+  partyCode?: string | null;
+  partyClass?: string | null;
+  note?: string | null;
+  payrollMonth?: string | null;
+  payrollBonus?: number | null;
+  academicYear?: string | null;
+  term?: string | null;
+  settlesCode?: string | null;
+  settlesDescription?: string | null;
   // True for the charges billed from a class level's fee structure. They are
   // owned by syncLevelFeeCharges, so deleting one is undone the next time that
   // level's fees are saved — the confirmation says so rather than pretending.
@@ -68,6 +80,30 @@ const BUCKETS: { id: Bucket; label: string }[] = [
 
 const TERM_OPTIONS = ['Term 1', 'Term 2', 'Term 3'];
 const PAGE_SIZE = 25;
+
+/**
+ * How each transaction type reads, and which way the money went.
+ *
+ * The five here are the ones the DATA can actually distinguish. Refund is not
+ * among them and cannot be: nothing in the schema records one. Every amount is
+ * validated strictly positive on the way in, there is no negative counter-entry,
+ * and there is no refund/reversal/credit column anywhere on LedgerEntry —
+ * "Overpaid" is a computed STATUS meaning a refund may be due, not a record that
+ * one happened. Inventing a Refund label would mean labelling something that is
+ * not a refund.
+ *
+ * Staff rows are named separately from student ones because a staff CHARGE and a
+ * student CHARGE run in opposite directions — one is money the school owes, the
+ * other money owed to it — and a single "Charge" pill would flatten that.
+ */
+const TX_TYPES: Record<string, { label: string; bg: string; fg: string; inbound: boolean }> = {
+  CHARGE: { label: 'Charge', bg: '#EFF6FF', fg: '#1D4ED8', inbound: false },
+  PAYMENT: { label: 'Payment', bg: '#ECFDF5', fg: '#05603D', inbound: true },
+  EXPENSE: { label: 'Expense', bg: '#FDF3EF', fg: '#C2410C', inbound: false },
+  PAYROLL: { label: 'Payroll', bg: '#F5F3FF', fg: '#6D28D9', inbound: false },
+  STAFF_PAYMENT: { label: 'Staff payment', bg: '#F5F3FF', fg: '#6D28D9', inbound: false },
+  STAFF_CHARGE: { label: 'Staff charge', bg: '#FEF3C7', fg: '#92400E', inbound: false },
+};
 
 function formatDate(value: string | undefined) {
   if (!value) return '—';
@@ -117,6 +153,8 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
   const [txPendingDelete, setTxPendingDelete] = useState<Transaction | null>(null);
   const [txDeleting, setTxDeleting] = useState(false);
   const [txDeleteError, setTxDeleteError] = useState<string | null>(null);
+  /** The row whose Details panel is open. Whole row, so the panel needs no refetch. */
+  const [txDetail, setTxDetail] = useState<Transaction | null>(null);
 
   const today = new Date().toISOString().split('T')[0];
   const [openDamage, setOpenDamage] = useState(false);
@@ -294,6 +332,23 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
     return null;
   };
 
+  /**
+   * Where a transaction's record actually lives.
+   *
+   * No screen in this app addresses a single ledger entry, so the closest real
+   * destination is the party's own Finance tab — which is where that entry is
+   * listed. ?tab= is the existing deep-link both profiles already read.
+   * Navigating to an invented per-entry URL would only 404.
+   */
+  const openParty = (t: Transaction) => {
+    if (!t.partyCode) return;
+    if (t.partyType === 'student') {
+      onViewStudent({ id: t.partyCode } as Student, 'finance');
+    } else if (t.partyType === 'staff') {
+      onNavigate('staff');
+    }
+  };
+
   const confirmTxDelete = async () => {
     if (!txPendingDelete) return;
     const target = txTarget(txPendingDelete);
@@ -346,21 +401,73 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-        <Card className="p-4">
-          <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Total Charged</p>
-          <p className="text-2xl font-medium text-gray-900">{totalCharged.toLocaleString()} FCFA</p>
-        </Card>
-        <Card className="p-4">
-          <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Total Collected</p>
-          <p className="text-2xl font-medium text-green-600">{totalCollected.toLocaleString()} FCFA</p>
-        </Card>
-        <Card className={`p-4 ${totalOutstanding > 0 ? 'bg-red-50 border-red-200' : ''}`}>
-          <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Outstanding</p>
-          <p className={`text-2xl font-medium ${totalOutstanding > 0 ? 'text-red-600' : 'text-gray-900'}`}>
-            {totalOutstanding.toLocaleString()} FCFA
-          </p>
-        </Card>
+      {/* One line at every width. Three across on a phone leaves roughly 87px
+          of usable card, so the figure has to size itself down rather than the
+          row breaking — same treatment as the dashboard tiles, and the same
+          shared sizer so the two cannot drift apart. `compact` is the tighter
+          scale three-up needs; FCFA is a separate span so the only place a line
+          may break is between the number and its unit, never mid-figure. */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+          gap: '0.5rem',
+          marginBottom: '2rem',
+        }}
+      >
+        {[
+          { label: 'Total Charged', value: totalCharged, color: '#111827', highlight: false },
+          { label: 'Total Collected', value: totalCollected, color: '#059669', highlight: false },
+          {
+            label: 'Outstanding',
+            value: totalOutstanding,
+            color: totalOutstanding > 0 ? '#DC2626' : '#111827',
+            highlight: totalOutstanding > 0,
+          },
+        ].map((c) => {
+          const figure = c.value.toLocaleString();
+          return (
+            <Card
+              key={c.label}
+              style={{
+                padding: '0.625rem 0.75rem',
+                minWidth: 0,
+                ...(c.highlight ? { backgroundColor: '#FEF2F2', borderColor: '#FECACA' } : {}),
+              }}
+            >
+              <p
+                className="text-gray-400 uppercase tracking-wide"
+                style={{ fontSize: '0.625rem', marginBottom: 2, lineHeight: 1.2 }}
+              >
+                {c.label}
+              </p>
+              <p style={{ margin: 0, lineHeight: 1.15, overflow: 'hidden' }}>
+                <span
+                  title={`${figure} FCFA`}
+                  style={{
+                    fontSize: statValueFontSize(figure, { compact: true }),
+                    fontWeight: 500,
+                    color: c.color,
+                    whiteSpace: 'nowrap',
+                    display: 'inline-block',
+                    maxWidth: '100%',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    verticalAlign: 'bottom',
+                  }}
+                >
+                  {figure}
+                </span>
+                <span
+                  className="text-gray-500"
+                  style={{ fontSize: '0.625rem', marginLeft: 3, display: 'inline-block', verticalAlign: 'bottom' }}
+                >
+                  FCFA
+                </span>
+              </p>
+            </Card>
+          );
+        })}
       </div>
 
       <Card className="mb-8">
@@ -372,7 +479,7 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
                 <Filter size={16} className="text-gray-400" />
                 <span className="text-sm font-medium text-gray-600">Filters</span>
               </div>
-              <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 flex-1">
+              <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 flex-1" style={{ minWidth: 0 }}>
                 <div>
                   <Label className="text-xs text-gray-500 mb-1">Class</Label>
                   <Select value={studentQuery.classFilter} onValueChange={(v: string) => updateStudentFilter({ classFilter: v })}>
@@ -408,29 +515,27 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
                     </SelectContent>
                   </Select>
                 </div>
+                {/* Matched to the three selects above: same pill radius, same
+                    h-9 px-3 box, and the calendar 12px in from the right where
+                    their chevrons sit. Before this the icon was a size-20 on the
+                    LEFT at left-3 with the browser's own arrow crowding the
+                    right edge, so these two read as a different kind of control
+                    from the three beside them. */}
                 <div>
                   <Label className="text-xs text-gray-500 mb-1">From Date</Label>
-                  <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-                    <Input
-                      type="date"
-                      value={studentQuery.dateFrom}
-                      onChange={e => updateStudentFilter({ dateFrom: e.target.value })}
-                      className="pl-10"
-                    />
-                  </div>
+                  <DateFilterInput
+                    value={studentQuery.dateFrom}
+                    onChange={(v) => updateStudentFilter({ dateFrom: v })}
+                    style={{ borderRadius: 9999 }}
+                  />
                 </div>
                 <div>
                   <Label className="text-xs text-gray-500 mb-1">To Date</Label>
-                  <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-                    <Input
-                      type="date"
-                      value={studentQuery.dateTo}
-                      onChange={e => updateStudentFilter({ dateTo: e.target.value })}
-                      className="pl-10"
-                    />
-                  </div>
+                  <DateFilterInput
+                    value={studentQuery.dateTo}
+                    onChange={(v) => updateStudentFilter({ dateTo: v })}
+                    style={{ borderRadius: 9999 }}
+                  />
                 </div>
               </div>
             </div>
@@ -548,73 +653,91 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
               <thead>
                 <tr className="border-b text-left text-xs text-gray-500 uppercase tracking-wide">
                   <th className="px-4 py-3 font-medium">Date</th>
-                  <th className="px-4 py-3 font-medium">Description</th>
-                  <th className="px-4 py-3 font-medium">Party</th>
                   <th className="px-4 py-3 font-medium">Category</th>
+                  <th className="px-4 py-3 font-medium">Party</th>
                   <th className="px-4 py-3 font-medium">Type</th>
                   <th className="px-4 py-3 font-medium text-right">Amount</th>
-                  <th className="px-4 py-3 font-medium">Method</th>
-                  <th className="px-4 py-3 font-medium">
-                    <span style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)', whiteSpace: 'nowrap' }}>
-                      Actions
-                    </span>
-                  </th>
+                  <th className="px-4 py-3 font-medium">Details</th>
                 </tr>
               </thead>
               <tbody>
                 {transactions.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-4 py-6 text-center text-gray-500">
+                    <td colSpan={6} className="px-4 py-6 text-center text-gray-500">
                       No {BUCKETS.find(b => b.id === txQuery.bucket)?.label.toLowerCase()} transactions found.
                     </td>
                   </tr>
-                ) : transactions.map((t) => (
-                  <tr key={t.id} className="border-b last:border-0 hover:bg-gray-50">
-                    <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{formatDate(t.entryDate)}</td>
-                    <td className="px-4 py-3 text-gray-900">{t.description}</td>
-                    <td className="px-4 py-3 text-gray-600">{t.partyName ?? '—'}</td>
-                    <td className="px-4 py-3 text-gray-600">{t.category ?? '—'}</td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
-                        t.type === 'PAYMENT'
-                          ? 'bg-green-100 text-green-700'
-                          : t.type === 'EXPENSE'
-                          ? 'bg-orange-100 text-orange-700'
-                          : 'bg-blue-100 text-blue-700'
-                      }`}>
-                        {t.type === 'CHARGE' ? 'Charge' : t.type === 'PAYMENT' ? 'Payment' : 'Expense'}
-                      </span>
-                    </td>
-                    <td className={`px-4 py-3 text-right font-medium whitespace-nowrap ${
-                      t.type === 'PAYMENT' ? 'text-green-600' : 'text-gray-900'
-                    }`}>
-                      {t.type === 'PAYMENT' ? '+' : ''}{t.amount.toLocaleString()} FCFA
-                    </td>
-                    <td className="px-4 py-3 text-gray-500">{t.paymentMethod ?? '—'}</td>
-                    {/* Icon-only, inline-styled: src/index.css is a pre-compiled
-                        Tailwind build, so a colour utility that isn't already in
-                        it renders as nothing at all. */}
-                    <td className="px-4 py-3">
-                      {txTarget(t) && (
-                        <button
-                          type="button"
-                          title="Delete this record"
-                          aria-label={`Delete ${t.description}, ${t.amount.toLocaleString()} FCFA`}
-                          onClick={() => { setTxDeleteError(null); setTxPendingDelete(t); }}
-                          disabled={txDeleting}
+                ) : transactions.map((t) => {
+                  const kind = TX_TYPES[t.type] ?? TX_TYPES.CHARGE;
+                  return (
+                    <tr key={t.id} className="border-b last:border-0 hover:bg-gray-50">
+                      <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{formatDate(t.entryDate)}</td>
+                      <td className="px-4 py-3 text-gray-600">{t.category ?? '—'}</td>
+                      <td className="px-4 py-3 text-gray-900">
+                        {t.partyName ?? '—'}
+                        {t.partyClass && (
+                          <span className="text-xs text-gray-400" style={{ display: 'block' }}>{t.partyClass}</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        {/* Inline colours: src/index.css is a pre-compiled
+                            Tailwind build, so a utility not already in it
+                            renders as nothing at all. */}
+                        <span
                           style={{
-                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                            padding: 4, borderRadius: 6, border: 'none', background: 'transparent',
-                            color: '#DC2626', cursor: txDeleting ? 'default' : 'pointer',
-                            opacity: txDeleting ? 0.5 : 1,
+                            display: 'inline-block', padding: '2px 8px', borderRadius: 4,
+                            fontSize: '0.75rem', fontWeight: 500, whiteSpace: 'nowrap',
+                            backgroundColor: kind.bg, color: kind.fg,
                           }}
                         >
-                          <Trash2 size={15} />
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                          {kind.label}
+                        </span>
+                      </td>
+                      <td
+                        className="px-4 py-3 text-right font-medium whitespace-nowrap"
+                        style={{ color: kind.inbound ? '#059669' : '#111827' }}
+                      >
+                        {kind.inbound ? '+' : ''}{t.amount.toLocaleString()} FCFA
+                      </td>
+                      <td className="px-4 py-3">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <button
+                            type="button"
+                            onClick={() => setTxDetail(t)}
+                            aria-label={`Details for ${t.description}, ${t.amount.toLocaleString()} FCFA`}
+                            style={{
+                              display: 'inline-flex', alignItems: 'center', gap: 4,
+                              padding: '3px 9px', borderRadius: 6,
+                              border: '1px solid #D1D5DB', background: '#FFFFFF',
+                              color: '#0f2345', fontSize: '0.75rem', fontWeight: 500,
+                              cursor: 'pointer', whiteSpace: 'nowrap',
+                            }}
+                          >
+                            <Info size={13} />
+                            Details
+                          </button>
+                          {txTarget(t) && (
+                            <button
+                              type="button"
+                              title="Delete this record"
+                              aria-label={`Delete ${t.description}, ${t.amount.toLocaleString()} FCFA`}
+                              onClick={() => { setTxDeleteError(null); setTxPendingDelete(t); }}
+                              disabled={txDeleting}
+                              style={{
+                                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                padding: 4, borderRadius: 6, border: 'none', background: 'transparent',
+                                color: '#DC2626', cursor: txDeleting ? 'default' : 'pointer',
+                                opacity: txDeleting ? 0.5 : 1,
+                              }}
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -642,6 +765,92 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
           </div>
         </div>
       </Card>
+
+      {/* Details for one transaction. Everything shown here already came down
+          with the row, so opening it costs no request — and the columns can stay
+          narrow enough to read on a phone precisely because the long fields live
+          in here rather than in the table. */}
+      <Dialog open={txDetail !== null} onOpenChange={(open) => { if (!open) setTxDetail(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Transaction details</DialogTitle>
+            <DialogDescription>
+              {txDetail ? (TX_TYPES[txDetail.type]?.label ?? txDetail.type) : ''} · {txDetail ? formatDate(txDetail.entryDate) : ''}
+            </DialogDescription>
+          </DialogHeader>
+
+          {txDetail && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+              {([
+                ['Description', txDetail.description],
+                ['Party', txDetail.partyName],
+                ['Class', txDetail.partyClass],
+                ['Category', txDetail.category],
+                ['Amount', `${txDetail.amount.toLocaleString()} FCFA`],
+                ['Payment method', txDetail.paymentMethod],
+                ['Payroll month', txDetail.payrollMonth],
+                ['Of which bonus', txDetail.payrollBonus ? `${txDetail.payrollBonus.toLocaleString()} FCFA` : null],
+                ['Academic year', txDetail.academicYear],
+                ['Term', txDetail.term],
+                ['Note', txDetail.note],
+                ['Reference', String(txDetail.id).replace(/^(ledger|expense)-/, '')],
+              ] as [string, string | null | undefined][])
+                // Absent fields are dropped rather than shown as a dash: a panel
+                // of em-dashes reads as missing data instead of as not applicable.
+                .filter(([, v]) => v !== null && v !== undefined && v !== '')
+                .map(([label, value]) => (
+                  <div key={label} style={{ display: 'flex', gap: '1rem', alignItems: 'baseline' }}>
+                    <span className="text-xs text-gray-500" style={{ width: 118, flexShrink: 0 }}>{label}</span>
+                    <span className="text-sm" style={{ minWidth: 0, wordBreak: 'break-word' }}>{value}</span>
+                  </div>
+                ))}
+
+              {/* Where this record involves a payment, link through to it. The
+                  ledger has no per-entry screen, so the destination is the
+                  party's own Finance tab, which is where the entry is listed —
+                  see openParty. A payment that settled a specific charge names
+                  that charge, since the pair is the whole story. */}
+              {txDetail.settlesCode && (
+                <div
+                  style={{
+                    marginTop: '0.25rem', padding: '0.55rem 0.7rem', borderRadius: 6,
+                    border: '1px solid #A7F3D0', backgroundColor: '#ECFDF5', color: '#05603D',
+                  }}
+                >
+                  <p className="text-xs" style={{ fontWeight: 600 }}>Settles a specific charge</p>
+                  <p className="text-xs" style={{ marginTop: 2 }}>
+                    {txDetail.settlesDescription ?? txDetail.settlesCode} ({txDetail.settlesCode})
+                  </p>
+                </div>
+              )}
+
+              {txDetail.partyType === 'student' || txDetail.partyType === 'staff' ? (
+                <Button
+                  variant="outline"
+                  style={{ marginTop: '0.35rem' }}
+                  onClick={() => { const t = txDetail; setTxDetail(null); openParty(t); }}
+                >
+                  Open {txDetail.partyType === 'student' ? "student's" : "staff member's"} finances
+                </Button>
+              ) : txDetail.type === 'EXPENSE' ? (
+                <Button
+                  variant="outline"
+                  style={{ marginTop: '0.35rem' }}
+                  onClick={() => { setTxDetail(null); onNavigate('expenses'); }}
+                >
+                  Open expenses
+                </Button>
+              ) : null}
+            </div>
+          )}
+
+          <div className="flex justify-end">
+            <DialogClose asChild>
+              <Button variant="outline">Close</Button>
+            </DialogClose>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={openDamage} onOpenChange={(open) => { setOpenDamage(open); if (!open) { setDamageResult(null); setDamageError(null); } }}>
         <DialogContent className="max-w-md">

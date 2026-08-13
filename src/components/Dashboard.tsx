@@ -14,28 +14,7 @@ import { useCachedResource, useSisCache } from "../../src/lib/SisCache";
 import { formatTermLabel, resolveSchoolTerm } from "../../src/utils/academicTerm";
 import { computeSchoolAbbreviation } from "../../src/utils/schoolAbbreviation";
 import { Card } from "./ui/card";
-
-/**
- * How big a stat figure can afford to be.
- *
- * Two cards per row at 390px leaves roughly 93px for the number: 390 less the
- * page's 16px gutters, halved, less a 12px gap, less the card's 16px padding and
- * the 48px the icon and its gap take. A 7-digit "1,939,000" only just fits at
- * 1.25rem; an 8-digit "10,939,000" does not, and a school that has collected ten
- * million is not an unusual school.
- *
- * So the size steps down with length rather than the number being allowed to
- * break, truncate, or widen its column. Measured in characters because that is
- * what actually drives the width — the commas a thousands separator adds count
- * as much as the digits do.
- */
-function statValueFontSize(text: string): string {
-  const n = text.length;
-  if (n <= 9) return '1.25rem';    // 1,939,000
-  if (n <= 11) return '1.05rem';   // 10,939,000 · 100,939,000
-  if (n <= 14) return '0.9rem';    // 1,000,939,000
-  return '0.8rem';                 // beyond that, something is very wrong anyway
-}
+import { statValueFontSize } from "../utils/statFigure";
 
 // onNavigate is optional so the existing `<Dashboard />` call sites keep
 // working; without it the setup card still lists what is outstanding, it just

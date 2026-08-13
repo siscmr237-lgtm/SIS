@@ -31,7 +31,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <div className="fixed inset-0 bg-black/50 z-40 md:hidden" onClick={() => setSidebarOpen(false)} />
         )}
         <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-        <main className="flex-1 overflow-y-auto pt-14 md:pt-0">
+        {/* min-w-0 is load-bearing, not decoration.
+            A flex item defaults to `min-width: auto`, meaning "never shrink
+            below your content's minimum". So one wide descendant — a date input
+            with an intrinsic widget width, a table of nowrap cells — pushed this
+            element wider than the screen. And because `overflow-y: auto` forces
+            the other axis from `visible` to `auto` (CSS Overflow 3 §3.2), the
+            excess did not get clipped: <main> quietly became a HORIZONTAL
+            scroller, which is the blank space you could swipe into to the right
+            of every page. min-w-0 lets it shrink to its share instead. */}
+        <main className="flex-1 min-w-0 overflow-y-auto pt-14 md:pt-0">
           {children}
         </main>
       </div>
