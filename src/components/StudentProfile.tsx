@@ -176,6 +176,12 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
   // The Total Charged breakdown: the only place the fee-structure charges are
   // listed, since the transaction table now hides them.
   const [showChargeBreakdown, setShowChargeBreakdown] = useState(false);
+  // The Balance Owed breakdown: what is still outstanding, category by
+  // category, against what each category was charged. Reuses loadOwing() and
+  // the owingCategories it fills — the same figures the Record Payment dialog
+  // caps against, so the two can never quote different amounts for the same
+  // category.
+  const [showOwingBreakdown, setShowOwingBreakdown] = useState(false);
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
   const [entryEditForm, setEntryEditForm] = useState({ description: '', amount: '' });
   const [entryBusy, setEntryBusy] = useState(false);
@@ -683,7 +689,47 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
         Back to Students
       </button>
 
-      <div className="mb-6">
+      {/* Layout for the General Information tab.
+
+          A <style> element rather than inline styles because these are media
+          queries, which a style attribute cannot express — and rather than
+          Tailwind classes because src/index.css is a frozen pre-compiled build:
+          a utility that isn't already in it renders as nothing, silently.
+
+          640px is the breakpoint, matching Tailwind's `sm:` — the same one the
+          rest of this page already switches on, so the field grids and every
+          neighbouring `sm:` class change together instead of stepping at two
+          different widths.
+
+          Scoped to data attributes so none of it can leak onto another screen. */}
+      <style>{`
+        [data-profile-fields] {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr);
+          column-gap: 3rem;
+          row-gap: 1.75rem;
+        }
+        [data-profile-fields] dt { line-height: 1.5; }
+        [data-profile-fields] dd { line-height: 1.6; }
+        [data-contact-grid] {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr);
+          gap: 0.75rem;
+        }
+        @media (min-width: 640px) {
+          [data-profile-fields="two"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+          [data-contact-grid] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+      `}</style>
+
+      {/* Name on the left, the mobile ⋯ menu right-aligned on the same line.
+          items-start rather than items-center so the button stays level with the
+          name itself when the class/ID line below wraps on a narrow screen. */}
+      <div className="mb-6 flex items-start justify-between gap-3">
+        {/* min-width:0 lets this column actually shrink. Without it a flex item
+            refuses to go below its content's intrinsic width, and a long name
+            would push the ⋯ button off the right edge instead of wrapping. */}
+        <div style={{ minWidth: 0 }}>
         {/* hasZeroMark comes off the STUDENT, not displayInfo — displayInfo holds
             only the editable identity fields, so reading it here left the dot
             permanently hidden on this page. */}
@@ -771,6 +817,55 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
             </>
           )}
         </p>
+        </div>
+
+        {/* The mobile action menu, moved up here from inside the Finance tab
+            where it sat in a right-aligned row of its own above the summary
+            cards. That row is gone rather than emptied, so nothing is left
+            holding blank space.
+
+            Still gated on the Finance tab: every item in it acts on this
+            student's money, and the desktop equivalent — the three-button row
+            further down — only exists on that tab too. Showing it above General
+            Information would offer Record Payment from a screen that has nothing
+            to do with payments.
+
+            Desktop is untouched: md:hidden keeps this to small screens, and the
+            desktop button row still lives in the Finance tab. */}
+        {activeTab === 'finance' && (
+          <div className="md:hidden shrink-0 relative" ref={actionsMenuRef}>
+            <Button variant="outline" size="sm" onClick={() => setShowActionsMenu(v => !v)}>
+              <MoreHorizontal size={16} />
+            </Button>
+            {showActionsMenu && (
+              <div className="absolute top-full right-0 mt-1 z-10 bg-white border rounded-md shadow-lg py-1 w-48">
+                <button
+                  className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 disabled:opacity-50"
+                  disabled={!ledgerData}
+                  onClick={() => { handleDownloadStatement(); setShowActionsMenu(false); }}
+                >
+                  Download Financial Sheet
+                </button>
+                {/* Record Charge lived here. Charges are now raised inside
+                    Edit This Student's Fees, which is where their money is
+                    arranged — one place instead of two entry points that
+                    created different kinds of charge. */}
+                <button
+                  className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
+                  onClick={() => { setShowFeeOverride(true); setShowActionsMenu(false); }}
+                >
+                  Edit Fees / Add Charge
+                </button>
+                <button
+                  className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
+                  onClick={() => { openPaymentDialog(); setShowActionsMenu(false); }}
+                >
+                  Record Payment
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Only the marks flag sits above the tabs now. The payment notice moved to
@@ -849,7 +944,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
               </Button>
               </div>
             </div>
-            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-5">
+            <dl data-profile-fields="two">
               <Field label="Student ID" value={student.id} />
               <Field label="Class" value={displayInfo.class} />
               <Field label="First Name" value={displayInfo.firstName} />
@@ -866,7 +961,10 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
           {/* Medical History */}
           <Card className="p-6 mt-4">
             <h2 className="text-base font-medium mb-5">Medical History</h2>
-            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-5">
+            {/* One column at every width. These four are free text — an allergy
+                list or a note runs long and reads badly in a half-width column
+                next to another one doing the same. */}
+            <dl data-profile-fields="one">
               <MedicalField label="Allergies" value={displayInfo.allergies} />
               <MedicalField label="Existing Medical Conditions" value={displayInfo.medicalConditions} />
               <MedicalField label="Current Medications" value={displayInfo.currentMedications} />
@@ -896,9 +994,21 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
             ) : pickupContacts.length === 0 ? (
               <p className="text-sm text-gray-400 italic">No pickup contacts recorded.</p>
             ) : (
-              <div className="divide-y">
+              /* Two columns of bordered cells rather than one divided list.
+                 A divide-y stack only reads correctly in a single column — in a
+                 grid the dividing rules run between cells that sit side by
+                 side, so each contact carries its own outline instead.
+
+                 A bare block comment, not {/* … *​/}: this sits in the
+                 expression slot of a ternary, where braces would open an object
+                 literal rather than a JSX comment. */
+              <div data-contact-grid="">
                 {pickupContacts.map((contact) => (
-                  <div key={contact.id} className="flex items-start justify-between py-3 first:pt-0 last:pb-0">
+                  <div
+                    key={contact.id}
+                    className="flex items-start justify-between"
+                    style={{ border: '1px solid #E5E7EB', borderRadius: 8, padding: '0.75rem' }}
+                  >
                     <div>
                       <p className="text-sm font-medium text-gray-900">{contact.name}</p>
                       <p className="text-sm text-gray-500">{contact.phone}</p>
@@ -1343,41 +1453,11 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
 
       {activeTab === 'finance' && (
         <div className="space-y-4">
-          {/* Mobile: ⋯ action menu */}
-          <div className="flex justify-end md:hidden">
-            <div className="relative" ref={actionsMenuRef}>
-              <Button variant="outline" size="sm" onClick={() => setShowActionsMenu(v => !v)}>
-                <MoreHorizontal size={16} />
-              </Button>
-              {showActionsMenu && (
-                <div className="absolute top-full right-0 mt-1 z-10 bg-white border rounded-md shadow-lg py-1 w-48">
-                  <button
-                    className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 disabled:opacity-50"
-                    disabled={!ledgerData}
-                    onClick={() => { handleDownloadStatement(); setShowActionsMenu(false); }}
-                  >
-                    Download Financial Sheet
-                  </button>
-                  {/* Record Charge lived here. Charges are now raised inside
-                      Edit This Student's Fees, which is where their money is
-                      arranged — one place instead of two entry points that
-                      created different kinds of charge. */}
-                  <button
-                    className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
-                    onClick={() => { setShowFeeOverride(true); setShowActionsMenu(false); }}
-                  >
-                    Edit Fees / Add Charge
-                  </button>
-                  <button
-                    className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
-                    onClick={() => { openPaymentDialog(); setShowActionsMenu(false); }}
-                  >
-                    Record Payment
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
+          {/* The mobile ⋯ menu used to sit here in a right-aligned row of its
+              own. It is now beside the student's name above the tabs, and the
+              row it lived in is deleted rather than left empty — an empty flex
+              row still takes a space-y-4 gap and would have left a visible band
+              of nothing at the top of this tab. */}
 
           {/* Desktop: three-button row */}
           <div className="hidden md:flex gap-2 justify-end flex-wrap">
@@ -1421,7 +1501,21 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                     onClick={() => { setEntryError(null); setEditingEntryId(null); setShowChargeBreakdown(true); }}
                     className="w-full text-left"
                     title="See every charge, including fees"
-                    style={{ cursor: 'pointer', background: 'none', border: 0, padding: 0 }}
+                    style={{
+                      cursor: 'pointer', background: 'none', border: 0, padding: 0,
+                      // This is why this card's figure sat higher and tighter to
+                      // its title than the other two. Card is `flex flex-col
+                      // gap-6`, so in the neighbouring cards the label and the
+                      // figure are two flex children with 24px of gap between
+                      // them, on top of the label's own mb-1. Here both <p>s are
+                      // wrapped in this button, which is a SINGLE child — the
+                      // gap has nothing to apply between, leaving only the 4px
+                      // margin. Restating the same gap inside the button gives
+                      // it the identical 4px + 24px the others get.
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '1.5rem',
+                    }}
                   >
                     <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Total Charged</p>
                     <p className="text-xs md:text-xl font-medium text-gray-900">
@@ -1429,17 +1523,39 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                     </p>
                   </button>
                 </Card>
-                <Card className="p-2 md:p-4">
+                {/* Outlined in the same green as the figure it contains.
+                    #16a34a is Tailwind's green-600, the literal value behind the
+                    text-green-600 below — written out because a border-green-600
+                    utility is not in the frozen build and would render nothing. */}
+                <Card className="p-2 md:p-4" style={{ borderColor: '#16a34a' }}>
                   <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Total Paid</p>
                   <p className="text-xs md:text-xl font-medium text-green-600">
                     {ledgerData.totalPaid.toLocaleString()} FCFA
                   </p>
                 </Card>
+                {/* Clickable for the same reason Total Charged is: the figure
+                    alone doesn't say WHICH fees are behind it, and that is the
+                    question anyone looking at a balance actually has. */}
                 <Card className={`p-2 md:p-4 ${ledgerData.balance > 0 ? 'bg-red-50 border-red-200' : ''}`}>
-                  <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Balance Owed</p>
-                  <p className={`text-xs md:text-xl font-medium ${ledgerData.balance > 0 ? 'text-red-600' : 'text-gray-900'}`}>
-                    {ledgerData.balance.toLocaleString()} FCFA
-                  </p>
+                  <button
+                    type="button"
+                    onClick={() => { setShowOwingBreakdown(true); loadOwing(); }}
+                    className="w-full text-left"
+                    title="See what is owed, category by category"
+                    style={{
+                      cursor: 'pointer', background: 'none', border: 0, padding: 0,
+                      // Same reasoning as Total Charged above: one flex child, so
+                      // the Card's gap-6 needs restating inside the button.
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '1.5rem',
+                    }}
+                  >
+                    <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Balance Owed</p>
+                    <p className={`text-xs md:text-xl font-medium ${ledgerData.balance > 0 ? 'text-red-600' : 'text-gray-900'}`}>
+                      {ledgerData.balance.toLocaleString()} FCFA
+                    </p>
+                  </button>
                 </Card>
               </div>
 
@@ -1525,6 +1641,102 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
               </Card>
             </>
           )}
+
+          {/* What is still owed, category by category, against what each was
+              charged. Opened from the Balance Owed card.
+
+              Served entirely by GET /ledger/student/:id/owing, which already
+              returns `charged`, `paid` and `owing` per category — no new
+              endpoint, and no arithmetic repeated on the client. Doing the
+              subtraction here would be a second implementation of the
+              allocation rule the server applies (tagged payments settle their
+              own category, untagged money fills oldest-first), and the two would
+              eventually disagree about the same student. */}
+          <Dialog open={showOwingBreakdown} onOpenChange={setShowOwingBreakdown}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>What is owed</DialogTitle>
+                <DialogDescription>
+                  Each fee category, what {displayInfo.firstName} was charged for it, and
+                  what is still outstanding.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div style={{ maxHeight: '55vh', overflowY: 'auto' }}>
+                {owingLoading ? (
+                  <p className="text-sm text-gray-500">Loading…</p>
+                ) : owingCategories.length === 0 ? (
+                  <p className="text-sm text-gray-500">No fee categories to show.</p>
+                ) : (
+                  <>
+                    <div
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '0.75rem',
+                        padding: '0.375rem 0', borderBottom: '1px solid #E5E7EB',
+                      }}
+                      className="text-xs text-gray-400 uppercase tracking-wide"
+                    >
+                      <span style={{ flex: 1, minWidth: 0 }}>Category</span>
+                      <span style={{ width: 130, textAlign: 'right' }}>Charged</span>
+                      <span style={{ width: 130, textAlign: 'right' }}>Owed</span>
+                    </div>
+                    {owingCategories.map((c) => (
+                      <div
+                        key={c.key}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '0.75rem',
+                          padding: '0.5rem 0', borderBottom: '1px solid #F3F4F6',
+                        }}
+                      >
+                        <span className="text-sm" style={{ flex: 1, minWidth: 0 }}>{c.name}</span>
+                        <span
+                          className="text-sm"
+                          style={{ width: 130, textAlign: 'right', whiteSpace: 'nowrap' }}
+                        >
+                          {c.charged.toLocaleString()} FCFA
+                        </span>
+                        {/* Settled categories are greyed rather than hidden.
+                            A category that vanished once paid would be
+                            indistinguishable from one that never applied. */}
+                        <span
+                          className="text-sm font-medium"
+                          style={{
+                            width: 130, textAlign: 'right', whiteSpace: 'nowrap',
+                            color: c.owing > 0 ? '#dc2626' : '#9CA3AF',
+                          }}
+                        >
+                          {c.owing.toLocaleString()} FCFA
+                        </span>
+                      </div>
+                    ))}
+                    <div
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '0.75rem',
+                        padding: '0.625rem 0', borderTop: '1px solid #E5E7EB',
+                      }}
+                    >
+                      <span className="text-sm font-medium" style={{ flex: 1, minWidth: 0 }}>Total</span>
+                      <span
+                        className="text-sm font-medium"
+                        style={{ width: 130, textAlign: 'right', whiteSpace: 'nowrap' }}
+                      >
+                        {owingCategories.reduce((n, c) => n + c.charged, 0).toLocaleString()} FCFA
+                      </span>
+                      <span
+                        className="text-sm font-medium"
+                        style={{
+                          width: 130, textAlign: 'right', whiteSpace: 'nowrap',
+                          color: '#dc2626',
+                        }}
+                      >
+                        {owingCategories.reduce((n, c) => n + c.owing, 0).toLocaleString()} FCFA
+                      </span>
+                    </div>
+                  </>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
 
           {/* Every charge, including the fee-structure ones the table hides. */}
           <Dialog
