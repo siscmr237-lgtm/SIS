@@ -39,6 +39,8 @@ export function Dashboard({ onNavigate }: { onNavigate?: (page: NavigationPage) 
     autoTermEnabled: true,
   });
   const [logoSrc, setLogoSrc] = useState<string | null>(null);
+  /** The wizard step the checklist has asked for, if any. Cleared on close. */
+  const [wizardStep, setWizardStep] = useState<string | null>(null);
   const resolved = resolveSchoolTerm(schoolSettings);
   // The school object below comes from the localStorage copy written at LOGIN, so
   // its academicYear is whatever it was then. Advancing the year would leave the
@@ -155,12 +157,21 @@ export function Dashboard({ onNavigate }: { onNavigate?: (page: NavigationPage) 
 
       {/* The wizard runs once, immediately after KYC; the checklist below is
           what catches whatever was skipped, from then on. Both read the same
-          live data, so neither can claim something the other denies. */}
-      <SetupWizard onNavigate={onNavigate} />
+          live data, so neither can claim something the other denies.
+
+          The dashboard owns the link between them: the checklist names a step,
+          this holds it, and the wizard opens there. Held here rather than inside
+          the checklist because the wizard is the checklist's sibling, not its
+          child, and neither should be reaching into the other. */}
+      <SetupWizard
+        onNavigate={onNavigate}
+        openAtStep={wizardStep}
+        onCloseRequested={() => setWizardStep(null)}
+      />
 
       {/* Sits above the metrics while there is setup left, and removes itself
           entirely once there is not. It blocks nothing either way. */}
-      <SetupChecklist onNavigate={onNavigate} />
+      <SetupChecklist onNavigate={onNavigate} onOpenWizardStep={setWizardStep} />
 
       <div className="mb-8">
         <h2 className="text-2xl mb-2">Dashboard Overview</h2>

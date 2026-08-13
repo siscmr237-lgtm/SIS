@@ -85,7 +85,31 @@ function outstanding(step: WizardStep): string | null {
   return null;
 }
 
-export function SetupWizard({ onNavigate }: { onNavigate?: (page: NavigationPage) => void }) {
+interface WizardProps {
+  onNavigate?: (page: NavigationPage) => void;
+  /**
+   * Open at THIS step, rather than at the first incomplete one.
+   *
+   * Set when the dashboard checklist asks for a specific step, and it has to win
+   * over the first-incomplete default: clicking "Subjects" while fees are also
+   * outstanding must open subjects. Landing on fees because fees happen to come
+   * first would ignore what the admin actually asked for, which is the one thing
+   * a click must never do.
+   *
+   * It also OVERRIDES `show`. The wizard runs once and then stamps itself seen,
+   * so for everyone past that first session `show` is false forever — and the
+   * checklist, whose whole job is to catch what the wizard skipped, is used
+   * precisely by those people. Without this the click would open nothing at all.
+   *
+   * null means an ordinary cold open: show only when the server says to, and
+   * land on the first incomplete step exactly as before.
+   */
+  openAtStep?: string | null;
+  /** Clear openAtStep. Called when a checklist-opened wizard is closed. */
+  onCloseRequested?: () => void;
+}
+
+export function SetupWizard({ onNavigate, openAtStep = null, onCloseRequested }: WizardProps) {
   const cache = useSisCache();
   const { status: yearStatus } = useAcademicYear();
   // Live, uncached — the same data the dashboard checklist reads, so the two
@@ -121,15 +145,26 @@ export function SetupWizard({ onNavigate }: { onNavigate?: (page: NavigationPage
    * failure than a wizard that will not close.
    */
   const exit = useCallback(async (goTo?: NavigationPage) => {
-    setExited(true);
     setTool(null);
+
+    // Opened FROM the checklist: just close it again. Stamping "seen" here would
+    // be recording the wrong fact — they did not walk the wizard, they clicked
+    // one item on a checklist — and for an admin who has not yet been through
+    // it, one checklist click would silently burn their first run.
+    if (openAtStep) {
+      onCloseRequested?.();
+      if (goTo && onNavigate) onNavigate(goTo);
+      return;
+    }
+
+    setExited(true);
     try {
       await api.post('/dashboard/setup-wizard/dismiss', {});
     } catch {
       // Deliberately swallowed — see above.
     }
     if (goTo && onNavigate) onNavigate(goTo);
-  }, [onNavigate]);
+  }, [onNavigate, openAtStep, onCloseRequested]);
 
   /**
    * Where to open: the first step that is not done.
@@ -147,6 +182,32 @@ export function SetupWizard({ onNavigate }: { onNavigate?: (page: NavigationPage
     const firstOutstanding = steps.findIndex((s) => !s.done);
     setIndex(firstOutstanding === -1 ? 0 : firstOutstanding);
   }, [data]);
+
+  /**
+   * An explicit target beats the first-incomplete default.
+   *
+   * Keyed on openAtStep rather than guarded by a ref, so asking for the same
+   * step twice reopens it — the dashboard clears openAtStep on close, and
+   * without that the second click on the same checklist row would do nothing.
+   *
+   * doneAtStart is seeded here too when the wizard has never landed cold, so the
+   * Continue button still appears if the admin completes this step while it is
+   * open. Both effects can run for the same load; whichever sets `index` last
+   * wins, and that is this one, because a request is a decision and the default
+   * is only a default.
+   */
+  useEffect(() => {
+    const steps = data?.steps;
+    if (!openAtStep || !steps?.length) return;
+    const target = steps.findIndex((s) => s.id === openAtStep);
+    if (target === -1) return;   // not a wizard step; the checklist routes those
+    if (!doneAtStart.current) {
+      doneAtStart.current = new Set(steps.filter((s) => s.done).map((s) => s.id));
+    }
+    landed.current = true;
+    setExited(false);
+    setIndex(target);
+  }, [openAtStep, data]);
 
   /**
    * Notice a step becoming complete, WITHOUT acting on it.
@@ -174,7 +235,12 @@ export function SetupWizard({ onNavigate }: { onNavigate?: (page: NavigationPage
     });
   }, [data]);
 
-  if (loading || !data?.show || exited) return null;
+  // A checklist request opens the wizard whether or not the server would have
+  // volunteered it — see openAtStep. Otherwise nothing has changed: show when
+  // told to, and stay gone once left.
+  const requested = Boolean(openAtStep && data?.steps?.some((s) => s.id === openAtStep));
+  if (loading || !data?.steps?.length) return null;
+  if (!requested && (!data.show || exited)) return null;
 
   const steps = data.steps;
   const step = steps[Math.min(index, steps.length - 1)];
