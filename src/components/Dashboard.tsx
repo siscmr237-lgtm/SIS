@@ -3,8 +3,10 @@
 import { DollarSign, TrendingUp, UserCheck, Users } from "lucide-react";
 import { useAcademicYear } from '@/lib/academicYear';
 import { AcademicYearNotices } from './AcademicYearNotices';
+import { RecentActivity } from './RecentActivity';
 import { SetupChecklist } from './SetupChecklist';
 import { SetupWizard } from './SetupWizard';
+import { useRouter } from 'next/navigation';
 import { NavigationPage } from '../App';
 import { useEffect, useState } from "react";
 import { api, BASE_URL } from "../../src/lib/api";
@@ -41,6 +43,28 @@ export function Dashboard({ onNavigate }: { onNavigate?: (page: NavigationPage) 
   const [logoSrc, setLogoSrc] = useState<string | null>(null);
   /** The wizard step the checklist has asked for, if any. Cleared on close. */
   const [wizardStep, setWizardStep] = useState<string | null>(null);
+  const router = useRouter();
+
+  /**
+   * Where a Recent Activity row goes.
+   *
+   * Two of the three land on the profile's Finance tab, which is where that
+   * transaction is actually listed — ?tab= is the app's existing deep-link
+   * mechanism (StudentProfile/StaffProfile both read it, and the Students list
+   * already uses it for the same reason). It opens the RECORD'S OWNER, not the
+   * individual ledger row: no screen in this app addresses a single entry, so
+   * the Finance tab is as close as the UI can actually get.
+   *
+   * Expenses only go as far as the list. ExpensesManagement reads no search
+   * params and has no per-expense route, so there is nothing to deep-link TO —
+   * inventing a URL here would just 404 or be silently ignored.
+   */
+  const openActivity = (ref: { type: string; code: string | null }) => {
+    if (!ref.code) return;
+    if (ref.type === 'student') router.push(`/students/${encodeURIComponent(ref.code)}?tab=finance`);
+    else if (ref.type === 'staff') router.push(`/staff/${encodeURIComponent(ref.code)}?tab=finance`);
+    else router.push('/expenses');
+  };
   const resolved = resolveSchoolTerm(schoolSettings);
   // The school object below comes from the localStorage copy written at LOGIN, so
   // its academicYear is whatever it was then. Advancing the year would leave the
@@ -196,27 +220,11 @@ export function Dashboard({ onNavigate }: { onNavigate?: (page: NavigationPage) 
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="p-6">
-          <h2 className="text-xl mb-4">Recent Expenses</h2>
-          <div className="space-y-3">
-            {dashboardData?.recentExpenses?.slice(0, 3).map((expense: any) => (
-              <div
-                key={expense.id}
-                className="flex justify-between items-center py-2 border-b"
-              >
-                <div>
-                  <p>{expense.description}</p>
-                  <p className="text-sm text-gray-500 capitalize">
-                    {expense.category}
-                  </p>
-                </div>
-                <p className="text-red-600">
-                  {expense.amount.toLocaleString()} FCFA
-                </p>
-              </div>
-            )) ?? <p>No recent expenses.</p>}
-          </div>
-        </Card>
+        {/* Replaces the old Recent Expenses card. That one showed only outgoing
+            money, so the dashboard's "recent activity" was half the story: a
+            school could take ten fee payments in a week and this corner of the
+            screen would not mention it. */}
+        <RecentActivity onOpen={openActivity} />
 
         <Card className="p-6">
           <h2 className="text-xl mb-4">Financial Summary</h2>
