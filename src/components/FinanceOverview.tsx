@@ -401,6 +401,45 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
         </div>
       </div>
 
+      {/* Both finance tables: one line per row, and an edge shadow showing there
+          is more to scroll to.
+
+          A <style> block because neither part is expressible inline — one needs
+          a descendant selector across every th/td, the other needs multiple
+          background layers with different attachments.
+
+          WHY THIS DOES NOT REPRODUCE THE PAGE-WIDE SCROLL. nowrap makes these
+          tables wider than the phone, which is exactly the condition that caused
+          it last time. The difference is where that width is allowed to land.
+          [data-fin-scroll] is a plain block div, so it is 100% of the Card and
+          cannot be widened by its contents; the table overflows INSIDE it and
+          that div scrolls. What broke before was <main> being a flex item with
+          the default min-width:auto, which meant it refused to shrink below its
+          content and grew past the viewport instead — fixed by min-w-0 in
+          app/(app)/layout.tsx, which still has to hold for this to stay
+          contained. Nothing here is a flex or grid item, so nothing re-opens it.
+
+          The shadow is the two-gradient scroll-shadow trick, no JS: the white
+          cover layers are `local` so they travel with the content, while the
+          dark radial layers are `scroll` so they stay pinned to the container.
+          At the far right the cover sits over the shadow and hides it, so the
+          hint disappears precisely when there is nothing left to scroll to. */}
+      <style>{`
+        [data-fin-table] th,
+        [data-fin-table] td { white-space: nowrap; }
+        [data-fin-scroll] {
+          overflow-x: auto;
+          background:
+            linear-gradient(to right, #FFFFFF 30%, rgba(255, 255, 255, 0)) left center,
+            linear-gradient(to left,  #FFFFFF 30%, rgba(255, 255, 255, 0)) right center,
+            radial-gradient(farthest-side at 0 50%, rgba(15, 35, 69, 0.16), rgba(15, 35, 69, 0)) left center,
+            radial-gradient(farthest-side at 100% 50%, rgba(15, 35, 69, 0.16), rgba(15, 35, 69, 0)) right center;
+          background-repeat: no-repeat;
+          background-size: 34px 100%, 34px 100%, 12px 100%, 12px 100%;
+          background-attachment: local, local, scroll, scroll;
+        }
+      `}</style>
+
       {/* One line at every width. Three across on a phone leaves roughly 87px
           of usable card, so the figure has to size itself down rather than the
           row breaking — same treatment as the dashboard tiles, and the same
@@ -557,8 +596,17 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
         {studentLoading ? (
           <p className="p-6 text-gray-500">Loading...</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+          /* The class is what actually guarantees the scroll container (it is
+             already in the pre-compiled build and was doing this job before);
+             the data attribute only adds the edge shadow. Keeping the class
+             means a problem with the style block can never silently turn
+             overflow off and let the table push the page wide again.
+
+             A bare block comment, not {@literal /*…*​/} in braces: this sits in
+             the expression slot of a ternary, where braces open an object
+             literal rather than a JSX comment. */
+          <div className="overflow-x-auto" data-fin-scroll="">
+            <table className="w-full text-sm" data-fin-table="">
               <thead>
                 <tr className="border-b text-left text-xs text-gray-500 uppercase tracking-wide">
                   <th className="px-4 py-3 font-medium">Student</th>
@@ -648,8 +696,17 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
         {transactionsLoading ? (
           <p className="p-6 text-gray-500">Loading...</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+          /* The class is what actually guarantees the scroll container (it is
+             already in the pre-compiled build and was doing this job before);
+             the data attribute only adds the edge shadow. Keeping the class
+             means a problem with the style block can never silently turn
+             overflow off and let the table push the page wide again.
+
+             A bare block comment, not {@literal /*…*​/} in braces: this sits in
+             the expression slot of a ternary, where braces open an object
+             literal rather than a JSX comment. */
+          <div className="overflow-x-auto" data-fin-scroll="">
+            <table className="w-full text-sm" data-fin-table="">
               <thead>
                 <tr className="border-b text-left text-xs text-gray-500 uppercase tracking-wide">
                   <th className="px-4 py-3 font-medium">Date</th>
@@ -673,10 +730,17 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
                     <tr key={t.id} className="border-b last:border-0 hover:bg-gray-50">
                       <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{formatDate(t.entryDate)}</td>
                       <td className="px-4 py-3 text-gray-600">{t.category ?? '—'}</td>
+                      {/* Name and class on ONE line, separated by a middot. The
+                          class used to be a display:block span underneath, which
+                          was the only deliberate two-line cell in either table.
+                          It stays visually secondary — smaller and grey — so the
+                          name is still what the eye lands on. */}
                       <td className="px-4 py-3 text-gray-900">
                         {t.partyName ?? '—'}
                         {t.partyClass && (
-                          <span className="text-xs text-gray-400" style={{ display: 'block' }}>{t.partyClass}</span>
+                          <span className="text-xs text-gray-400" style={{ marginLeft: 6 }}>
+                            · {t.partyClass}
+                          </span>
                         )}
                       </td>
                       <td className="px-4 py-3">

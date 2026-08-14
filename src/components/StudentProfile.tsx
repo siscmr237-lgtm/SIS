@@ -706,18 +706,30 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
         [data-profile-fields] {
           display: grid;
           grid-template-columns: minmax(0, 1fr);
-          column-gap: 3rem;
+          /* Tighter than the 3rem below, because at 390px two columns only have
+             about 175px each to live in and a 48px gutter would eat a third of
+             one of them. Widened back at 640px, where there is room for it. */
+          column-gap: 1.25rem;
           row-gap: 1.75rem;
         }
+        /* TWO COLUMNS AT EVERY WIDTH, phones included — deliberately outside the
+           media query below. minmax(0, 1fr) is what makes that safe: it lets a
+           column be narrower than its content, so a long value wraps inside its
+           own cell instead of widening the column and pushing the grid out. The
+           section never drops to one column; only the text inside it reflows. */
+        [data-profile-fields="two"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         [data-profile-fields] dt { line-height: 1.5; }
         [data-profile-fields] dd { line-height: 1.6; }
+        /* Long values — an address, a parent's full name — must break rather
+           than run past their cell now that the cell can be this narrow. */
+        [data-profile-fields] dd { overflow-wrap: anywhere; }
         [data-contact-grid] {
           display: grid;
           grid-template-columns: minmax(0, 1fr);
           gap: 0.75rem;
         }
         @media (min-width: 640px) {
-          [data-profile-fields="two"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+          [data-profile-fields] { column-gap: 3rem; }
           [data-contact-grid] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         }
       `}</style>
