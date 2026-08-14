@@ -44,6 +44,8 @@ import { toast } from 'sonner';
  * wants, and a user who cannot get out of the loop.
  */
 
+type FeeGroup = 'REGISTRATION' | 'OTHER_FEES';
+
 interface FeeRow {
   /** Absent on a row the user just added; the server creates it. */
   id?: number;
@@ -51,6 +53,8 @@ interface FeeRow {
   amount: string;
   includedInFirstInstallment: boolean;
   percent: string;
+  /** One of the two fixed groups. Registration is out of the first-installment rule. */
+  group: FeeGroup;
 }
 
 /**
@@ -179,6 +183,7 @@ export function LevelFeesDialog({ open, onOpenChange, inWizard = false, onAllLev
             name: f.name,
             amount: String(f.amount ?? 0),
             includedInFirstInstallment: f.firstInstallmentPercent != null,
+            group: (f.group ?? 'OTHER_FEES') as FeeGroup,
             percent: f.firstInstallmentPercent != null ? String(f.firstInstallmentPercent) : '100',
           })),
         );
@@ -198,7 +203,7 @@ export function LevelFeesDialog({ open, onOpenChange, inWizard = false, onAllLev
     dirty.current = true;
     setError(null);
     setZeroNotice(null);
-    setRows(rs => [...rs, { name: '', amount: '0', includedInFirstInstallment: false, percent: '100' }]);
+    setRows(rs => [...rs, { name: '', amount: '0', includedInFirstInstallment: false, percent: '100', group: 'OTHER_FEES' }]);
   };
   const removeRow = (i: number) => {
     dirty.current = true;
@@ -271,7 +276,8 @@ export function LevelFeesDialog({ open, onOpenChange, inWizard = false, onAllLev
           ...(r.id != null ? { id: r.id } : {}),
           name: r.name.trim(),
           amount: Math.round(Number(r.amount)),
-          firstInstallmentPercent: r.includedInFirstInstallment ? Math.round(Number(r.percent)) : null,
+          firstInstallmentPercent: r.group === 'REGISTRATION' || !r.includedInFirstInstallment ? null : Math.round(Number(r.percent)),
+          group: r.group,
         })),
       });
       dirty.current = false;
@@ -283,6 +289,7 @@ export function LevelFeesDialog({ open, onOpenChange, inWizard = false, onAllLev
           name: f.name,
           amount: String(f.amount ?? 0),
           includedInFirstInstallment: f.firstInstallmentPercent != null,
+            group: (f.group ?? 'OTHER_FEES') as FeeGroup,
           percent: f.firstInstallmentPercent != null ? String(f.firstInstallmentPercent) : '100',
         })),
       );
@@ -455,7 +462,8 @@ export function LevelFeesDialog({ open, onOpenChange, inWizard = false, onAllLev
               style={{ paddingBottom: 6, borderBottom: '1px solid #E5E7EB' }}
             >
               <span style={{ flex: 1 }}>Fee</span>
-              <span style={{ width: 120, textAlign: 'right' }}>Amount</span>
+              <span style={{ width: 132, textAlign: 'center' }}>Group</span>
+              <span style={{ width: 110, textAlign: 'right' }}>Amount</span>
               <span style={{ width: 150, textAlign: 'center' }}>First installment</span>
               <span style={{ width: 32 }} />
             </div>
@@ -472,13 +480,42 @@ export function LevelFeesDialog({ open, onOpenChange, inWizard = false, onAllLev
                     value={r.name}
                     onChange={e => edit(i, { name: e.target.value })}
                   />
+                  {/* Two fixed options, never free text. Registration means the
+                      same thing in every school because the first-installment
+                      rule is written in terms of it; a school-nameable group
+                      would make that rule mean whatever each school typed. */}
+                  <select
+                    value={r.group}
+                    onChange={e => edit(i, { group: e.target.value as FeeGroup })}
+                    aria-label={`Group for ${r.name || 'this fee'}`}
+                    style={{
+                      width: 132, height: 36, borderRadius: 6, padding: '0 8px',
+                      border: '1px solid #D1D5DB', backgroundColor: '#FFFFFF',
+                      fontSize: '0.875rem', cursor: 'pointer',
+                    }}
+                  >
+                    <option value="OTHER_FEES">Other Fees</option>
+                    <option value="REGISTRATION">Registration</option>
+                  </select>
                   <Input
                     type="number"
                     min={0}
-                    style={{ width: 120, textAlign: 'right' }}
+                    style={{ width: 110, textAlign: 'right' }}
                     value={r.amount}
                     onChange={e => edit(i, { amount: e.target.value })}
                   />
+                  {/* Not offered for Registration: the server ignores whatever is
+                      stored there (see buildFirstInstallmentRule), and a control
+                      that changes nothing is worse than no control. */}
+                  {r.group === 'REGISTRATION' ? (
+                    <div
+                      className="text-xs text-gray-400"
+                      style={{ width: 150, textAlign: 'center' }}
+                      title="Registration is never part of the first installment"
+                    >
+                      Not applicable
+                    </div>
+                  ) : (
                   <div className="flex items-center gap-1" style={{ width: 150, justifyContent: 'center' }}>
                     <input
                       type="checkbox"
@@ -499,6 +536,7 @@ export function LevelFeesDialog({ open, onOpenChange, inWizard = false, onAllLev
                     />
                     <span className="text-sm text-gray-500">%</span>
                   </div>
+                  )}
                   <Button
                     variant="ghost"
                     size="sm"
