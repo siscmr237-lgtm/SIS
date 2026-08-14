@@ -98,7 +98,13 @@ export function TeacherSidebar({ open = false, onClose }: TeacherSidebarProps) {
   };
 
   return (
-    <aside className={`w-64 bg-blue-900 text-white flex flex-col fixed inset-y-0 left-0 z-50 md:static md:inset-auto md:z-auto transition-transform duration-300 ease-in-out ${open ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
+    /* Same treatment as the admin Sidebar — teachers are on phones too, so the
+       reach argument applies identically. See MOBILE_DRAWER_CSS. */
+    <aside
+      data-sis-drawer=""
+      data-open={open ? 'true' : 'false'}
+      className="w-64 bg-blue-900 text-white flex flex-col fixed inset-y-0 right-0 md:static md:inset-auto md:z-auto"
+    >
       <div className="p-6 border-b border-blue-800">
         <div className="flex items-center gap-3">
           {logoSrc && (

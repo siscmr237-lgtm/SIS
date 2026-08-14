@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Menu } from "lucide-react";
 import { TeacherSidebar } from "@/components/TeacherSidebar";
+import { MOBILE_DRAWER_CSS } from "@/components/mobileDrawerCss";
 import { useTeacherAuthGate } from "@/lib/teacherAuthGate";
 
 // Shell for the teacher section, mirroring app/(app)/layout.tsx.
@@ -21,15 +22,27 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
-      <div className="md:hidden fixed top-0 left-0 right-0 z-30 h-14 bg-blue-900 text-white flex items-center px-4 gap-3 shadow-md">
-        <button onClick={() => setSidebarOpen(true)} className="p-1 rounded hover:bg-blue-800">
+      <style>{MOBILE_DRAWER_CSS}</style>
+      {/* Mirrors app/(app)/layout.tsx exactly — teachers are on phones too, so
+          the same one-handed reach argument applies. */}
+      <div className="md:hidden fixed top-0 left-0 right-0 z-30 h-14 bg-blue-900 text-white flex items-center justify-between px-4 gap-3 shadow-md">
+        <span className="font-medium text-sm truncate min-w-0">Teacher Portal</span>
+        <button
+          onClick={() => setSidebarOpen(true)}
+          aria-label="Open menu"
+          aria-expanded={sidebarOpen}
+          className="p-1 rounded hover:bg-blue-800 shrink-0"
+        >
           <Menu size={22} />
         </button>
-        <span className="font-medium text-sm truncate">Teacher Portal</span>
       </div>
-      {sidebarOpen && (
-        <div className="fixed inset-0 bg-black/50 z-40 md:hidden" onClick={() => setSidebarOpen(false)} />
-      )}
+      <div
+        data-sis-drawer-overlay=""
+        data-open={sidebarOpen ? 'true' : 'false'}
+        aria-hidden="true"
+        className="fixed inset-0 md:hidden"
+        onClick={() => setSidebarOpen(false)}
+      />
       <TeacherSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <main className="flex-1 overflow-y-auto pt-14 md:pt-0">
         {children}

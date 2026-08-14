@@ -86,7 +86,16 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
   }, []);
 
   return (
-    <aside className={`w-64 bg-blue-900 text-white flex flex-col fixed inset-y-0 left-0 z-50 md:static md:inset-auto md:z-auto transition-transform duration-300 ease-in-out ${open ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
+    /* Anchored to the RIGHT edge on mobile, matching the hamburger that opens
+       it. The transform and z-index live in MOBILE_DRAWER_CSS rather than in
+       utility classes: `translate-x-full` is not in the frozen stylesheet, so
+       the class form of this would have silently done nothing. From md up the
+       md:static below takes over and the offsets stop applying. */
+    <aside
+      data-sis-drawer=""
+      data-open={open ? 'true' : 'false'}
+      className="w-64 bg-blue-900 text-white flex flex-col fixed inset-y-0 right-0 md:static md:inset-auto md:z-auto"
+    >
       <div className="p-6 border-b border-blue-800">
         <div className="flex items-center gap-3 mb-4">
           {logoSrc && (
