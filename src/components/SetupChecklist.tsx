@@ -164,7 +164,13 @@ export function SetupChecklist({ onNavigate, onOpenWizardStep }: Props) {
   const toggle = () => setExpanded((e) => !e);
 
   return (
-    <Card className="p-6 mb-8">
+    /* Tighter than the p-6/mb-8 it had. Collapsed, this card is a one-line
+       summary bar, and 24px of padding all round plus a 32px margin made it
+       taller than the four metric cards it sits above — which is what pushed
+       the fourth of them under the floating support button at 390x844.
+       Expanded, the step rows carry their own padding, so the open state is
+       not cramped by this. */
+    <Card style={{ padding: '0.875rem 1rem', marginBottom: '1rem' }}>
       {/* The whole progress row is the toggle. role/tabIndex rather than a
           <button> because the row contains headings and a progressbar, which are
           flow content and not legal inside a button. */}

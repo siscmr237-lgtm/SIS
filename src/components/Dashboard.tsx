@@ -165,18 +165,38 @@ export function Dashboard({ onNavigate }: { onNavigate?: (page: NavigationPage) 
           overflowing. None of these change desktop, where there's room to spare. */}
       <AcademicYearNotices status={yearStatus} onAdvance={advanceYear} onAcknowledge={ackYear} />
 
-      <Card className="p-6 mb-8 bg-gradient-to-r from-blue-50 to-purple-50 overflow-hidden">
-        <div className="flex items-center gap-6 min-w-0">
+      {/* A banner, not a hero panel. The logo is 48px rather than 80, the two
+          text lines together come to 44px so the block never sets the height
+          (the logo does), and the padding is 10/14 rather than 24 all round so
+          the card hugs its contents. Roughly 70px tall against the 130 it was,
+          and the bottom margin halves too — that space is what the four metric
+          cards below need in order to be on screen at 390x844. */}
+      <Card
+        className="bg-gradient-to-r from-blue-50 to-purple-50 overflow-hidden"
+        style={{ padding: '0.625rem 0.875rem', marginBottom: '1rem' }}
+      >
+        <div className="flex items-center min-w-0" style={{ gap: '0.75rem' }}>
           {logoSrc && (
             <img
               src={logoSrc}
               alt="School Logo"
-              className="w-20 h-20 object-cover rounded-lg border-2 border-white shadow-lg shrink-0"
+              className="object-cover rounded-lg border-2 border-white shadow-lg shrink-0"
+              style={{ width: 48, height: 48 }}
             />
           )}
           <div className="flex-1 min-w-0">
-            <h1 className="text-3xl mb-1 truncate">{headerName}</h1>
-            <div className="flex flex-wrap gap-4 text-gray-600 min-w-0">
+            {/* Explicit line-heights, because the whole point is that these two
+                lines add up to less than the logo beside them: 26 + 18 = 44. */}
+            <h1
+              className="truncate"
+              style={{ fontSize: '1.125rem', lineHeight: '1.4rem', margin: 0, fontWeight: 500 }}
+            >
+              {headerName}
+            </h1>
+            <div
+              className="flex flex-wrap text-gray-600 min-w-0"
+              style={{ gap: '0.5rem', fontSize: '0.75rem', lineHeight: '1.125rem', marginTop: 2 }}
+            >
               <span className="truncate min-w-0">Academic Year: {academicYear}</span>
               <span className="shrink-0">•</span>
               <span className="truncate min-w-0">{formatTermLabel(term)}</span>
@@ -203,9 +223,17 @@ export function Dashboard({ onNavigate }: { onNavigate?: (page: NavigationPage) 
           entirely once there is not. It blocks nothing either way. */}
       <SetupChecklist onNavigate={onNavigate} onOpenWizardStep={setWizardStep} />
 
-      <div className="mb-8">
-        <h2 className="text-2xl mb-2">Dashboard Overview</h2>
-        <p className="text-gray-600">Key metrics and recent activities</p>
+      {/* Third and last place the space for the metric cards comes from, after
+          the school card and the checklist. A 24px heading over a 16px subtitle
+          with a 32px margin under it was 96px of chrome introducing four cards
+          that already say what they are. */}
+      <div style={{ marginBottom: '0.875rem' }}>
+        <h2 style={{ fontSize: '1.125rem', lineHeight: '1.5rem', margin: 0, fontWeight: 500 }}>
+          Dashboard Overview
+        </h2>
+        <p className="text-gray-600" style={{ fontSize: '0.8125rem', lineHeight: '1.125rem', marginTop: 2 }}>
+          Key metrics and recent activities
+        </p>
       </div>
 
       {/* Two per row at every width — Students | Staff, then Collected |

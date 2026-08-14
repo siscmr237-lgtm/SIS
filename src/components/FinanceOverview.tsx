@@ -427,6 +427,15 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
       <style>{`
         [data-fin-table] th,
         [data-fin-table] td { white-space: nowrap; }
+        /* FILTER PAIRING. Five filters in a two-column grid fell as
+           Class|Year, Term|From, To|— which split the date range across two
+           rows and left a hole. Letting Term take the whole of its row pushes
+           From and To onto one row together: Class|Year, Term, From|To.
+           Only below lg, where the grid is two columns; at lg it is five
+           across on one line and there is nothing to pair. */
+        @media (max-width: 1023.98px) {
+          [data-fin-filters] > [data-fin-filter="term"] { grid-column: span 2; }
+        }
         [data-fin-scroll] {
           overflow-x: auto;
           background:
@@ -518,7 +527,7 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
                 <Filter size={16} className="text-gray-400" />
                 <span className="text-sm font-medium text-gray-600">Filters</span>
               </div>
-              <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 flex-1" style={{ minWidth: 0 }}>
+              <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 flex-1" style={{ minWidth: 0 }} data-fin-filters="">
                 <div>
                   <Label className="text-xs text-gray-500 mb-1">Class</Label>
                   <Select value={studentQuery.classFilter} onValueChange={(v: string) => updateStudentFilter({ classFilter: v })}>
@@ -542,7 +551,7 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
                     style={{ borderRadius: 9999 }}
                   />
                 </div>
-                <div>
+                <div data-fin-filter="term">
                   <Label className="text-xs text-gray-500 mb-1">Term</Label>
                   <Select value={studentQuery.term} onValueChange={(v: string) => updateStudentFilter({ term: v })}>
                     <SelectTrigger style={{ borderRadius: 9999 }}><SelectValue placeholder="All" /></SelectTrigger>
@@ -566,6 +575,9 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
                     value={studentQuery.dateFrom}
                     onChange={(v) => updateStudentFilter({ dateFrom: v })}
                     style={{ borderRadius: 9999 }}
+                    /* The real input is invisible, so it cannot be reached by
+                       its visible Label the way a normal field would be. */
+                    aria-label="From date"
                   />
                 </div>
                 <div>
@@ -574,6 +586,7 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
                     value={studentQuery.dateTo}
                     onChange={(v) => updateStudentFilter({ dateTo: v })}
                     style={{ borderRadius: 9999 }}
+                    aria-label="To date"
                   />
                 </div>
               </div>

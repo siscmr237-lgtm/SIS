@@ -1,78 +1,134 @@
 'use client';
 
 import { Calendar } from 'lucide-react';
-import { Input } from './ui/input';
 
 /**
- * A date filter that wears a calendar instead of the browser's own arrow, and
- * that can actually shrink.
+ * A date filter that looks like the selects beside it.
  *
- * TWO PROBLEMS, ONE COMPONENT.
+ * WHY THIS IS AN OVERLAY RATHER THAN A STYLED INPUT.
  *
- * 1. The browser draws its own picker button inside a date input, and in Chrome
- *    that is a chevron — so a date field sitting in a row of real dropdowns says
- *    "pick from a list" when it means "pick a date". The native button is made
- *    transparent rather than removed, so it is still there and still clickable
- *    in the same place: tapping the calendar opens the real OS picker, with no
- *    showPicker() to feature-detect and no way to end up with a date field that
- *    cannot be opened at all.
+ * A native <input type="date"> cannot be made to match a Radix SelectTrigger.
+ * Its internal date text, its placeholder and its picker button are all UA
+ * shadow DOM: the only handle a page gets is
+ * ::-webkit-calendar-picker-indicator, that pseudo-element is WebKit/Blink only,
+ * and hiding it does not reliably remove the control Chrome on Android draws —
+ * which is what left these two fields wearing both a calendar AND a chevron
+ * while the field itself read as blank.
  *
- * 2. A date input has an INTRINSIC minimum width — the widget has to fit
- *    dd/mm/yyyy — and grid and flex items default to `min-width: auto`, which
- *    means "never shrink below your content's minimum". Two of these in a
- *    two-column grid therefore refuse to fit a narrow phone, and the excess
- *    escapes every ancestor that is not itself a scroll container. minWidth 0
- *    below is what lets the column win that argument.
+ * So the native control is not styled at all. It is made fully transparent and
+ * laid over a box we do control:
  *
- * Position is copied from SelectTrigger so a row of mixed filters lines up:
- * that trigger is `h-9 px-3` with its chevron as a 16px `size-4 opacity-50` at
- * the end of a `justify-between` row — 12px in from the right edge, centred on
- * 36px. Input is also `h-9 px-3`, so the same numbers put the calendar exactly
- * where the arrows beside it sit.
+ *   1. a visible box, styled with the SAME utilities SelectTrigger uses, showing
+ *      the date as DD/MM/YYYY;
+ *   2. the lucide Calendar on the right, at the 12px inset the selects' chevrons
+ *      sit at;
+ *   3. the real <input type="date"> stretched over the whole thing at opacity 0.
  *
- * The transparency needs a ::-webkit-calendar-picker-indicator rule, which an
- * inline style cannot express and src/index.css is frozen against — hence the
- * one scoped <style>. It is not Tailwind and touches nothing global.
+ * The input is still a real, focusable, keyboard-editable date field — it is
+ * merely invisible. Tapping anywhere on the control opens the OS picker, because
+ * opacity does not affect hit testing, and desktop typing still works. That also
+ * settles the chevron for good: the browser's button is inside an element with
+ * opacity 0, so there is nothing to hide with a vendor pseudo-element and
+ * nothing that can come back on a browser that ignores it.
+ *
+ * PLACEHOLDER, NOT A VALUE. When `value` is empty the box shows TODAY in grey,
+ * exactly as placeholder text. `value` itself stays '' and the caller's state is
+ * untouched, so the filter is genuinely unset — nothing is sent to the API and
+ * the transaction tables are not narrowed to a single day. The grey is the
+ * signal that this is a hint rather than a selection.
  */
+
+/** 'YYYY-MM-DD' → 'DD/MM/YYYY'. Empty for anything that isn't a full date. */
+function toDisplayDate(iso: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso ?? '');
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : '';
+}
+
+/** Today, in the same DD/MM/YYYY the field displays. */
+function todayDisplayDate(): string {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
+}
+
+/**
+ * `:focus-within` and the vendor pseudo-elements are the two things an inline
+ * style cannot express, and src/index.css is frozen — hence one scoped block.
+ *
+ * The ::-webkit rules are belt-and-braces only. The opacity:0 on the input is
+ * what actually removes the native button everywhere; these keep it gone if the
+ * field is ever made visible again.
+ */
+const SCOPED_CSS = `
+  .sis-date-native::-webkit-calendar-picker-indicator { opacity: 0; cursor: pointer; }
+  .sis-date-native::-webkit-inner-spin-button,
+  .sis-date-native::-webkit-clear-button { display: none; -webkit-appearance: none; }
+  .sis-date-field:focus-within .sis-date-box {
+    border-color: #0f2345;
+    box-shadow: 0 0 0 3px rgba(15, 35, 69, 0.15);
+  }
+`;
+
 export function DateFilterInput({
   value,
   onChange,
   disabled,
-  /** Extra styling for the field itself — the finance filters pass a pill radius. */
+  /** Extra styling for the visible box — the finance filters pass a pill radius. */
   style,
   className,
+  'aria-label': ariaLabel,
 }: {
   value: string;
   onChange: (v: string) => void;
   disabled?: boolean;
   style?: React.CSSProperties;
   className?: string;
+  'aria-label'?: string;
 }) {
+  const shown = toDisplayDate(value);
+  const isPlaceholder = shown === '';
+
   return (
-    <div style={{ position: 'relative', minWidth: 0 }}>
-      <style>{`
-        .sis-date-filter::-webkit-calendar-picker-indicator {
-          opacity: 0;
-          cursor: pointer;
-        }
-        .sis-date-filter::-webkit-inner-spin-button { display: none; }
-      `}</style>
-      <Input
-        className={['sis-date-filter', className].filter(Boolean).join(' ')}
-        type="date"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        disabled={disabled}
+    <div className="sis-date-field" style={{ position: 'relative', minWidth: 0 }}>
+      <style>{SCOPED_CSS}</style>
+
+      {/* The visible control. These are the utilities SelectTrigger itself uses
+          — h-9, rounded-md, border, border-input, px-3, text-sm — so the text
+          inside starts on exactly the same x as the text in the three selects
+          and the box is exactly as tall. */}
+      <div
+        aria-hidden="true"
+        className={[
+          'sis-date-box',
+          'border-input bg-input-background flex h-9 w-full items-center rounded-md border px-3 text-sm',
+          className,
+        ]
+          .filter(Boolean)
+          .join(' ')}
         style={{
-          // Room for the icon, so a long value never runs underneath it.
+          // Clears the calendar so a full date never runs underneath it.
           paddingRight: 34,
-          // Overrides the intrinsic minimum described above. Without it the
-          // field sets the floor for its whole column.
           minWidth: 0,
-          width: '100%',
+          transition: 'color 150ms, box-shadow 150ms, border-color 150ms',
+          ...(disabled ? { opacity: 0.5 } : {}),
           ...style,
         }}
-      />
+      >
+        <span
+          style={{
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            // Grey exactly like placeholder text while nothing is chosen.
+            color: isPlaceholder ? '#9CA3AF' : '#111827',
+          }}
+        >
+          {isPlaceholder ? todayDisplayDate() : shown}
+        </span>
+      </div>
+
+      {/* Painted after the box so it sits above it, and before the input so the
+          input still takes every click. */}
       <Calendar
         size={16}
         aria-hidden="true"
@@ -82,8 +138,36 @@ export function DateFilterInput({
           top: '50%',
           transform: 'translateY(-50%)',
           opacity: disabled ? 0.25 : 0.5,
-          // Decorative: the invisible native button underneath takes the click.
           pointerEvents: 'none',
+        }}
+      />
+
+      {/* The real field. Invisible, but present, focusable and editable — last
+          in the DOM so it is on top and receives the tap. */}
+      <input
+        type="date"
+        className="sis-date-native"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        disabled={disabled}
+        aria-label={ariaLabel}
+        style={{
+          position: 'absolute',
+          inset: 0,
+          width: '100%',
+          height: '100%',
+          margin: 0,
+          padding: 0,
+          border: 0,
+          background: 'transparent',
+          opacity: 0,
+          WebkitAppearance: 'none',
+          appearance: 'none',
+          cursor: disabled ? 'not-allowed' : 'pointer',
+          // A date input has an intrinsic minimum width — the widget must fit
+          // dd/mm/yyyy — and as a grid item that minimum becomes the column's
+          // floor. Zero here lets the column shrink on a narrow phone.
+          minWidth: 0,
         }}
       />
     </div>
