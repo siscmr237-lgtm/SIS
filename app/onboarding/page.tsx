@@ -3,9 +3,9 @@
 import { Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { api, BASE_URL } from "../../src/lib/api";
+import { api } from "../../src/lib/api";
 import { clampSectionCount, expandClassSections, MAX_SECTIONS } from "../../src/lib/classes";
-import { compressImageForUpload } from "../../src/lib/imageResize";
+import { postImage, prepareImage } from "../../src/lib/uploadImage";
 import { EMPTY_UNIFORM_COLORS, UniformColors } from "../../src/lib/uniformColors";
 import { UniformColorPicker } from "../../src/components/onboarding/UniformColorPicker";
 
@@ -130,6 +130,7 @@ export default function OnboardingPage() {
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [logoUploading, setLogoUploading] = useState(false);
+  const [logoError, setLogoError] = useState<string | null>(null);
   const [uniformColors, setUniformColors] = useState<UniformColors>(() => loadDraft()?.uniformColors ?? EMPTY_UNIFORM_COLORS);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -218,16 +219,21 @@ export default function OnboardingPage() {
     if (!file) return;
     input.value = "";
 
-    let toStore: File = file;
+    setLogoError(null);
     try {
-      toStore = await compressImageForUpload(file);
-    } catch (err) {
-      // Fall back to the original file — the backend has its own resize
-      // safety net if it turns out to be too large.
-      console.error("Client-side image compression failed, using original file", err);
+      // Shrunk here, at pick time, so the preview and the stored file are the
+      // same small thing that will later be sent. A failure is reported and
+      // the file is dropped — it must NOT fall through to keeping the original,
+      // which is what turned a 4 MB camera photo into "Failed to fetch" at the
+      // end of a long form.
+      const toStore = await prepareImage(file, "logo");
+      setLogoFile(toStore);
+      setLogoPreview(URL.createObjectURL(toStore));
+    } catch (err: any) {
+      setLogoFile(null);
+      setLogoPreview(null);
+      setLogoError(err?.message || "This image could not be used. Please try another.");
     }
-    setLogoFile(toStore);
-    setLogoPreview(URL.createObjectURL(toStore));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -250,27 +256,11 @@ export default function OnboardingPage() {
 
       if (logoFile) {
         setLogoUploading(true);
-        const token =
-          typeof window !== "undefined"
-            ? window.localStorage.getItem("auth_token")
-            : null;
-        const formData = new FormData();
-        formData.append("file", logoFile);
-        formData.append("type", "logo");
-
-        const uploadRes = await fetch(`${BASE_URL}/upload`, {
-          method: "POST",
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-          body: formData,
-        });
-        setLogoUploading(false);
-
-        if (!uploadRes.ok) {
-          const text = await uploadRes.text();
-          throw new Error(text || `Logo upload failed: ${uploadRes.status}`);
+        try {
+          logoPath = await postImage(logoFile, "logo");
+        } finally {
+          setLogoUploading(false);
         }
-        const { path } = await uploadRes.json();
-        logoPath = path;
       }
 
       await api.post("/onboarding", {
@@ -631,6 +621,21 @@ export default function OnboardingPage() {
                 JPG, PNG or WebP
               </span>
             </div>
+            {/* Reported next to the control that caused it, at pick time,
+                rather than 300px away at the foot of the form after submit. */}
+            {logoError && (
+              <p
+                style={{
+                  fontSize: "0.8rem",
+                  color: "#DC2626",
+                  marginTop: 8,
+                  marginBottom: 0,
+                  lineHeight: 1.4,
+                }}
+              >
+                {logoError}
+              </p>
+            )}
           </Section>
 
           {/* ── 6. Uniform Colours ───────────────────────────────────── */}

@@ -9,11 +9,11 @@ import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle, DialogDe
 import { Settings, Plus, Trash2, Edit, Save, X, Upload, KeyRound, EyeIcon, EyeOffIcon } from 'lucide-react';
 import { schoolSettings } from '../data/mockData';
 import { toast } from 'sonner';
-import { api, BASE_URL } from '@/lib/api';
+import { api } from '@/lib/api';
 import { useAcademicYear } from '@/lib/academicYear';
 import { useCachedResource, useSisCache } from '@/lib/SisCache';
 import { RevalidatingBadge, useResourceError } from './ResourceStatus';
-import { compressImageForUpload } from '@/lib/imageResize';
+import { uploadImage } from '@/lib/uploadImage';
 import { PasswordHints } from './PasswordHints';
 import { formatTermLabel, resolveSchoolTerm, resolveEffectiveSchoolTerm } from '@/utils/academicTerm';
 import { computeSchoolAbbreviation } from '@/utils/schoolAbbreviation';
@@ -244,32 +244,9 @@ export function SchoolSettings() {
     setLogoError(null);
 
     try {
-      let uploadFile: File = file;
-      try {
-        uploadFile = await compressImageForUpload(file);
-      } catch (compressErr) {
-        // Fall back to the original file — the backend has its own resize
-        // safety net if it turns out to be too large.
-        console.error('Client-side image compression failed, uploading original', compressErr);
-      }
-
-      const token = typeof window !== 'undefined' ? window.localStorage.getItem('auth_token') : null;
-      const body = new FormData();
-      body.append('file', uploadFile);
-      body.append('type', 'logo');
-
-      const res = await fetch(`${BASE_URL}/upload`, {
-        method: 'POST',
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-        body,
-      });
-
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || `Upload failed: ${res.status}`);
-      }
-
-      const { path } = await res.json();
+      // Resizes, checks the payload size and reports its own failures in
+      // words. Nothing here falls back to sending the original file.
+      const path = await uploadImage(file, 'logo');
 
       // Persist the path to the database
       await api.put('/settings', { logo: path });
@@ -294,9 +271,13 @@ export function SchoolSettings() {
 
       toast.success('Logo uploaded successfully');
     } catch (err: any) {
-      const msg = err?.message || 'Upload failed';
+      // The reason goes in BOTH places. The toast is what a phone user
+      // actually sees — it used to say only "Logo upload failed", which is the
+      // same amount of information the browser gave us and none of what we now
+      // know. The inline copy persists after the toast has gone.
+      const msg = err?.message || 'The logo could not be uploaded. Please try again.';
       setLogoError(msg);
-      toast.error('Logo upload failed');
+      toast.error(msg);
     } finally {
       setLogoUploading(false);
       // Reset so the same file can be re-selected if needed
