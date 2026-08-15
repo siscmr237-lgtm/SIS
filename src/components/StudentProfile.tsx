@@ -6,7 +6,10 @@ import { api } from '../lib/api';
 import { useSisCache } from '../lib/SisCache';
 import { useSchoolClassNames } from '../lib/classes';
 import { useStudentPaymentStatuses } from './PaymentStatus';
+import { toast } from 'sonner';
 import { StudentFeeStatusPopover } from './StudentFeeStatusPopover';
+import { FirstInstallmentNotice } from './FirstInstallmentNotice';
+import { SettleGroupDialog } from './SettleGroupDialog';
 import { ZeroMarkDot, ZERO_MARK_COLOR, useStudentsWithZeroMarks } from './MarkStatus';
 import { StudentFlagNotices } from './StudentFlagNotices';
 import { AcademicYearSelect, useAcademicYear } from '../lib/academicYear';
@@ -227,8 +230,12 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
   const [owingCategories, setOwingCategories] = useState<Array<{
     key: string; kind: string; name: string; charged: number; paid: number;
     owing: number; payable: boolean;
+    /** Which fixed fee group this category is in — the server already sends it. */
+    group?: 'REGISTRATION' | 'OTHER_FEES';
   }>>([]);
   const [owingLoading, setOwingLoading] = useState(false);
+  /** Which group a settle-all has been opened for, if any. */
+  const [settleGroup, setSettleGroup] = useState<'REGISTRATION' | 'OTHER_FEES' | null>(null);
   const [paymentForm, setPaymentForm] = useState({
     feeKey: '', description: '', amount: '', entryDate: today, paymentMethod: '',
   });
@@ -1471,6 +1478,32 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
               row still takes a space-y-4 gap and would have left a visible band
               of nothing at the top of this tab. */}
 
+          {/* Why the first installment is unmet, at the top of the tab where
+              the money is. It renders nothing when met, or when the level has
+              no rule at all — null is "not configured", not "failed". */}
+          <FirstInstallmentNotice
+            met={(student as any).firstInstallmentMet}
+            shortfalls={(student as any).firstInstallmentShortfalls}
+          />
+
+          {/* Settle a whole group in one action. Offered per group, and only
+              while that group actually has something outstanding — an action
+              that is always available but sometimes does nothing is worse than
+              one that is absent. The amounts come from the server. */}
+          {(['REGISTRATION', 'OTHER_FEES'] as const)
+            .filter((g) => owingCategories.some((c) => (c.group ?? 'OTHER_FEES') === g && c.payable && c.owing > 0))
+            .length > 0 && (
+            <div className="flex gap-2 flex-wrap" style={{ justifyContent: 'flex-end' }}>
+              {(['REGISTRATION', 'OTHER_FEES'] as const)
+                .filter((g) => owingCategories.some((c) => (c.group ?? 'OTHER_FEES') === g && c.payable && c.owing > 0))
+                .map((g) => (
+                  <Button key={g} variant="outline" size="sm" onClick={() => setSettleGroup(g)}>
+                    Settle {g === 'REGISTRATION' ? 'Registration' : 'Other Fees'}
+                  </Button>
+                ))}
+            </div>
+          )}
+
           {/* Desktop: three-button row */}
           <div className="hidden md:flex gap-2 justify-end flex-wrap">
             <Button variant="outline" onClick={handleDownloadStatement} disabled={!ledgerData}>
@@ -1692,7 +1725,22 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                       <span style={{ width: 130, textAlign: 'right' }}>Charged</span>
                       <span style={{ width: 130, textAlign: 'right' }}>Owed</span>
                     </div>
-                    {owingCategories.map((c) => (
+                    {/* Grouped under the two fixed headings. A group with no
+                        categories is skipped entirely rather than rendering an
+                        empty heading — a school with no registration fee is a
+                        normal school, not a missing one. */}
+                    {(['REGISTRATION', 'OTHER_FEES'] as const).flatMap((g) => {
+                      const inGroup = owingCategories.filter((c) => (c.group ?? 'OTHER_FEES') === g);
+                      if (inGroup.length === 0) return [];
+                      return [
+                        <p
+                          key={`hdr-${g}`}
+                          className="text-xs"
+                          style={{ color: '#6B7280', fontWeight: 600, margin: '0.6rem 0 0.1rem' }}
+                        >
+                          {g === 'REGISTRATION' ? 'Registration' : 'Other Fees'}
+                        </p>,
+                        ...inGroup.map((c) => (
                       <div
                         key={c.key}
                         style={{
@@ -1720,7 +1768,9 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                           {c.owing.toLocaleString()} FCFA
                         </span>
                       </div>
-                    ))}
+                        )),
+                      ];
+                    })}
                     <div
                       style={{
                         display: 'flex', alignItems: 'center', gap: '0.75rem',
@@ -1874,6 +1924,26 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
               colour means. Saying it in both places would just be saying it
               twice. The marks banner above the tabs is untouched. */}
 
+          {settleGroup && (
+            <SettleGroupDialog
+              open
+              onOpenChange={(o) => { if (!o) setSettleGroup(null); }}
+              studentCode={String(student.id)}
+              studentName={`${displayInfo.firstName} ${displayInfo.lastName}`}
+              group={settleGroup}
+              onSettled={(recorded, total) => {
+                toast.success(
+                  `${recorded} payment${recorded === 1 ? '' : 's'} recorded — ${total.toLocaleString()} FCFA`,
+                );
+                // Re-read rather than patch: the same reason the dialog does not
+                // compute amounts. The server has just changed several figures.
+                cache.invalidateOn('ledger:write');
+                void loadOwing();
+                void refreshLedger();
+              }}
+            />
+          )}
+
           <StudentFeeOverrideDialog
             open={showFeeOverride}
             onOpenChange={setShowFeeOverride}
@@ -1965,17 +2035,33 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                         rather than being disabled, since a row that does not
                         respond to a click reads as broken. */}
                     <SelectContent>
-                      {owingCategories.map(c => (
-                        <SelectItem
-                          key={c.key}
-                          value={c.key}
-                          style={c.owing > 0 ? undefined : { color: '#9CA3AF' }}
-                        >
-                          {c.owing > 0
-                            ? `${c.name} — ${c.owing.toLocaleString()} owing`
-                            : `${c.name} — ${c.charged > 0 ? 'fully paid' : 'nothing charged'}`}
-                        </SelectItem>
-                      ))}
+                      {/* Grouped, and a group with no categories renders nothing
+                          at all rather than a heading over an empty list — a
+                          school with no registration fee is perfectly valid. */}
+                      {(['REGISTRATION', 'OTHER_FEES'] as const).flatMap((g) => {
+                        const inGroup = owingCategories.filter((c) => (c.group ?? 'OTHER_FEES') === g);
+                        if (inGroup.length === 0) return [];
+                        return [
+                          <div
+                            key={`hdr-${g}`}
+                            className="text-xs"
+                            style={{ color: '#6B7280', fontWeight: 600, padding: '6px 8px 2px' }}
+                          >
+                            {g === 'REGISTRATION' ? 'Registration' : 'Other Fees'}
+                          </div>,
+                          ...inGroup.map(c => (
+                            <SelectItem
+                              key={c.key}
+                              value={c.key}
+                              style={c.owing > 0 ? undefined : { color: '#9CA3AF' }}
+                            >
+                              {c.owing > 0
+                                ? `${c.name} — ${c.owing.toLocaleString()} owing`
+                                : `${c.name} — ${c.charged > 0 ? 'fully paid' : 'nothing charged'}`}
+                            </SelectItem>
+                          )),
+                        ];
+                      })}
                     </SelectContent>
                   </Select>
                   {!owingLoading && owingCategories.length === 0 && (
