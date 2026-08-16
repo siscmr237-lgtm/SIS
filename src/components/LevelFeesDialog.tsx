@@ -5,7 +5,7 @@ import { api } from '@/lib/api';
 import { useSisCache } from '@/lib/SisCache';
 import { Button } from './ui/button';
 import {
-  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
+  Dialog, DialogContent, DialogHeader, DialogTitle,
 } from './ui/dialog';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -121,9 +121,18 @@ export function LevelFeesDialog({ open, onOpenChange, inWizard = false, onAllLev
   const [zeroNotice, setZeroNotice] = useState<string | null>(null);
   const [sections, setSections] = useState<string[]>([]);
   const [rows, setRows] = useState<FeeRow[]>([]);
+  /**
+   * Which group's fees are listed.
+   *
+   * A FILTER over the same rows array, never a separate fetch. The level's whole
+   * structure stays loaded even while only one group is on screen, because
+   * saving replaces all of it — see save(), which sends every row regardless of
+   * the filter. Sending only the visible ones would delete the other group.
+   */
+  const [groupFilter, setGroupFilter] = useState<FeeGroup>('OTHER_FEES');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [markingFree, setMarkingFree] = useState(false);
+
   const [error, setError] = useState<string | null>(null);
   // Shown after a save that changed amounts while detached students exist.
   const [notice, setNotice] = useState<{ detached: DetachedStudent[]; changed: ChangedFee[] } | null>(null);
@@ -203,7 +212,9 @@ export function LevelFeesDialog({ open, onOpenChange, inWizard = false, onAllLev
     dirty.current = true;
     setError(null);
     setZeroNotice(null);
-    setRows(rs => [...rs, { name: '', amount: '0', includedInFirstInstallment: false, percent: '100', group: 'OTHER_FEES' }]);
+    // A new fee lands in whichever group is being viewed. That is what makes the
+    // filter the only place a group is ever chosen.
+    setRows(rs => [...rs, { name: '', amount: '0', includedInFirstInstallment: false, percent: '100', group: groupFilter }]);
   };
   const removeRow = (i: number) => {
     dirty.current = true;
@@ -211,6 +222,19 @@ export function LevelFeesDialog({ open, onOpenChange, inWizard = false, onAllLev
     setRows(rs => rs.filter((_, idx) => idx !== i));
   };
 
+  /**
+   * The rows the filter shows, each paired with its index in the FULL rows
+   * array. Editing addresses that index, so a change made while filtered lands
+   * on the fee it appears to rather than on whatever sits at that position in
+   * the unfiltered list.
+   */
+  const visibleRows = rows
+    .map((row, index) => ({ row, index }))
+    .filter(({ row }) => row.group === groupFilter);
+
+  // Two figures, because one would be ambiguous while a filter is on: what this
+  // group costs, and what the level costs altogether.
+  const groupTotal = visibleRows.reduce((sum, { row }) => sum + (Number(row.amount) || 0), 0);
   const total = rows.reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
 
   /**
@@ -324,49 +348,6 @@ export function LevelFeesDialog({ open, onOpenChange, inWizard = false, onAllLev
     }
   };
 
-  /**
-   * "This level charges nothing" — a statement, recorded in the database.
-   *
-   * Needed because a level with no fees and a level nobody has got to yet look
-   * identical in the data, so without this a school with a free nursery could
-   * never finish the fees step and the checklist would nag about it forever.
-   *
-   * Browser state would not do: the checklist is a live query the server answers,
-   * and a flag the server cannot see would leave the two permanently disagreeing.
-   */
-  const markNoFees = async () => {
-    if (markingFree || saving) return;
-    const charged = rows.filter(r => (Number(r.amount) || 0) > 0);
-    if (charged.length) {
-      setError(
-        `${level} still charges ${charged.map(r => r.name.trim() || 'an unnamed fee').join(', ')}. `
-        + 'Clear those amounts first if this level is free.',
-      );
-      return;
-    }
-    setError(null);
-    setZeroNotice(null);
-    setMarkingFree(true);
-    const freedLevel = level;
-    try {
-      const res: any = await api.post(`/classes/levels/${encodeURIComponent(freedLevel)}/no-fees`, {});
-      dirty.current = false;
-      cache.invalidateOn('level-fee:write');
-      const removed = res?.removedEmptyFees ?? 0;
-      toast.success(
-        removed
-          ? `${freedLevel} charges nothing — ${removed} empty categor${removed === 1 ? 'y' : 'ies'} removed`
-          : `${freedLevel} charges nothing`,
-      );
-      setRows([]);
-      if (res?.feeSetup) walk(res.feeSetup, freedLevel);
-    } catch (e: any) {
-      setError(e?.message || 'Could not mark this level as free.');
-    } finally {
-      setMarkingFree(false);
-    }
-  };
-
   // Progress through the walk, from the server's numbers. Wizard only: on the
   // Classes page there is no walk to be a position within.
   const progress = inWizard && feeSetup && feeSetup.levels.length > 0
@@ -381,10 +362,6 @@ export function LevelFeesDialog({ open, onOpenChange, inWizard = false, onAllLev
       <DialogContent style={{ maxWidth: 720 }}>
         <DialogHeader>
           <DialogTitle>Fee Categories</DialogTitle>
-          <DialogDescription>
-            Fees belong to a class level and apply to every section of it. Saving re-bills all
-            students in the level, including any who have already paid in full.
-          </DialogDescription>
         </DialogHeader>
 
         {progress && (
@@ -417,17 +394,36 @@ export function LevelFeesDialog({ open, onOpenChange, inWizard = false, onAllLev
         )}
 
         <div className="py-2">
-          <Label>Class Level</Label>
-          <Select value={level} onValueChange={setLevel}>
-            <SelectTrigger>
-              <SelectValue placeholder={levels.length ? 'Select a class level' : 'No classes yet'} />
-            </SelectTrigger>
-            <SelectContent>
-              {levels.map(l => (
-                <SelectItem key={l} value={l}>{l}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {/* Two filters: which class level, and which group of its fees. The
+              group is a FILTER, not a per-row field — a fee's group is decided
+              by which list it was added to. That is one fewer decision on every
+              row, and it lets the two groups be read separately instead of
+              interleaved down one list. */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '0.75rem' }}>
+            <div style={{ minWidth: 0 }}>
+              <Label>Class Level</Label>
+              <Select value={level} onValueChange={setLevel}>
+                <SelectTrigger>
+                  <SelectValue placeholder={levels.length ? 'Select a class level' : 'No classes yet'} />
+                </SelectTrigger>
+                <SelectContent>
+                  {levels.map(l => (
+                    <SelectItem key={l} value={l}>{l}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <Label>Fee Group</Label>
+              <Select value={groupFilter} onValueChange={(v) => setGroupFilter(v as FeeGroup)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="OTHER_FEES">Other Fees</SelectItem>
+                  <SelectItem value="REGISTRATION">Registration</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
           {sections.length > 0 && (
             <p className="text-sm text-gray-500 mt-2">
               Applies to: {sections.join(', ')}
@@ -445,7 +441,7 @@ export function LevelFeesDialog({ open, onOpenChange, inWizard = false, onAllLev
               </p>
               <p className="text-xs" style={{ marginTop: 2 }}>
                 Every amount there is 0, so it bills nobody anything. Give at least one fee an
-                amount, or use “No fees for this level” if that is intended.
+                amount for at least one fee on this level.
               </p>
             </div>
           )}
@@ -462,17 +458,21 @@ export function LevelFeesDialog({ open, onOpenChange, inWizard = false, onAllLev
               style={{ paddingBottom: 6, borderBottom: '1px solid #E5E7EB' }}
             >
               <span style={{ flex: 1 }}>Fee</span>
-              <span style={{ width: 132, textAlign: 'center' }}>Group</span>
-              <span style={{ width: 110, textAlign: 'right' }}>Amount</span>
+              <span style={{ width: 120, textAlign: 'right' }}>Amount</span>
               <span style={{ width: 150, textAlign: 'center' }}>First installment</span>
               <span style={{ width: 32 }} />
             </div>
 
             <div className="space-y-2" style={{ maxHeight: 320, overflowY: 'auto', paddingTop: 8 }}>
-              {rows.length === 0 && (
-                <p className="text-sm text-gray-500">No fees for this level. Add one below.</p>
+              {visibleRows.length === 0 && (
+                <p className="text-sm text-gray-500">
+                  No {groupFilter === 'REGISTRATION' ? 'registration' : 'other'} fees for this level.
+                  Add one below.
+                </p>
               )}
-              {rows.map((r, i) => (
+              {/* The index threaded through here is the row's position in the
+                  FULL rows array, not in this filtered view — see visibleRows. */}
+              {visibleRows.map(({ row: r, index: i }) => (
                 <div key={r.id ?? `new-${i}`} className="flex items-center gap-2">
                   <Input
                     style={{ flex: 1 }}
@@ -480,34 +480,18 @@ export function LevelFeesDialog({ open, onOpenChange, inWizard = false, onAllLev
                     value={r.name}
                     onChange={e => edit(i, { name: e.target.value })}
                   />
-                  {/* Two fixed options, never free text. Registration means the
-                      same thing in every school because the first-installment
-                      rule is written in terms of it; a school-nameable group
-                      would make that rule mean whatever each school typed. */}
-                  <select
-                    value={r.group}
-                    onChange={e => edit(i, { group: e.target.value as FeeGroup })}
-                    aria-label={`Group for ${r.name || 'this fee'}`}
-                    style={{
-                      width: 132, height: 36, borderRadius: 6, padding: '0 8px',
-                      border: '1px solid #D1D5DB', backgroundColor: '#FFFFFF',
-                      fontSize: '0.875rem', cursor: 'pointer',
-                    }}
-                  >
-                    <option value="OTHER_FEES">Other Fees</option>
-                    <option value="REGISTRATION">Registration</option>
-                  </select>
                   <Input
                     type="number"
                     min={0}
-                    style={{ width: 110, textAlign: 'right' }}
+                    style={{ width: 120, textAlign: 'right' }}
                     value={r.amount}
                     onChange={e => edit(i, { amount: e.target.value })}
                   />
-                  {/* Not offered for Registration: the server ignores whatever is
-                      stored there (see buildFirstInstallmentRule), and a control
-                      that changes nothing is worse than no control. */}
-                  {r.group === 'REGISTRATION' ? (
+                  {/* Absent for the whole Registration list rather than per row:
+                      the server ignores firstInstallmentPercent on a Registration
+                      fee (see buildFirstInstallmentRule), so a control here would
+                      invite somebody to set a requirement that never applies. */}
+                  {groupFilter === 'REGISTRATION' ? (
                     <div
                       className="text-xs text-gray-400"
                       style={{ width: 150, textAlign: 'center' }}
@@ -556,7 +540,9 @@ export function LevelFeesDialog({ open, onOpenChange, inWizard = false, onAllLev
                 Add Fee
               </Button>
               <p className="text-sm text-gray-500">
-                Total per student: <strong>{total.toLocaleString()}</strong>
+                {groupFilter === 'REGISTRATION' ? 'Registration' : 'Other Fees'}:{' '}
+                <strong>{groupTotal.toLocaleString()}</strong>
+                {' · '}All fees: <strong>{total.toLocaleString()}</strong>
               </p>
             </div>
 
@@ -640,23 +626,12 @@ export function LevelFeesDialog({ open, onOpenChange, inWizard = false, onAllLev
               </div>
             )}
 
-            <div className="flex items-center justify-between gap-2 mt-4" style={{ flexWrap: 'wrap' }}>
-              {/* Offered in both contexts: whether a level is free is a fact
-                  about the school, not about which screen you happen to be on.
-                  Only the moving-on afterwards is wizard-only. */}
-              <Button
-                variant="outline"
-                onClick={markNoFees}
-                disabled={saving || markingFree || !level}
-                title={`Record that ${level || 'this level'} charges nothing`}
-              >
-                {markingFree ? 'Saving...' : 'No fees for this level'}
-              </Button>
+            <div className="flex justify-end gap-2 mt-4" style={{ flexWrap: 'wrap' }}>
               <div className="flex gap-2">
-                <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving || markingFree}>
+                <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
                   Cancel
                 </Button>
-                <Button onClick={save} disabled={saving || markingFree}>
+                <Button onClick={save} disabled={saving}>
                   {saving ? 'Saving...' : 'Save Fees'}
                 </Button>
               </div>
