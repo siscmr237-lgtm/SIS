@@ -21,7 +21,10 @@ export interface AcademicYearStatus {
   activeYear: string;
   firstYear: string;
   targetYear: string;
+  /** Years the school HAS — first through active. What the data filters offer. */
   years: string[];
+  /** The same list plus the next year — what School Settings offers. */
+  selectableYears: string[];
   /** Persistent and non-dismissible: shown from 1 August until they advance. */
   nudgeDue: boolean;
   nudgeYear: string | null;

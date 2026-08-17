@@ -4,25 +4,23 @@ import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { Switch } from './ui/switch';
 import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Settings, Plus, Trash2, Edit, Save, X, Upload, KeyRound, EyeIcon, EyeOffIcon } from 'lucide-react';
 import { schoolSettings } from '../data/mockData';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
-import { useAcademicYear } from '@/lib/academicYear';
+import { AcademicYearSelect, useAcademicYear } from '@/lib/academicYear';
 import { useCachedResource, useSisCache } from '@/lib/SisCache';
 import { RevalidatingBadge, useResourceError } from './ResourceStatus';
 import { uploadImage } from '@/lib/uploadImage';
 import { PasswordHints } from './PasswordHints';
-import { formatTermLabel, resolveSchoolTerm, resolveEffectiveSchoolTerm } from '@/utils/academicTerm';
-import { computeSchoolAbbreviation } from '@/utils/schoolAbbreviation';
+import { HOLIDAY, TERM_OPTIONS, resolveSchoolTerm } from '@/utils/academicTerm';
 
 export function SchoolSettings() {
   const router = useRouter();
   const cache = useSisCache();
   const [settings, setSettings] = useState(schoolSettings);
-  const [isEditingBasic, setIsEditingBasic] = useState(false);
   const [savingBasicInfo, setSavingBasicInfo] = useState(false);
   const [logoUploading, setLogoUploading] = useState(false);
   const [logoError, setLogoError] = useState<string | null>(null);
@@ -35,16 +33,9 @@ export function SchoolSettings() {
     revalidating,
     error: settingsError,
   } = useCachedResource<any>('settings', () => api.get('/settings'));
-  // Academic-year state and the manual advance action.
-  const { status: yearStatus, advance: advanceYear } = useAcademicYear();
-  const [confirmAdvanceYear, setConfirmAdvanceYear] = useState(false);
-  const [advancingYear, setAdvancingYear] = useState(false);
-  // Label for the destination year, derived from the active one so the button
-  // says exactly where a click leads.
-  const nextYearLabel = (() => {
-    const start = Number(String(yearStatus?.activeYear || '').slice(0, 4));
-    return Number.isFinite(start) && start > 0 ? `${start + 1}/${start + 2}` : 'the next year';
-  })();
+  // Academic-year state. Fetching it is also the app-load half of the rollover,
+  // so the auto-advance still happens on this page — quietly, with no card.
+  const { status: yearStatus, refresh: refreshYear } = useAcademicYear();
 
   useResourceError(settingsError, 'school settings', settingsData !== null);
 
@@ -63,43 +54,64 @@ export function SchoolSettings() {
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSubmitting, setPasswordSubmitting] = useState(false);
 
-  // Basic Settings Form State
-  const [formData, setFormData] = useState({
-    name: settings.name,
-    logo: settings.logo,
-    academicYear: settings.academicYear,
-    currentTerm: settings.currentTerm,
-    motto: '',
-    abbreviation: '',
-  });
-  // Tracks whether the admin actually typed into the Academic Year / Current
-  // Term fields (as opposed to just re-saving the auto-resolved value that
-  // was pre-filled) — only a real edit should switch autoTermEnabled off.
-  const [termFieldsDirty, setTermFieldsDirty] = useState(false);
+  /**
+   * Every field is editable from the moment the page loads — there is no edit
+   * mode. What used to be "am I editing" is now "has anything changed", which
+   * is what the Save button needs to know anyway.
+   *
+   * `baseline` is the last saved state. Dirtiness is a comparison against it,
+   * not a flag set by each onChange: typing a character and deleting it again
+   * leaves nothing to save, and a flag would still claim otherwise.
+   */
+  type BasicForm = {
+    name: string; logo: string; academicYear: string;
+    currentTerm: string; motto: string; abbreviation: string;
+  };
+  const EMPTY_FORM: BasicForm = { name: '', logo: '', academicYear: '', currentTerm: '', motto: '', abbreviation: '' };
+  const [formData, setFormData] = useState<BasicForm>(EMPTY_FORM);
+  const [baseline, setBaseline] = useState<BasicForm>(EMPTY_FORM);
 
-  // What to actually display: live-computed when autoTermEnabled is on,
-  // otherwise exactly the manually stored values.
-  const displayedTerm = resolveSchoolTerm(settings);
+  const dirtyFields = (Object.keys(formData) as (keyof BasicForm)[])
+    .filter(k => formData[k] !== baseline[k]);
+  const isDirty = dirtyFields.length > 0;
+  // Only a real change to either of these should switch auto-detect off.
+  const termFieldsDirty = dirtyFields.includes('academicYear') || dirtyFields.includes('currentTerm');
+
+  /**
+   * What the two calendar fields should show before anyone touches them.
+   *
+   * The YEAR is server state (it is what the rollover advances), so it comes
+   * from /academic-year/status. The TERM is auto-detected from today's date
+   * while autoTermEnabled is on, and is the stored value once it has been set
+   * by hand. Auto-detection still happens exactly as before — it simply has no
+   * card announcing it any more.
+   */
+  const detected = (() => {
+    const resolved = resolveSchoolTerm(settingsData ?? settings);
+    return {
+      academicYear: yearStatus?.activeYear || resolved.academicYear || '',
+      // null means the calendar says holiday; that IS the Holiday option.
+      currentTerm: resolved.term || HOLIDAY,
+    };
+  })();
 
   useEffect(() => {
     if (!settingsData) return;
     setSettings(prev => ({ ...prev, ...settingsData }));
-    // Pre-fill the editable fields with the effective (never-blank) current
-    // value so opening the edit form always starts from something sensible,
-    // whether auto or manual. Skipped while the form is open: a background
-    // revalidation landing mid-edit must not overwrite what is being typed.
-    if (isEditingBasic) return;
-    const effective = resolveEffectiveSchoolTerm(settingsData);
-    setFormData({
+    // A background revalidation must never overwrite unsaved edits.
+    if (isDirty) return;
+    const next: BasicForm = {
       name: settingsData.name || '',
       logo: settingsData.logo || '',
-      academicYear: effective.academicYear,
-      currentTerm: effective.term,
+      academicYear: detected.academicYear,
+      currentTerm: detected.currentTerm,
       motto: settingsData.motto || '',
       abbreviation: settingsData.abbreviation || '',
-    });
-    setTermFieldsDirty(false);
-  }, [settingsData, isEditingBasic]);
+    };
+    setFormData(next);
+    setBaseline(next);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settingsData, detected.academicYear, detected.currentTerm]);
 
   const syncLocalStorageSchool = (fields: Record<string, unknown>) => {
     try {
@@ -114,127 +126,46 @@ export function SchoolSettings() {
   };
 
   const handleBasicInfoSave = async () => {
-    if (savingBasicInfo) return;
+    if (savingBasicInfo || !isDirty) return;
     setSavingBasicInfo(true);
-    const isAutoAbbrev = !!(settings as any).abbreviationAutoGenerated;
+    // The abbreviation is now an ordinary manual field: sent whenever it has
+    // changed, and never re-derived from the name by the server.
     const payload: Record<string, unknown> = {
       name: formData.name,
       logo: formData.logo,
       motto: formData.motto,
+      abbreviation: formData.abbreviation,
     };
-    // Manual abbreviation edits are only ever sent while auto-generate is
-    // off — while it's on, the backend derives it from `name` itself, so
-    // sending a value here would just be ignored (and could get stale).
-    if (!isAutoAbbrev) {
-      payload.abbreviation = formData.abbreviation;
-    }
     if (termFieldsDirty) {
       payload.academicYear = formData.academicYear;
       payload.currentTerm = formData.currentTerm;
+      // Choosing a term by hand is what turns auto-detect off — the toggle
+      // that used to do it explicitly is gone, but the behaviour it guarded
+      // is unchanged: a deliberate choice must not be overwritten tomorrow.
       if (settings.autoTermEnabled) payload.autoTermEnabled = false;
     }
 
     try {
       await api.put('/settings', payload);
       cache.invalidateOn('settings:write');
-      // Mirrors what the backend just computed/stored, so the cached school
-      // (and anything reading it, like the Dashboard) reflects it right away
-      // without waiting for a fresh /settings fetch.
-      const resolvedAbbreviation = isAutoAbbrev ? computeSchoolAbbreviation(formData.name) : formData.abbreviation;
-      // Uses the functional updater (spreading `prev`, not the outer
-      // `settings` closure) so this can never clobber a state change made by
-      // another in-flight action (e.g. the abbreviation toggle) that
-      // resolved while this save's own await was pending.
       setSettings(prev => {
-        const next: any = { ...prev, name: formData.name, logo: formData.logo, motto: formData.motto, abbreviation: resolvedAbbreviation };
-        if (termFieldsDirty) {
-          next.academicYear = formData.academicYear;
-          next.currentTerm = formData.currentTerm;
-          if (settings.autoTermEnabled) next.autoTermEnabled = false;
-        }
+        const next: any = { ...prev, ...payload };
         return next;
       });
-      syncLocalStorageSchool({ ...payload, abbreviation: resolvedAbbreviation });
-      setTermFieldsDirty(false);
-      setIsEditingBasic(false);
+      syncLocalStorageSchool(payload);
+      // Saved state IS the new baseline, so Save goes quiet again.
+      setBaseline(formData);
+      // The year lives in the rollover's state as well; re-read it so the
+      // dropdown and every other screen agree immediately.
+      if (dirtyFields.includes('academicYear')) refreshYear();
       toast.success('School information updated successfully');
-    } catch {
-      toast.error('Failed to save school information');
+    } catch (e: any) {
+      toast.error(e?.message || 'Failed to save school information');
     } finally {
       setSavingBasicInfo(false);
     }
   };
 
-  const handleAbbreviationAutoToggle = async (checked: boolean) => {
-    // Whatever is currently shown (live-computed from the school name while
-    // auto is on) is what gets persisted — whether we're enabling it (so the
-    // stored value matches what's displayed) or disabling it (so switching
-    // off freezes the value the admin was just looking at, not something
-    // stale from before auto was last turned on).
-    //
-    // liveAbbreviation is computed from `prev` inside the updater rather than
-    // from the `settings` closure directly — if this toggle is clicked right
-    // after another save, React may not have re-rendered (and handed this
-    // handler a fresh closure) yet, so reading `settings.name` here could
-    // still see the pre-save value even though `prev` is guaranteed current.
-    let liveAbbreviation = '';
-    setSettings(prev => {
-      liveAbbreviation = computeSchoolAbbreviation(isEditingBasic ? formData.name : prev.name);
-      return { ...prev, abbreviationAutoGenerated: checked, abbreviation: liveAbbreviation } as any;
-    });
-    if (!checked) {
-      setFormData(prev => ({ ...prev, abbreviation: liveAbbreviation }));
-    }
-
-    try {
-      await api.put(
-        '/settings',
-        checked ? { abbreviationAutoGenerated: true } : { abbreviationAutoGenerated: false, abbreviation: liveAbbreviation }
-      );
-      cache.invalidateOn('settings:write');
-      syncLocalStorageSchool({ abbreviationAutoGenerated: checked, abbreviation: liveAbbreviation });
-      toast.success(
-        checked
-          ? 'Auto-generate enabled — abbreviation now follows the school name.'
-          : 'Auto-generate disabled — abbreviation is now set manually.'
-      );
-    } catch {
-      setSettings(prev => ({ ...prev, abbreviationAutoGenerated: !checked } as any));
-      toast.error(checked ? 'Failed to enable auto-generate' : 'Failed to disable auto-generate');
-    }
-  };
-
-  const handleAutoTermToggle = async (checked: boolean) => {
-    if (checked) {
-      setSettings(prev => ({ ...prev, autoTermEnabled: true }));
-      try {
-        await api.put('/settings', { autoTermEnabled: true });
-        cache.invalidateOn('settings:write');
-        syncLocalStorageSchool({ autoTermEnabled: true });
-        toast.success('Auto-detect enabled — now showing the live term and year.');
-      } catch {
-        setSettings(prev => ({ ...prev, autoTermEnabled: false }));
-        toast.error('Failed to enable auto-detect');
-      }
-      return;
-    }
-
-    // Turning auto off freezes whatever is currently being displayed (the
-    // live value) into the manual fields, rather than reverting to a
-    // possibly stale value that predates auto being turned on.
-    const frozen = resolveEffectiveSchoolTerm(settings);
-    setSettings(prev => ({ ...prev, autoTermEnabled: false, academicYear: frozen.academicYear, currentTerm: frozen.term }));
-    setFormData(prev => ({ ...prev, academicYear: frozen.academicYear, currentTerm: frozen.term }));
-    setTermFieldsDirty(false);
-    try {
-      await api.put('/settings', { autoTermEnabled: false, academicYear: frozen.academicYear, currentTerm: frozen.term });
-      cache.invalidateOn('settings:write');
-      syncLocalStorageSchool({ autoTermEnabled: false, academicYear: frozen.academicYear, currentTerm: frozen.term });
-      toast.success('Auto-detect disabled — term and year are now set manually.');
-    } catch {
-      toast.error('Failed to disable auto-detect');
-    }
-  };
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -325,188 +256,120 @@ export function SchoolSettings() {
 
       {/* Basic Information Card */}
       <Card className="p-6 mb-6">
-        <div className="flex justify-between items-center mb-6">
+        {/* No Edit button: every field below is live from first paint. Save is
+            the only action, it is disabled until something actually differs
+            from the last saved state, and nothing auto-saves on blur or on
+            change — a half-typed school name must never reach the server. */}
+        <div className="flex justify-between items-center gap-4 mb-6">
           <h2 className="text-xl">Basic Information</h2>
           <Button
-            onClick={() => {
-              if (isEditingBasic) {
-                handleBasicInfoSave();
-              } else {
-                setIsEditingBasic(true);
-              }
-            }}
-            variant={isEditingBasic ? "default" : "outline"}
-            disabled={savingBasicInfo}
+            onClick={handleBasicInfoSave}
+            variant={isDirty ? 'default' : 'outline'}
+            disabled={!isDirty || savingBasicInfo}
           >
-            {isEditingBasic ? (
-              <>
-                <Save className="mr-2" size={16} />
-                {savingBasicInfo ? 'Saving...' : 'Save Changes'}
-              </>
-            ) : (
-              <>
-                <Edit className="mr-2" size={16} />
-                Edit
-              </>
-            )}
+            <Save className="mr-2" size={16} />
+            {savingBasicInfo ? 'Saving...' : isDirty ? 'Save Changes' : 'Saved'}
           </Button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <Label>School Name</Label>
-            {isEditingBasic ? (
-              <Input
-                value={formData.name}
-                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                placeholder="Enter school name"
-              />
-            ) : (
-              <p className="mt-2 p-2 bg-gray-50 rounded">{settings.name}</p>
-            )}
+            <Input
+              className="mt-2"
+              value={formData.name}
+              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+              placeholder="Enter school name"
+            />
           </div>
 
           <div>
             <Label>School Motto <span className="text-gray-400 font-normal text-xs">(optional)</span></Label>
-            {isEditingBasic ? (
-              <Input
-                value={formData.motto}
-                onChange={(e) => setFormData(prev => ({ ...prev, motto: e.target.value }))}
-                placeholder="e.g. Excellence in Education"
-              />
-            ) : (
-              <p className="mt-2 p-2 bg-gray-50 rounded">{(settings as any).motto || '—'}</p>
-            )}
+            <Input
+              className="mt-2"
+              value={formData.motto}
+              onChange={(e) => setFormData(prev => ({ ...prev, motto: e.target.value }))}
+              placeholder="e.g. Excellence in Education"
+            />
           </div>
 
-          <div className="md:col-span-2 flex items-center justify-between gap-4 p-3 bg-gray-50 rounded-lg border">
-            <div>
-              <Label className="mb-0.5 block">Auto-generate abbreviation from school name</Label>
-              <p className="text-xs text-gray-500">
-                {(settings as any).abbreviationAutoGenerated
-                  ? 'Following the school name automatically.'
-                  : 'Off — Abbreviation is set manually below.'}
-              </p>
-            </div>
-            <Switch checked={!!(settings as any).abbreviationAutoGenerated} onCheckedChange={handleAbbreviationAutoToggle} />
-          </div>
-
+          {/* Derived from the school name once, at signup, and manual from then
+              on — renaming the school no longer rewrites it. The auto-generate
+              toggle that used to sit above this went with that behaviour. */}
           <div className="md:col-span-2">
             <Label>Abbreviation</Label>
-            {(settings as any).abbreviationAutoGenerated ? (
-              <p className="mt-2 p-2 bg-gray-50 rounded text-gray-500">
-                {computeSchoolAbbreviation(isEditingBasic ? formData.name : settings.name)}
-                {' '}
-                <span className="text-xs text-gray-400 font-normal">(auto-generated)</span>
-              </p>
-            ) : isEditingBasic ? (
-              <Input
-                value={formData.abbreviation}
-                onChange={(e) => setFormData(prev => ({ ...prev, abbreviation: e.target.value }))}
-                placeholder="e.g., ENPS"
-              />
-            ) : (
-              <p className="mt-2 p-2 bg-gray-50 rounded">{(settings as any).abbreviation}</p>
-            )}
+            <Input
+              className="mt-2"
+              value={formData.abbreviation}
+              onChange={(e) => setFormData(prev => ({ ...prev, abbreviation: e.target.value }))}
+              placeholder="e.g., ENPS"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Used where the full school name will not fit. Set from your school name at signup; yours to change from here.
+            </p>
           </div>
 
-          <div className="md:col-span-2 flex items-center justify-between gap-4 p-3 bg-gray-50 rounded-lg border">
-            <div>
-              <Label className="mb-0.5 block">Auto-detect term and year</Label>
-              <p className="text-xs text-gray-500">
-                {settings.autoTermEnabled
-                  ? 'Following the school calendar automatically. Editing the fields below switches this off.'
-                  : 'Off — Academic Year and Current Term are set manually below.'}
-              </p>
-            </div>
-            <Switch checked={settings.autoTermEnabled} onCheckedChange={handleAutoTermToggle} />
-          </div>
-
-          {/* The academic year is no longer free text. It is state that moves
-              forward through the manual → nudge → auto flow, so it is shown
-              read-only with an explicit advance action: a typo here would file
-              records under a year that does not exist, and every year-tagged row
-              is matched by exact string. */}
+          {/* A dropdown, never free text: every year-tagged row is matched by
+              exact string, so "2026-2027" or "2026/2028" would file records
+              under a year that does not exist and cannot be selected back.
+              The list is the school's own years plus the next one — see
+              selectableAcademicYears in the backend. The separate "Start next
+              academic year" button is gone: choosing the year IS starting it. */}
           <div>
             <Label>Academic Year</Label>
-            <p className="mt-2 p-2 bg-gray-50 rounded">
-              {yearStatus?.activeYear ?? displayedTerm.academicYear}
+            <div className="mt-2">
+              <AcademicYearSelect
+                value={formData.academicYear}
+                years={yearStatus?.selectableYears ?? []}
+                onChange={(year) => setFormData(prev => ({ ...prev, academicYear: year }))}
+              />
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              Runs September to August. Detected automatically; change it here to work in another year.
             </p>
-            {yearStatus && (
-              <div className="mt-2">
-                {confirmAdvanceYear ? (
-                  <div
-                    style={{
-                      padding: '0.75rem 0.875rem', borderRadius: 8,
-                      border: '1px solid #FCD34D', backgroundColor: '#FFFBEB',
-                      color: '#92400E', fontSize: '0.8125rem',
-                    }}
-                  >
-                    <p style={{ fontWeight: 600, marginBottom: 4 }}>
-                      Start the {nextYearLabel} academic year?
-                    </p>
-                    <p style={{ marginBottom: 8 }}>
-                      New marks, fees and other records will be filed under{' '}
-                      <strong>{nextYearLabel}</strong> from now on. Earlier years stay readable and
-                      selectable. Nothing is promoted, graduated or reset.
-                    </p>
-                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                      <Button
-                        size="sm"
-                        disabled={advancingYear}
-                        onClick={async () => {
-                          setAdvancingYear(true);
-                          try {
-                            await advanceYear();
-                            toast.success(`Academic year is now ${nextYearLabel}`);
-                            setConfirmAdvanceYear(false);
-                          } catch (e: any) {
-                            toast.error(e?.message || 'Could not advance the academic year.');
-                          } finally {
-                            setAdvancingYear(false);
-                          }
-                        }}
-                      >
-                        {advancingYear ? 'Starting...' : `Yes, start ${nextYearLabel}`}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={advancingYear}
-                        onClick={() => setConfirmAdvanceYear(false)}
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <Button variant="outline" size="sm" onClick={() => setConfirmAdvanceYear(true)}>
-                    Start next academic year ({nextYearLabel})
-                  </Button>
-                )}
-              </div>
-            )}
           </div>
 
           <div>
             <Label>Current Term</Label>
-            {isEditingBasic ? (
-              <Input
+            <div className="mt-2">
+              <Select
                 value={formData.currentTerm}
-                onChange={(e) => { setFormData(prev => ({ ...prev, currentTerm: e.target.value })); setTermFieldsDirty(true); }}
-                placeholder="e.g., Term 1"
-              />
-            ) : (
-              <p className="mt-2 p-2 bg-gray-50 rounded">{formatTermLabel(displayedTerm.term)}</p>
-            )}
+                onValueChange={(term) => setFormData(prev => ({ ...prev, currentTerm: term }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select term" />
+                </SelectTrigger>
+                <SelectContent>
+                  {TERM_OPTIONS.map(t => (
+                    <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              Detected from today's date. Choosing one yourself stops it changing on its own.
+            </p>
           </div>
 
           <div>
             <Label>School Logo</Label>
             <div className="mt-2 space-y-2">
               <div className="flex items-center gap-3">
+                {/* `relative` is load-bearing, not decoration.
+                    The input below is .sr-only, which is `position: absolute`
+                    with NO top/left — so it stays at its static position, and
+                    its containing block is whatever is positioned above it.
+                    Without this class nothing was, so the containing block was
+                    the initial one (offsetParent was literally <body>): the
+                    input escaped both <main>'s overflow-y and the shell's
+                    overflow-hidden, landed 193px below the viewport near the
+                    foot of this long page, and made the DOCUMENT scrollable.
+                    Scrolling <main> to its end then chained into that empty
+                    193px. Making this label the containing block keeps the
+                    input where it actually lives, clipped normally.
+                    Not display:none, which would drop it out of the tab order. */}
                 <label
-                  className={`cursor-pointer inline-flex items-center gap-2 px-3 py-2 text-sm rounded-md border border-gray-300 hover:bg-gray-50 transition-colors${logoUploading ? ' opacity-50 pointer-events-none' : ''}`}
+                  className={`relative cursor-pointer inline-flex items-center gap-2 px-3 py-2 text-sm rounded-md border border-gray-300 hover:bg-gray-50 transition-colors${logoUploading ? ' opacity-50 pointer-events-none' : ''}`}
                 >
                   <Upload size={14} />
                   {logoUploading ? 'Uploading…' : 'Choose image'}
