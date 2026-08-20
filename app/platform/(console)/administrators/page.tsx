@@ -1,5 +1,7 @@
 "use client";
 
+import { PhoneInput } from "@/components/PhoneInput";
+
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { platformApi } from "@/lib/platformApi";
@@ -144,8 +146,7 @@ export default function AdministratorsPage() {
 
             <label style={{ display: "block", marginBottom: 12 }}>
               <span style={{ fontSize: "0.8125rem", color: "#374151" }}>Phone number</span>
-              <input style={field} value={form.phoneNumber} required
-                onChange={(e) => setForm({ ...form, phoneNumber: e.target.value })} />
+              <PhoneInput value={form.phoneNumber} onChange={(v) => setForm({ ...form, phoneNumber: v })} required />
             </label>
 
             <label style={{ display: "block", marginBottom: 12 }}>

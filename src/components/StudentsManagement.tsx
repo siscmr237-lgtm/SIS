@@ -26,6 +26,7 @@ import {
 } from "./ui/dialog";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
+import { PhoneInput } from "./PhoneInput";
 import { Textarea } from "./ui/textarea";
 import { ParentTypeahead, ParentMatch } from "./ParentTypeahead";
 import { buildParentPayload, ParentBaseline } from "@/utils/parentPayload";
@@ -269,12 +270,9 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
               </div>
               <div>
                 <Label>Parent Phone</Label>
-                <Input
-                  placeholder="+237 6XX XXX XXX"
+                <PhoneInput
                   value={form.parentPhone}
-                  onChange={(e) =>
-                    setForm((s) => ({ ...s, parentPhone: e.target.value }))
-                  }
+                  onChange={(v) => setForm((s) => ({ ...s, parentPhone: v }))}
                 />
               </div>
               <div>
@@ -400,10 +398,9 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
                     </div>
                     <div>
                       <Label>Phone</Label>
-                      <Input
-                        placeholder="+237 6XX XXX XXX"
+                      <PhoneInput
                         value={c.phone}
-                        onChange={(e) => updateContactRow(i, "phone", e.target.value)}
+                        onChange={(v) => updateContactRow(i, "phone", v)}
                       />
                     </div>
                     <div className="col-span-2">

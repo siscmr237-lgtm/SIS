@@ -8,6 +8,7 @@ import { useSchoolClassNames } from '../lib/classes';
 import { useStudentPaymentStatuses } from './PaymentStatus';
 import { toast } from 'sonner';
 import { StudentFeeStatusPopover } from './StudentFeeStatusPopover';
+import { PhoneInput } from './PhoneInput';
 import { FirstInstallmentNotice } from './FirstInstallmentNotice';
 import { SettleGroupDialog } from './SettleGroupDialog';
 import { ZeroMarkDot, ZERO_MARK_COLOR, useStudentsWithZeroMarks } from './MarkStatus';
@@ -1091,10 +1092,9 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                 </div>
                 <div>
                   <Label>Phone</Label>
-                  <Input
+                  <PhoneInput
                     value={addContactForm.phone}
-                    onChange={(e) => setAddContactForm((f) => ({ ...f, phone: e.target.value }))}
-                    placeholder="+237 6XX XXX XXX"
+                    onChange={(v) => setAddContactForm((f) => ({ ...f, phone: v }))}
                   />
                 </div>
                 <div>
@@ -1146,10 +1146,9 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                 </div>
                 <div>
                   <Label>Phone</Label>
-                  <Input
+                  <PhoneInput
                     value={editContactForm.phone}
-                    onChange={(e) => setEditContactForm((f) => ({ ...f, phone: e.target.value }))}
-                    placeholder="+237 6XX XXX XXX"
+                    onChange={(v) => setEditContactForm((f) => ({ ...f, phone: v }))}
                   />
                 </div>
                 <div>
@@ -1266,10 +1265,9 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                 </div>
                 <div>
                   <Label>Parent Phone</Label>
-                  <Input
+                  <PhoneInput
                     value={editForm.parentPhone}
-                    onChange={e => setEditForm(f => ({ ...f, parentPhone: e.target.value }))}
-                    placeholder="+237 6XX XXX XXX"
+                    onChange={(v) => setEditForm(f => ({ ...f, parentPhone: v }))}
                   />
                 </div>
                 <div>
@@ -1385,11 +1383,10 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                       </div>
                       <div>
                         <Label>Phone</Label>
-                        <Input
-                          placeholder="+237 6XX XXX XXX"
+                        <PhoneInput
                           value={c.phone}
-                          onChange={e => setEditNewContacts(prev =>
-                            prev.map((row, idx) => idx === i ? { ...row, phone: e.target.value } : row)
+                          onChange={(v) => setEditNewContacts(prev =>
+                            prev.map((row, idx) => idx === i ? { ...row, phone: v } : row)
                           )}
                         />
                       </div>

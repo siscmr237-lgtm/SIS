@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PhoneInput } from "@/components/PhoneInput";
 import { PasswordHints } from "@/components/PasswordHints";
 import { api } from "@/lib/api";
 
@@ -159,12 +160,10 @@ export default function TeacherProfilePage() {
             <form onSubmit={savePhone} className="space-y-4">
               <div>
                 <Label htmlFor="phone">Phone</Label>
-                <Input
+                <PhoneInput
                   id="phone"
-                  type="tel"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="e.g. 670000000"
+                  onChange={setPhone}
                 />
               </div>
               {phoneMessage && <p className="text-sm text-green-700">{phoneMessage}</p>}

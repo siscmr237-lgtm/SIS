@@ -1,5 +1,7 @@
 "use client";
 
+import { PhoneInput } from "@/components/PhoneInput";
+
 import { Button } from "@/components/ui/button";
 import { EyeIcon, EyeOffIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -108,16 +110,10 @@ function StepPhone({ onSuccess }: { onSuccess: (phone: string) => void }) {
           >
             Phone Number
           </label>
-          <input
-            type="tel"
-            placeholder="Enter your account phone number"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            required
-            onFocus={() => setFocused(true)}
-            onBlur={() => setFocused(false)}
-            style={textInputStyle(focused)}
-          />
+          {/* Safe to compose a country code here: the lookup matches on
+              digits now, so "+237679379134" finds an account stored as the
+              bare "679379134" that every existing row holds. */}
+          <PhoneInput value={phone} onChange={setPhone} required height={44} />
         </div>
 
         <Button

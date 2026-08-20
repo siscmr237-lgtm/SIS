@@ -4,6 +4,7 @@ import { Checkbox } from './ui/checkbox';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
+import { PhoneInput } from './PhoneInput';
 
 export interface StaffFormValues {
   firstName?: string;
@@ -134,7 +135,7 @@ export function StaffForm({ mode, open, onOpenChange, initialValues, onSubmit }:
           )}
           <div>
             <Label>Phone</Label>
-            <Input placeholder="+237 6XX XXX XXX" value={form.phone} onChange={e => setForm(s => ({ ...s, phone: e.target.value }))} />
+            <PhoneInput value={form.phone} onChange={v => setForm(s => ({ ...s, phone: v }))} />
           </div>
           <div>
             <Label>Email</Label>

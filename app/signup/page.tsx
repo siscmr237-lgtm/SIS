@@ -1,7 +1,9 @@
 "use client";
 
+import { PhoneInput } from "@/components/PhoneInput";
+
 import { Button } from "@/components/ui/button";
-import { EyeIcon, EyeOffIcon, PhoneIcon } from "lucide-react";
+import { EyeIcon, EyeOffIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { PasswordHints } from "../../src/components/PasswordHints";
@@ -173,47 +175,12 @@ function SignupForm({ onSuccess }: { onSuccess: () => void }) {
               ...fieldRingStyle(focused === "phone"),
             }}
           >
-            <select
-              defaultValue="CM +237"
-              aria-label="Country code"
-              style={{
-                border: "none",
-                borderRight: "1px solid #E5E7EB",
-                padding: "0 8px 0 12px",
-                backgroundColor: "#F9FAFB",
-                fontSize: "0.875rem",
-                color: "#374151",
-                outline: "none",
-                minWidth: 90,
-              }}
-            >
-              <option>CM +237</option>
-              <option>NG +234</option>
-              <option>GH +233</option>
-            </select>
-            <div style={{ display: "flex", alignItems: "center", flex: 1, position: "relative" }}>
-              <PhoneIcon
-                style={{ position: "absolute", left: 12, color: "#9CA3AF", width: 16, height: 16 }}
-              />
-              <input
-                type="tel"
-                placeholder="Phone number"
-                value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
-                required
-                style={{
-                  flex: 1,
-                  height: "100%",
-                  paddingLeft: "2.5rem",
-                  paddingRight: "0.75rem",
-                  border: "none",
-                  outline: "none",
-                  fontSize: "0.875rem",
-                  color: "#111827",
-                  background: "transparent",
-                }}
-              />
-            </div>
+            {/* One control, and a real one. The select this replaces had no
+                value and no onChange — picking NG changed nothing and only the
+                bare number was submitted — and it offered Ghana rather than
+                the USA. PhoneInput composes E.164, so the country actually
+                reaches the server. */}
+            <PhoneInput value={phoneNumber} onChange={setPhoneNumber} required height={44} />
           </div>
         </div>
 
