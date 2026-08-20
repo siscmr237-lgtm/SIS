@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { platformApi } from "@/lib/platformApi";
 
@@ -15,6 +16,7 @@ interface SchoolRow {
   name: string;
   signedUpAt: string | null;
   studentCount: number;
+  staffCount: number;
 }
 
 function formatDate(iso: string | null) {
@@ -44,6 +46,7 @@ export default function SchoolsPage() {
     padding: "12px 14px", fontSize: "0.875rem", color: "#0F172A",
     borderBottom: "1px solid #F1F5F9", whiteSpace: "nowrap",
   };
+  const link: React.CSSProperties = { color: "#1D4ED8", textDecoration: "none" };
 
   return (
     <div style={{ maxWidth: 900 }}>
@@ -72,15 +75,29 @@ export default function SchoolsPage() {
                 <th style={th}>School</th>
                 <th style={th}>Signed up</th>
                 <th style={{ ...th, textAlign: "right" }}>Students</th>
+                <th style={{ ...th, textAlign: "right" }}>Staff</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((s) => (
                 <tr key={s.id}>
-                  <td style={{ ...td, whiteSpace: "normal" }}>{s.name}</td>
+                  <td style={{ ...td, whiteSpace: "normal" }}>
+                    <Link href={`/platform/schools/${s.id}`} style={link}>{s.name}</Link>
+                  </td>
                   <td style={td}>{formatDate(s.signedUpAt)}</td>
                   <td style={{ ...td, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
                     {s.studentCount}
+                  </td>
+                  {/* The count itself is the control — it is the thing you are
+                      asking a question about. A zero is not a link: there is
+                      nothing behind it, and a link that leads to an empty list
+                      reads as a fault. */}
+                  <td style={{ ...td, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
+                    {s.staffCount > 0 ? (
+                      <Link href={`/platform/schools/${s.id}/staff`} style={link}>{s.staffCount}</Link>
+                    ) : (
+                      <span style={{ color: "#94A3B8" }}>0</span>
+                    )}
                   </td>
                 </tr>
               ))}
