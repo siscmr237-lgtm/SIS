@@ -78,6 +78,16 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
           background: "#0F172A", color: "white", padding: "0 16px",
           display: "flex", alignItems: "center", justifyContent: "space-between",
           height: 56, gap: 16, flexWrap: "nowrap",
+          // Stays put while the page scrolls.
+          //
+          // STICKY rather than FIXED, deliberately. Sticky keeps the header's 56px
+          // in the flow, so nothing below has to be padded down to compensate and
+          // no content can end up starting underneath it. Fixed would take the
+          // header out of flow and push the first row of every page up under it.
+          //
+          // 30 sits below the 50 the Administrators modal overlay uses, so a
+          // dialog still covers the header instead of it punching through.
+          position: "sticky", top: 0, zIndex: 30,
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 18, minWidth: 0 }}>
