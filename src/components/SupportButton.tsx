@@ -24,16 +24,33 @@ const GOLD = "#e6c482";
 const ROUTES_WITH_THEIR_OWN_SUPPORT = ["/verify-email", "/password-reset"];
 
 /**
+ * Routes that get NO button at all — a different question from the list above,
+ * which is about pages that already offer support another way.
+ *
+ * /platform is the internal team console. This button offers a WhatsApp link to
+ * our own support line, so on those pages it would be us offering to help
+ * ourselves. Excluded here, at the source, because the button is rendered from
+ * the root layout and so reaches every route including the console's own shell.
+ */
+const ROUTES_WITHOUT_SUPPORT = ["/platform"];
+
+/**
  * Matches the route itself and anything nested under it, but never a route that
  * merely starts with the same letters — `/password-reset-help` is a different
  * page from `/password-reset` and would keep the button.
  */
-function hasOwnSupport(pathname: string | null): boolean {
+function matchesRoute(pathname: string | null, routes: string[]): boolean {
   if (!pathname) return false;
   const path = pathname.replace(/\/+$/, "") || "/";
-  return ROUTES_WITH_THEIR_OWN_SUPPORT.some(
-    (route) => path === route || path.startsWith(`${route}/`),
-  );
+  return routes.some((route) => path === route || path.startsWith(`${route}/`));
+}
+
+function hasOwnSupport(pathname: string | null): boolean {
+  return matchesRoute(pathname, ROUTES_WITH_THEIR_OWN_SUPPORT);
+}
+
+function suppressesSupport(pathname: string | null): boolean {
+  return matchesRoute(pathname, ROUTES_WITHOUT_SUPPORT);
 }
 
 /**
@@ -98,7 +115,7 @@ export function SupportButton() {
     };
   }, [open]);
 
-  if (hasOwnSupport(pathname)) return null;
+  if (hasOwnSupport(pathname) || suppressesSupport(pathname)) return null;
 
   const rowBase: React.CSSProperties = {
     display: "flex",
