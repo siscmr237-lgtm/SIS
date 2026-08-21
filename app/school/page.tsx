@@ -2,7 +2,8 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuthGate } from "@/lib/authGate";
+import { useAuthGateWithRetry } from "@/lib/authGate";
+import { AuthGateError } from "@/components/AuthGateError";
 
 /**
  * /school — the school admin section's bare root, which until now was a 404.
@@ -17,18 +18,22 @@ import { useAuthGate } from "@/lib/authGate";
  * layout runs — so this page cannot drift from it. That gate already routes
  * every case: no session to /school/login, a teacher who wandered in to
  * /teacher, an unverified email to /school/verify-email, an unfinished setup to
- * /school/onboarding. 'ready' is what is left over, and it means a signed-in
- * admin with nothing outstanding, so the dashboard is where they go.
+ * /school/onboarding, and a school still waiting on the platform team to
+ * /school/pending-verification. 'ready' is what is left over, and it now means
+ * something narrower than it used to: a signed-in admin whose school the server
+ * has confirmed is APPROVED. That is the only case the dashboard opens for.
  *
  * Identical in shape to app/page.tsx, which does this same job for '/'.
  */
 export default function SchoolIndexPage() {
   const router = useRouter();
-  const status = useAuthGate();
+  const { status, retry } = useAuthGateWithRetry();
 
   useEffect(() => {
     if (status === "ready") router.replace("/school/dashboard");
   }, [status, router]);
+
+  if (status === "error") return <AuthGateError onRetry={retry} />;
 
   return (
     <div

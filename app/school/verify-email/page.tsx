@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { OtpVerifyScreen } from "../../../src/components/OtpVerifyScreen";
 import { api } from "../../../src/lib/api";
+import { routeForFreshUser } from "../../../src/lib/registrationStatus";
 
 // ---------------------------------------------------------------------------
 // Shared style helpers (same look as signup/login/password-reset)
@@ -266,8 +267,12 @@ export default function VerifyEmailPage() {
         return;
       }
       if (user.emailVerified === true) {
-        const school = user?.School?.[0];
-        router.replace(school?.onboardingCompleted === false ? "/school/onboarding" : "/");
+        // Forwarded to "/" rather than worked out here, because the only thing
+        // this page knows about the school is the cached copy in localStorage —
+        // and that cannot be trusted to say where an approved, pending or
+        // incomplete school belongs. "/" runs the real gate, which asks the
+        // server, and lands them in the right place from there.
+        router.replace("/");
         return;
       }
       setEmail(user.email);
@@ -293,8 +298,10 @@ export default function VerifyEmailPage() {
     const res = (await api.post("/auth/otp/verify-signup", { code })) as any;
     if (res?.user) {
       window.localStorage.setItem("user", JSON.stringify(res.user));
-      const school = res.user?.School?.[0];
-      router.replace(school?.onboardingCompleted === false ? "/school/onboarding" : "/");
+      // res.user is re-read by the server AFTER it moves the school out of
+      // FAILED, so the status on it is the post-verification one — a school
+      // that has just proved its email lands on the KYC form, not back here.
+      router.replace(routeForFreshUser(res.user));
     }
   };
 

@@ -6,6 +6,8 @@ import { useEffect, useState } from "react";
 import { platformApi } from "@/lib/platformApi";
 import { PasswordResetControl } from "@/components/platform/PasswordResetControl";
 import { hexForLabel } from "@/lib/uniformColors";
+import { RegistrationStatusBadge } from "@/components/platform/RegistrationStatusBadge";
+import { ApproveSchoolControl } from "@/components/platform/ApproveSchoolControl";
 
 /**
  * One school. Identity, headcounts, and its admin accounts.
@@ -27,6 +29,9 @@ interface SchoolAdmin {
 interface SchoolDetail {
   id: number;
   name: string;
+  /** FAILED | INCOMPLETE | PENDING | APPROVED. Typed as string so a value this
+   *  build has not heard of renders as itself rather than crashing the page. */
+  registrationStatus: string;
   abbreviation: string;
   logo: string | null;
   motto: string | null;
@@ -126,8 +131,36 @@ export default function SchoolDetailPage() {
             {school.abbreviation}
             {school.motto ? ` · ${school.motto}` : ""}
           </p>
+          <div style={{ marginTop: 7 }}>
+            <RegistrationStatusBadge status={school.registrationStatus} />
+          </div>
         </div>
       </div>
+
+      {/* The approval, on its own card directly under the identity block — the
+          first thing on the page for the one status that needs a decision, and
+          absent entirely for every other status. A school that has not
+          submitted its details cannot be approved (the API refuses it), and one
+          that already is has nothing left to do here. */}
+      {school.registrationStatus === "PENDING" && (
+        <div style={{ ...card, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, flexWrap: "wrap" }}>
+          <div style={{ minWidth: 0 }}>
+            <h2 style={{ fontSize: "0.9375rem", fontWeight: 600, margin: "0 0 3px", color: "#0F172A" }}>
+              Waiting for approval
+            </h2>
+            <p style={{ fontSize: "0.8125rem", color: "#64748B", margin: 0, lineHeight: 1.45 }}>
+              This school has submitted its details and cannot reach its dashboard until it is approved.
+            </p>
+          </div>
+          <ApproveSchoolControl
+            schoolId={school.id}
+            schoolName={school.name}
+            onApproved={(status) =>
+              setSchool((prev) => (prev ? { ...prev, registrationStatus: status } : prev))
+            }
+          />
+        </div>
+      )}
 
       <div style={card}>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 14 }}>

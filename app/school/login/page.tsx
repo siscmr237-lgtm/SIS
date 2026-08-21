@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { api } from "../../../src/lib/api";
 import { mapLoginError } from "../../../src/lib/loginErrors";
+import { routeForFreshUser } from "../../../src/lib/registrationStatus";
 
 // THE SCHOOL ADMIN DOOR. Teachers have their own at /teacher/login, and every
 // teacher-side redirect now points there instead of here.
@@ -78,8 +79,15 @@ export default function LoginPage() {
         } else if (user?.emailVerified === false) {
           router.replace("/school/verify-email");
         } else {
-          const school = user?.School?.[0];
-          router.replace(school?.onboardingCompleted === false ? "/school/onboarding" : "/");
+          // Where an admin belongs depends on how far their registration has
+          // got, and that now has four possible answers rather than two. The
+          // rule lives in one place so this door, the OTP screen and the app
+          // shell's gate cannot drift into disagreeing about it.
+          //
+          // Reading it off the login RESPONSE is allowed — that payload came
+          // back from the server in this same exchange, so it is not a cache.
+          // Every later page load asks the server again.
+          router.replace(routeForFreshUser(user));
         }
       } else {
         setError("Something went wrong on our end. Please try again shortly.");

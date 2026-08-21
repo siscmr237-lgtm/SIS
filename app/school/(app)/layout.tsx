@@ -5,15 +5,25 @@ import { Menu } from "lucide-react";
 import { SisCacheProvider } from "@/lib/SisCache";
 import { Sidebar } from "@/components/Sidebar";
 import { MOBILE_DRAWER_CSS } from "@/components/mobileDrawerCss";
-import { useAuthGate } from "@/lib/authGate";
+import { useAuthGateWithRetry } from "@/lib/authGate";
+import { AuthGateError } from "@/components/AuthGateError";
 
 // Shared shell for every internal section (Dashboard, Students, Staff, ...).
 // Mounts fresh on every direct URL visit and every hard reload, so the auth
 // gate below runs independently each time rather than relying on whatever
 // redirect happened at login.
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const status = useAuthGate();
+  const { status, retry } = useAuthGateWithRetry();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // "error" means the gate could not reach an answer — a network drop, or the
+  // API returning 503 on a database blip. It is NOT permission to continue: the
+  // shell holds here rather than rendering a dashboard it has not been told
+  // this school may see. The session is left intact, so a retry is all it takes
+  // once the connection is back.
+  if (status === "error") {
+    return <AuthGateError onRetry={retry} />;
+  }
 
   if (status !== "ready") {
     return <div className="p-6 text-sm text-gray-600">Loading...</div>;

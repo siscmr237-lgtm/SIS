@@ -4,6 +4,7 @@ import { Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { api } from "../../../src/lib/api";
+import { fetchRegistrationSnapshot, routeForSnapshot } from "../../../src/lib/registrationStatus";
 import { clampSectionCount, expandClassSections, MAX_SECTIONS } from "../../../src/lib/classes";
 import { postImage, prepareImage } from "../../../src/lib/uploadImage";
 import { EMPTY_UNIFORM_COLORS, UniformColors } from "../../../src/lib/uniformColors";
@@ -135,8 +136,23 @@ export default function OnboardingPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Guard: existing schools (onboardingCompleted=true) must never reach this page.
+  // Guard: this form is only for a school that has not currently got details
+  // submitted — an INCOMPLETE one.
+  //
+  // Asked of the SERVER rather than of the cached user, because the cache
+  // cannot answer it any more. A school arrives here by two different routes
+  // now: straight after verifying its email, and again later by pressing "Not
+  // Done" on the waiting page, which moves it back from PENDING to INCOMPLETE.
+  // The second of those changes a row this browser may already have a stale
+  // copy of.
+  //
+  // A failure to reach the answer leaves the form as it is. This page grants no
+  // access — submitting it makes a school PENDING, which is further from the
+  // dashboard, not closer — so holding a visitor here on a network blip is the
+  // harmless direction, and the app shell's gate is what actually guards the
+  // product.
   useEffect(() => {
+    let alive = true;
     const userStr =
       typeof window !== "undefined" ? window.localStorage.getItem("user") : null;
     if (!userStr) {
@@ -144,13 +160,31 @@ export default function OnboardingPage() {
       return;
     }
     try {
-      const user = JSON.parse(userStr);
-      if (user?.School?.[0]?.onboardingCompleted !== false) {
-        router.replace("/");
-      }
+      JSON.parse(userStr);
     } catch {
       router.replace("/school/login");
+      return;
     }
+
+    fetchRegistrationSnapshot()
+      .then((snap) => {
+        if (!alive) return;
+        const destination = routeForSnapshot(snap);
+        // null means APPROVED — an existing school, which must never see this
+        // form. Anything pointing somewhere other than here is followed too.
+        if (destination === null) {
+          router.replace("/");
+        } else if (destination !== "/school/onboarding") {
+          router.replace(destination);
+        }
+      })
+      .catch(() => {
+        /* Could not reach the server: leave the form up rather than bounce. */
+      });
+
+    return () => {
+      alive = false;
+    };
   }, [router]);
 
   // Fetch filtered class catalog whenever school type changes. Selections
@@ -263,7 +297,7 @@ export default function OnboardingPage() {
         }
       }
 
-      await api.post("/onboarding", {
+      const submitted: any = await api.post("/onboarding", {
         schoolType,
         classNames: expandedClassNames,
         ...(motto && { motto }),
@@ -276,7 +310,9 @@ export default function OnboardingPage() {
         window.localStorage.removeItem(getDraftKey());
       } catch {}
 
-      // Update localStorage so subsequent checks see onboardingCompleted=true
+      // Keep the cached user roughly in step with what was just saved. It is a
+      // convenience for anything that reads the school's own particulars off
+      // it — it decides nothing about access, which is always a live question.
       try {
         const userStr = window.localStorage.getItem("user");
         if (userStr) {
@@ -284,6 +320,9 @@ export default function OnboardingPage() {
           if (user?.School?.[0]) {
             user.School[0].onboardingCompleted = true;
             user.School[0].schoolType = schoolType;
+            if (submitted?.school?.registrationStatus) {
+              user.School[0].registrationStatus = submitted.school.registrationStatus;
+            }
             if (motto) user.School[0].motto = motto;
             if (address) user.School[0].address = address;
             if (logoPath) user.School[0].logo = logoPath;
@@ -292,7 +331,16 @@ export default function OnboardingPage() {
         }
       } catch {}
 
-      router.replace("/");
+      // Submitting KYC is an application, not an arrival. It leaves the school
+      // PENDING, so the next screen is the waiting page rather than the
+      // dashboard — read from the row the server just wrote back, so an already
+      // APPROVED school editing its particulars is not sent to wait for an
+      // approval it already has.
+      router.replace(
+        submitted?.school?.registrationStatus === "PENDING"
+          ? "/school/pending-verification"
+          : "/",
+      );
     } catch (err: any) {
       setError(err.message || "Something went wrong. Please try again.");
     } finally {

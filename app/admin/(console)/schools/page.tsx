@@ -3,17 +3,22 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { platformApi } from "@/lib/platformApi";
+import { RegistrationStatusBadge } from "@/components/platform/RegistrationStatusBadge";
 
 /**
- * V1 placeholder: proof the door works. Every school, read-only, three columns.
+ * Every school, read-only, plus where each one stands in signing up.
  *
  * Deliberately nothing else — no student names, no fee figures, no staff pay.
- * The API returns exactly these three fields and computes the count as an
- * aggregate, so there is nothing extra here to reveal even by accident.
+ * registrationStatus is the one thing added to the fields already here, and
+ * it is a fact about the REGISTRATION rather than about the school's data; the
+ * counts are still aggregates, so there is nothing extra here to reveal even by
+ * accident. The status has to be on the list rather than only on the detail
+ * page: finding the schools waiting on you should not mean opening every row.
  */
 interface SchoolRow {
   id: number;
   name: string;
+  registrationStatus: string;
   signedUpAt: string | null;
   studentCount: number;
   staffCount: number;
@@ -73,6 +78,10 @@ export default function SchoolsPage() {
             <thead>
               <tr>
                 <th style={th}>School</th>
+                {/* Second column, not last: where a school stands is the reason
+                    to open this list at all, and a status pushed out past the
+                    counts is one nobody reads. */}
+                <th style={th}>Status</th>
                 <th style={th}>Signed up</th>
                 <th style={{ ...th, textAlign: "right" }}>Students</th>
                 <th style={{ ...th, textAlign: "right" }}>Staff</th>
@@ -83,6 +92,9 @@ export default function SchoolsPage() {
                 <tr key={s.id}>
                   <td style={{ ...td, whiteSpace: "normal" }}>
                     <Link href={`/admin/schools/${s.id}`} style={link}>{s.name}</Link>
+                  </td>
+                  <td style={td}>
+                    <RegistrationStatusBadge status={s.registrationStatus} />
                   </td>
                   <td style={td}>{formatDate(s.signedUpAt)}</td>
                   <td style={{ ...td, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
