@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import * as Popover from '@radix-ui/react-popover';
 
 /**
@@ -69,31 +69,58 @@ const byDial = [...PHONE_COUNTRIES].sort((a, b) => b.dial.length - a.dial.length
 /**
  * Split a stored value into a country and its national digits.
  *
- * Longest dial code first, so +234 is never mistaken for +23 of something else.
- * A bare number is attributed by LENGTH only when that is unambiguous — 9 digits
- * can only be Cameroon here — and otherwise falls back to the default rather
- * than guessing between two countries that share a length.
+ * `explicit` says whether the country was STATED by the value or merely
+ * guessed from it. That distinction is what lets the picker work: a value can
+ * only name a country while it has digits, so on an empty or half-typed field
+ * the component has to fall back to what the user last chose rather than to
+ * whatever this function guessed.
+ *
+ * A LEADING PLUS IS TRUSTED. It means the string was composed as E.164 — by
+ * this component or by the API — so the dial code is stated outright and the
+ * rest is however far through typing the user happens to be. Matching the
+ * prefix without demanding a complete number is what makes switching country
+ * mid-edit work: nine Cameroonian digits under Nigeria's ten is a legitimate
+ * in-progress number, and it used to parse as neither.
+ *
+ * A BARE NUMBER IS NOT TRUSTED, because it is ambiguous by construction — it
+ * is what legacy rows hold. There a leading dial code counts only when what
+ * follows is exactly the right length, otherwise a US number starting 1 would
+ * eat its own first digit as the +1. Failing that it is attributed by LENGTH
+ * when that is unambiguous — 9 digits can only be Cameroon here — and
+ * otherwise falls back to the default rather than guessing between two
+ * countries that share a length.
+ *
+ * Longest dial code first throughout, so +234 is never mistaken for +23 of
+ * something else, and +1 never shadows +237.
  */
-export function parsePhone(value: string | null | undefined): { country: PhoneCountry; national: string } {
+export function parsePhone(
+  value: string | null | undefined,
+): { country: PhoneCountry; national: string; explicit: boolean } {
   const raw = String(value ?? '').trim();
   const digits = raw.replace(/\D/g, '');
-  if (!digits) return { country: DEFAULT_PHONE_COUNTRY, national: '' };
+  if (!digits) return { country: DEFAULT_PHONE_COUNTRY, national: '', explicit: false };
 
-  for (const c of byDial) {
-    const code = c.dial.slice(1);
-    // Only treat a leading dial code as one when what follows is the right
-    // length. Without that, a US number starting 1 would eat its own first
-    // digit as the +1.
-    if (digits.startsWith(code) && digits.length === code.length + c.digits) {
-      return { country: c, national: digits.slice(code.length) };
+  if (raw.startsWith('+')) {
+    for (const c of byDial) {
+      const code = c.dial.slice(1);
+      if (digits.startsWith(code)) {
+        return { country: c, national: digits.slice(code.length).slice(0, c.digits), explicit: true };
+      }
     }
   }
 
-  // No country code. Drop a local trunk zero, then match on length.
+  for (const c of byDial) {
+    const code = c.dial.slice(1);
+    if (digits.startsWith(code) && digits.length === code.length + c.digits) {
+      return { country: c, national: digits.slice(code.length), explicit: true };
+    }
+  }
+
+  // Drop a local trunk zero, then match on length.
   const local = digits.replace(/^0+/, '');
   const exact = PHONE_COUNTRIES.filter((c) => c.digits === local.length);
   const country = exact.length === 1 ? exact[0] : DEFAULT_PHONE_COUNTRY;
-  return { country, national: local.slice(0, country.digits) };
+  return { country, national: local.slice(0, country.digits), explicit: false };
 }
 
 /** The E.164 string for a country and national digits, or '' for no digits. */
@@ -260,13 +287,41 @@ export function PhoneInput({
   borderWidth?: number;
   'aria-label'?: string;
 }) {
-  // Derived from the value, never held separately: two sources of truth for the
-  // same number is how a field ends up showing one country and submitting
-  // another.
-  const { country, national } = useMemo(() => parsePhone(value), [value]);
+  const parsed = useMemo(() => parsePhone(value), [value]);
   const [open, setOpen] = useState(false);
 
+  /**
+   * The country the user last chose outright.
+   *
+   * This used to be derived from `value` alone, on the reasoning that two
+   * sources of truth for one number is how a field shows one country and
+   * submits another. True, but incomplete: `value` cannot NAME a country while
+   * its national part is empty, because formatPhone has nothing to prefix and
+   * returns ''. So picking Nigeria on an empty field emitted '', which parsed
+   * straight back to the Cameroon default — the picker looked like it did
+   * nothing at all. It also could not name one mid-switch, when the digits
+   * carried over are the wrong length for the country just chosen.
+   *
+   * So: the VALUE still wins whenever it states a country, which keeps a
+   * loaded record authoritative over anything clicked earlier. The PICK only
+   * fills the gap where the value is silent.
+   */
+  const [picked, setPicked] = useState<PhoneCountry | null>(null);
+  const country = parsed.explicit ? parsed.country : picked ?? parsed.country;
+  const national = parsed.national;
+
+  // Remember an explicit country as it goes past, so that clearing the digits
+  // afterwards leaves the picker where it was instead of springing back to
+  // Cameroon.
+  useEffect(() => {
+    if (parsed.explicit) setPicked(parsed.country);
+  }, [parsed.explicit, parsed.country]);
+
   const select = (next: PhoneCountry) => {
+    // Both, and both are needed. The emit keeps the number canonical for the
+    // form; the pick is what survives the round trip when the number is empty
+    // or not yet long enough for the new country to be read back out of it.
+    setPicked(next);
     // Re-emit under the new country, trimmed to ITS limit. Switching from a
     // 10-digit country to a 9-digit one has to drop a digit rather than keep an
     // over-long number that would never validate.
