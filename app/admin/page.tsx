@@ -28,16 +28,17 @@ export default function AdminIndexPage() {
     router.replace(getPlatformToken() ? "/admin/schools" : "/admin/login");
   }, [router]);
 
-  // The console's own loading colours, so passing through this page does not
-  // flash a light screen between two dark ones.
+  // The login door's colours rather than the console's: the visitor who
+  // actually pauses here is the one arriving without a token, and they are on
+  // their way to /admin/login.
   return (
     <div
       style={{
         minHeight: "100vh",
         display: "grid",
         placeItems: "center",
-        background: "#0F172A",
-        color: "#94A3B8",
+        background: "#F0F5F9",
+        color: "#64748B",
         fontSize: "0.875rem",
       }}
     >

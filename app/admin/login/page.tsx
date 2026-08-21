@@ -52,7 +52,7 @@ export default function PlatformLoginPage() {
     <div
       style={{
         minHeight: "100vh", display: "flex", alignItems: "center",
-        justifyContent: "center", background: "#0F172A", padding: 20,
+        justifyContent: "center", background: "#F0F5F9", padding: 20,
       }}
     >
       <form
@@ -60,7 +60,7 @@ export default function PlatformLoginPage() {
         style={{
           width: "100%", maxWidth: 380, background: "white",
           borderRadius: 14, padding: "28px 24px",
-          boxShadow: "0 12px 40px rgba(0,0,0,0.35)",
+          boxShadow: "0 4px 16px rgba(15, 23, 42, 0.06)",
         }}
       >
         <div style={{ marginBottom: 22 }}>
