@@ -371,8 +371,8 @@ export default function TeacherLoginPage() {
             </Button>
 
             {/* No "Forgot your password?" and no "Sign up".
-                /password-reset is an admin flow end to end — it asks for a
-                phone number and posts /password-reset/request, which resolves
+                /school/password-reset is an admin flow end to end — it asks
+                for an email and posts /password-reset/request, which resolves
                 AdminUser rows only — so pointing a teacher at it would be a
                 dead end. /signup creates a school admin account, which is the
                 one thing this page exists to turn away. A teacher who cannot

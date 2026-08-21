@@ -14,14 +14,20 @@ const GOLD = "#e6c482";
 
 /**
  * Routes that already offer support of their own, so a second affordance would
- * just be clutter: both OTP screens render the "Having trouble receiving your
+ * just be clutter: the OTP screen renders a "Having trouble receiving your
  * code?" block inside OtpVerifyScreen.
  *
+ * /school/password-reset was on this list and has come off it. That page no
+ * longer shows an OTP screen — it asks for an email and hands off to
+ * /school/reset-password — so with it listed here, the one page reached by
+ * people who cannot get in would have offered no way to reach anyone.
+ *
  * Everything else gets the button — including /school/login, /school/signup,
- * /school/onboarding, /teacher/login and /teacher/set-password. Someone who
- * cannot get through a front door is exactly who needs to reach support.
+ * /school/onboarding, /school/reset-password, /teacher/login and
+ * /teacher/set-password. Someone who cannot get through a front door is exactly
+ * who needs to reach support.
  */
-const ROUTES_WITH_THEIR_OWN_SUPPORT = ["/school/verify-email", "/school/password-reset"];
+const ROUTES_WITH_THEIR_OWN_SUPPORT = ["/school/verify-email"];
 
 /**
  * Routes that get NO button at all — a different question from the list above,
