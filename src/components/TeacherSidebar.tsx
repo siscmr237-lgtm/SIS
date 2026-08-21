@@ -94,7 +94,7 @@ export function TeacherSidebar({ open = false, onClose }: TeacherSidebarProps) {
     window.localStorage.clear();
     // replace(), not push(): signing out must not leave the teacher section one
     // Back press away.
-    window.location.replace("/login");
+    window.location.replace("/teacher/login");
   };
 
   return (

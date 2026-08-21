@@ -204,7 +204,7 @@ function SetPasswordForm() {
         window.localStorage.setItem("user", JSON.stringify(user));
         router.replace("/teacher");
       } else {
-        router.replace("/login?message=password_updated");
+        router.replace("/teacher/login?message=password_updated");
       }
     } catch (err: any) {
       setError(err?.message || "Something went wrong. Please try again.");
@@ -226,7 +226,7 @@ function SetPasswordForm() {
           {verify.message}
         </p>
         <p className="text-sm text-gray-500" style={{ marginTop: "1.5rem" }}>
-          <a href="/login" className="font-medium" style={{ color: "#2563EB" }}>
+          <a href="/teacher/login" className="font-medium" style={{ color: "#2563EB" }}>
             ← Back to login
           </a>
         </p>

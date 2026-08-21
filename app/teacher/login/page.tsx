@@ -4,30 +4,45 @@ import { Button } from "@/components/ui/button";
 import { EyeIcon, EyeOffIcon, UserIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { api } from "../../src/lib/api";
-import { mapLoginError } from "../../src/lib/loginErrors";
+import { api } from "../../../src/lib/api";
+import { mapLoginError } from "../../../src/lib/loginErrors";
 
-// THE SCHOOL ADMIN DOOR. Teachers have their own at /teacher/login, and every
-// teacher-side redirect now points there instead of here.
-//
-// This page still accepts a teacher who arrives anyway — an old bookmark, a
-// shared link, a browser autofilling the address — and forwards them to
-// /teacher rather than refusing. They gave correct details for a real account;
-// turning that into an error would be a dead end for no reason. The refusal
-// only runs the other way round, on /teacher/login, where letting an admin
-// through would put a school-wide session behind the teachers' door.
-
-export default function LoginPage() {
+/**
+ * The teachers' door.
+ *
+ * Sits at /teacher/login, OUTSIDE app/teacher/(protected). (protected) is a
+ * route group and adds no URL segment, so this page shares the /teacher prefix
+ * with the portal while staying outside its gate — the same arrangement
+ * /teacher/set-password already relies on. A gated login page could never be
+ * reached by the person who needs it.
+ *
+ * The form, the fields and the auth call are the same as app/login/page.tsx.
+ * What differs is who is allowed through: only actorType 'teacher'. Anything
+ * else is refused here rather than signed in.
+ *
+ * Styled with inline styles and classes that already exist in the frozen
+ * src/index.css — every className here is one app/login/page.tsx already
+ * ships, so nothing new has to be compiled.
+ */
+export default function TeacherLoginPage() {
   const router = useRouter();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Kept apart from `error` because it is not a failed attempt: the details
+  // were correct and the account is real, it just is not a teacher. It gets its
+  // own block with a way onward instead of a red line.
+  const [wrongDoor, setWrongDoor] = useState(false);
   const [sessionMessage, setSessionMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [focusedField, setFocusedField] = useState<string | null>(null);
 
+  // The same two one-time banners app/login/page.tsx handles, and this page
+  // needs them for the same reason: the teacher-side redirects that used to
+  // land on /login now land here, carrying these params with them —
+  // /teacher/set-password on success, and the shared api.ts on a dead session.
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
@@ -40,8 +55,6 @@ export default function LoginPage() {
       setSuccessMessage('Password updated — please sign in with your new password.');
       shouldCleanUrl = true;
     }
-    // Strip the query param once read so a refresh or renewed navigation to /login
-    // can't get stuck re-showing a banner from a one-time event.
     if (shouldCleanUrl) {
       window.history.replaceState(null, '', window.location.pathname);
     }
@@ -51,6 +64,7 @@ export default function LoginPage() {
     e.preventDefault();
     if (loading) return;
     setError(null);
+    setWrongDoor(false);
 
     if (!identifier.trim() || !password.trim()) {
       setError('Please enter your phone number or email, and your password.');
@@ -61,26 +75,28 @@ export default function LoginPage() {
     try {
       const res = await api.post("/auth/login", { identifier, password });
       if ((res as any)?.token) {
-        // actorType is stored ON the user object rather than beside it because
-        // every gate downstream reads a single parsed `user` from localStorage;
-        // a second key would be one more thing a partial write could desync.
         const actorType = (res as any).actorType;
+
+        // THE REFUSAL, and it happens BEFORE anything is written to
+        // localStorage. The response carries a perfectly valid token; storing
+        // it and then refusing would leave a live admin session sitting in the
+        // browser on a page that just said no, one URL away from the admin app.
+        // Nothing is persisted unless the actor is a teacher, so a refused
+        // sign-in leaves the browser exactly as it was.
+        if (actorType !== "teacher") {
+          setWrongDoor(true);
+          setLoading(false);
+          return;
+        }
+
         const user = { ...(res as any).user, actorType };
         if (typeof window !== "undefined") {
           window.localStorage.setItem("auth_token", (res as any).token);
           window.localStorage.setItem("user", JSON.stringify(user));
         }
-        if (actorType === "teacher") {
-          // Graceful forward, not an error. Teachers have no school-onboarding
-          // or email-verification flow of their own — those are admin-account
-          // concerns — so /teacher is the whole journey from here.
-          router.replace("/teacher");
-        } else if (user?.emailVerified === false) {
-          router.replace("/verify-email");
-        } else {
-          const school = user?.School?.[0];
-          router.replace(school?.onboardingCompleted === false ? "/onboarding" : "/");
-        }
+        // Teachers have no onboarding or email-verification step of their own —
+        // those are admin-account concerns — so this is the whole journey.
+        router.replace("/teacher");
       } else {
         setError("Something went wrong on our end. Please try again shortly.");
       }
@@ -136,7 +152,7 @@ export default function LoginPage() {
               className="text-3xl font-bold tracking-tight"
               style={{ color: "#0F172A" }}
             >
-              Welcome back
+              Welcome back Sir/Madam
             </h1>
             <p
               className="text-sm"
@@ -178,12 +194,50 @@ export default function LoginPage() {
             </div>
           )}
 
+          {/* The wrong-door notice. Amber rather than red: nothing failed, and
+              it carries the way onward, because a bare refusal is a dead end
+              for someone who has just proved they own a real account. */}
+          {wrongDoor && (
+            <div
+              style={{
+                marginBottom: "1.25rem",
+                padding: "0.75rem 1rem",
+                borderRadius: 10,
+                backgroundColor: "#FEF3C7",
+                border: "1px solid #FCD34D",
+                color: "#92400E",
+                fontSize: "0.875rem",
+                lineHeight: 1.45,
+              }}
+            >
+              This login is for teachers only.
+              <span style={{ display: "block", marginTop: "0.5rem" }}>
+                Those details belong to a school admin account —{" "}
+                <a
+                  href="/login"
+                  style={{ color: "#92400E", fontWeight: 600, textDecoration: "underline" }}
+                >
+                  sign in to the school
+                </a>{" "}
+                instead.
+              </span>
+              {/* POST /auth/login resolves an admin before a teacher, so one
+                  email on both an AdminUser row and a Staff row always returns
+                  the admin. The teacher record stays reachable by the phone
+                  number the two rows do not share — worth saying, because
+                  otherwise this person is stuck on a door they belong behind. */}
+              <span style={{ display: "block", marginTop: "0.5rem" }}>
+                If you are also on your school&apos;s staff list, sign in here with
+                your teacher phone number rather than that email.
+              </span>
+            </div>
+          )}
+
           <form onSubmit={onSubmit} className="space-y-5">
-            {/* Phone Number or Email — admins sign in with the former,
-                teachers with the latter, and the server tells them apart. The
-                country-code select that used to sit here is gone: it cannot
-                mean anything for an email address, and prefixing one would
-                have corrupted the value being sent. */}
+            {/* Phone Number or Email — the same field as the school door, and
+                for the same reason: /auth/login matches a teacher on either a
+                Staff email or a Staff phone, so narrowing the label to one of
+                them would hide a working way in. */}
             <div>
               <label
                 htmlFor="identifier"
@@ -296,17 +350,6 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* Forgot password — right-aligned */}
-            <div className="flex justify-end">
-              <a
-                href="/password-reset"
-                className="text-sm font-medium"
-                style={{ color: "#2563EB" }}
-              >
-                Forgot your password?
-              </a>
-            </div>
-
             {error && (
               <p className="text-sm text-red-600">{error}</p>
             )}
@@ -327,15 +370,17 @@ export default function LoginPage() {
               {loading ? "Signing in..." : "Sign In"}
             </Button>
 
+            {/* No "Forgot your password?" and no "Sign up".
+                /password-reset is an admin flow end to end — it asks for a
+                phone number and posts /password-reset/request, which resolves
+                AdminUser rows only — so pointing a teacher at it would be a
+                dead end. /signup creates a school admin account, which is the
+                one thing this page exists to turn away. A teacher who cannot
+                get in reaches a human instead: the floating support button is
+                on this page, as it is on /login. */}
             <p className="text-center text-sm text-gray-500">
-              Don't have an account?{" "}
-              <a
-                href="/signup"
-                className="font-medium"
-                style={{ color: "#2563EB" }}
-              >
-                Sign up
-              </a>
+              Trouble signing in? Ask your school administrator to re-send your
+              teacher invitation.
             </p>
           </form>
         </div>

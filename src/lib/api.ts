@@ -6,9 +6,24 @@ const BASE_URL = runtimeApiUrl;
 
 function clearSessionAndRedirect(genuineExpiry: boolean) {
   if (typeof window === 'undefined') return;
+
+  // Which door to send them back to. Read BEFORE the clear below, because the
+  // 'user' entry being removed is the only thing here that knows whose session
+  // just died — this function is shared by both actor types and its arguments
+  // say nothing about who the caller is.
+  //
+  // The admin door is the fallback for anything unreadable or unrecognised: a
+  // session predating actorType is an admin session, and /login forwards a
+  // teacher to /teacher anyway, so guessing wrong that way self-corrects.
+  let door = '/login';
+  try {
+    const raw = window.localStorage.getItem('user');
+    if (raw && JSON.parse(raw)?.actorType === 'teacher') door = '/teacher/login';
+  } catch { /* unparseable: keep the admin door */ }
+
   window.localStorage.removeItem('auth_token');
   window.localStorage.removeItem('user');
-  window.location.replace(genuineExpiry ? '/login?reason=expired' : '/login');
+  window.location.replace(genuineExpiry ? `${door}?reason=expired` : door);
 }
 
 // The only /auth/ endpoints reachable with no session yet — every other /auth/

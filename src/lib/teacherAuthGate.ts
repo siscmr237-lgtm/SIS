@@ -39,7 +39,7 @@ export function useTeacherAuthGate(): TeacherAuthGateStatus {
 
       if (alive) setStatus('ready');
     } catch {
-      if (alive) router.replace('/login');
+      if (alive) router.replace('/teacher/login');
     }
     return () => {
       alive = false;
