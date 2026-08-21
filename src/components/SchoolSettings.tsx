@@ -417,7 +417,7 @@ export function SchoolSettings() {
               if (typeof window !== "undefined") {
                 window.localStorage.removeItem("auth_token");
                 window.localStorage.removeItem("user");
-                router.replace("/login");
+                router.replace("/school/login");
               }
             } catch {}
           }}

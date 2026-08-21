@@ -32,17 +32,17 @@ export function useAuthGate(): AuthGateStatus {
           return;
         }
         if (user?.emailVerified === false) {
-          if (alive) router.replace('/verify-email');
+          if (alive) router.replace('/school/verify-email');
           return;
         }
         if (user?.School?.[0]?.onboardingCompleted === false) {
-          if (alive) router.replace('/onboarding');
+          if (alive) router.replace('/school/onboarding');
           return;
         }
       }
       if (alive) setStatus('ready');
     } catch {
-      if (alive) router.replace('/login');
+      if (alive) router.replace('/school/login');
     }
     return () => {
       alive = false;

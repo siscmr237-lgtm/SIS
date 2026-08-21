@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button";
 import { EyeIcon, EyeOffIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { PasswordHints } from "../../src/components/PasswordHints";
-import { api } from "../../src/lib/api";
+import { PasswordHints } from "../../../src/components/PasswordHints";
+import { api } from "../../../src/lib/api";
 
 // ---------------------------------------------------------------------------
 // Shared style helpers
@@ -294,7 +294,7 @@ function SignupForm({ onSuccess }: { onSuccess: () => void }) {
 
         <p className="text-center text-sm text-gray-500">
           Already have an account?{" "}
-          <a href="/login" className="font-medium" style={{ color: "#2563EB" }}>
+          <a href="/school/login" className="font-medium" style={{ color: "#2563EB" }}>
             Sign in
           </a>
         </p>
@@ -311,7 +311,7 @@ export default function SignupPage() {
 
   return (
     <Shell>
-      <SignupForm onSuccess={() => router.replace("/verify-email")} />
+      <SignupForm onSuccess={() => router.replace("/school/verify-email")} />
     </Shell>
   );
 }

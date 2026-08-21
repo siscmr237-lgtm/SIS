@@ -62,9 +62,9 @@ export function Dashboard({ onNavigate }: { onNavigate?: (page: NavigationPage) 
    */
   const openActivity = (ref: { type: string; code: string | null }) => {
     if (!ref.code) return;
-    if (ref.type === 'student') router.push(`/students/${encodeURIComponent(ref.code)}?tab=finance`);
-    else if (ref.type === 'staff') router.push(`/staff/${encodeURIComponent(ref.code)}?tab=finance`);
-    else router.push('/expenses');
+    if (ref.type === 'student') router.push(`/school/students/${encodeURIComponent(ref.code)}?tab=finance`);
+    else if (ref.type === 'staff') router.push(`/school/staff/${encodeURIComponent(ref.code)}?tab=finance`);
+    else router.push('/school/expenses');
   };
   const resolved = resolveSchoolTerm(schoolSettings);
   // The school object below comes from the localStorage copy written at LOGIN, so

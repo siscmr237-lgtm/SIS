@@ -345,7 +345,7 @@ export function AttendanceSheet({ audience }: { audience: 'admin' | 'teacher' })
                         <>{s.firstName} {s.lastName}</>
                       ) : (
                         <Link
-                          href={`/students/${encodeURIComponent(s.studentId)}`}
+                          href={`/school/students/${encodeURIComponent(s.studentId)}`}
                           style={{ textDecoration: 'underline' }}
                         >
                           {s.firstName} {s.lastName}

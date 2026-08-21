@@ -6,9 +6,9 @@ import { Button } from "@/components/ui/button";
 import { EyeIcon, EyeOffIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { OtpVerifyScreen } from "../../src/components/OtpVerifyScreen";
-import { PasswordHints } from "../../src/components/PasswordHints";
-import { api } from "../../src/lib/api";
+import { OtpVerifyScreen } from "../../../src/components/OtpVerifyScreen";
+import { PasswordHints } from "../../../src/components/PasswordHints";
+import { api } from "../../../src/lib/api";
 
 // ---------------------------------------------------------------------------
 // Shared style helpers
@@ -132,7 +132,7 @@ function StepPhone({ onSuccess }: { onSuccess: (phone: string) => void }) {
         </Button>
 
         <p className="text-center text-sm text-gray-500">
-          <a href="/login" className="font-medium" style={{ color: "#2563EB" }}>
+          <a href="/school/login" className="font-medium" style={{ color: "#2563EB" }}>
             ← Back to login
           </a>
         </p>
@@ -172,7 +172,7 @@ function StepNewPassword({ resetToken }: { resetToken: string }) {
         newPassword: password,
         confirmPassword: confirm,
       });
-      router.replace("/login?message=password_updated");
+      router.replace("/school/login?message=password_updated");
     } catch (err: any) {
       setError(err?.message || "Something went wrong. Please try again.");
     } finally {

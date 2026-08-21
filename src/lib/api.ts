@@ -15,7 +15,7 @@ function clearSessionAndRedirect(genuineExpiry: boolean) {
   // The admin door is the fallback for anything unreadable or unrecognised: a
   // session predating actorType is an admin session, and /login forwards a
   // teacher to /teacher anyway, so guessing wrong that way self-corrects.
-  let door = '/login';
+  let door = '/school/login';
   try {
     const raw = window.localStorage.getItem('user');
     if (raw && JSON.parse(raw)?.actorType === 'teacher') door = '/teacher/login';

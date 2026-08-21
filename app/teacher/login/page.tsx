@@ -214,7 +214,7 @@ export default function TeacherLoginPage() {
               <span style={{ display: "block", marginTop: "0.5rem" }}>
                 Those details belong to a school admin account —{" "}
                 <a
-                  href="/login"
+                  href="/school/login"
                   style={{ color: "#92400E", fontWeight: 600, textDecoration: "underline" }}
                 >
                   sign in to the school

@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import { EyeIcon, EyeOffIcon, UserIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { api } from "../../src/lib/api";
-import { mapLoginError } from "../../src/lib/loginErrors";
+import { api } from "../../../src/lib/api";
+import { mapLoginError } from "../../../src/lib/loginErrors";
 
 // THE SCHOOL ADMIN DOOR. Teachers have their own at /teacher/login, and every
 // teacher-side redirect now points there instead of here.
@@ -76,10 +76,10 @@ export default function LoginPage() {
           // concerns — so /teacher is the whole journey from here.
           router.replace("/teacher");
         } else if (user?.emailVerified === false) {
-          router.replace("/verify-email");
+          router.replace("/school/verify-email");
         } else {
           const school = user?.School?.[0];
-          router.replace(school?.onboardingCompleted === false ? "/onboarding" : "/");
+          router.replace(school?.onboardingCompleted === false ? "/school/onboarding" : "/");
         }
       } else {
         setError("Something went wrong on our end. Please try again shortly.");
@@ -136,13 +136,13 @@ export default function LoginPage() {
               className="text-3xl font-bold tracking-tight"
               style={{ color: "#0F172A" }}
             >
-              Welcome back
+              Welcome back Proprietor
             </h1>
             <p
               className="text-sm"
               style={{ color: "#6B7280", marginTop: "0.375rem" }}
             >
-              Login to your school.
+              Log in to your school.
             </p>
           </div>
 
@@ -299,7 +299,7 @@ export default function LoginPage() {
             {/* Forgot password — right-aligned */}
             <div className="flex justify-end">
               <a
-                href="/password-reset"
+                href="/school/password-reset"
                 className="text-sm font-medium"
                 style={{ color: "#2563EB" }}
               >
@@ -330,7 +330,7 @@ export default function LoginPage() {
             <p className="text-center text-sm text-gray-500">
               Don't have an account?{" "}
               <a
-                href="/signup"
+                href="/school/signup"
                 className="font-medium"
                 style={{ color: "#2563EB" }}
               >

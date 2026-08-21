@@ -24,14 +24,14 @@ interface SidebarProps {
 }
 
 const MENU_ITEMS = [
-  { href: "/dashboard", label: "Dashboard", icon: Home },
-  { href: "/students", label: "Students", icon: Users },
-  { href: "/staff", label: "Staff", icon: UserCheck },
-  { href: "/classes", label: "Classes", icon: LayoutGrid },
-  { href: "/finance", label: "Finance", icon: DollarSign },
-  { href: "/report-cards", label: "Report Cards", icon: FileText },
-  { href: "/attendance", label: "Attendance", icon: Calendar },
-  { href: "/timetable", label: "Timetable", icon: Clock },
+  { href: "/school/dashboard", label: "Dashboard", icon: Home },
+  { href: "/school/students", label: "Students", icon: Users },
+  { href: "/school/staff", label: "Staff", icon: UserCheck },
+  { href: "/school/classes", label: "Classes", icon: LayoutGrid },
+  { href: "/school/finance", label: "Finance", icon: DollarSign },
+  { href: "/school/report-cards", label: "Report Cards", icon: FileText },
+  { href: "/school/attendance", label: "Attendance", icon: Calendar },
+  { href: "/school/timetable", label: "Timetable", icon: Clock },
 ];
 
 /**
@@ -39,7 +39,7 @@ const MENU_ITEMS = [
  * removed so the app still says the thing is planned — a menu that quietly
  * loses an item reads as something having broken.
  */
-const COMING_SOON = ["/timetable"];
+const COMING_SOON = ["/school/timetable"];
 
 export function Sidebar({ open = false, onClose }: SidebarProps) {
   const cache = useSisCache();
@@ -168,10 +168,10 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
 
       <div className="px-4 py-2 border-t border-blue-800">
         <Link
-          href="/settings"
+          href="/school/settings"
           onClick={() => onClose?.()}
           className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${
-            isActive("/settings")
+            isActive("/school/settings")
               ? "bg-blue-700 text-white"
               : "text-blue-100 hover:bg-blue-800"
           }`}

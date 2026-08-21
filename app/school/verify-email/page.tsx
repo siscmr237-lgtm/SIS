@@ -3,8 +3,8 @@
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { OtpVerifyScreen } from "../../src/components/OtpVerifyScreen";
-import { api } from "../../src/lib/api";
+import { OtpVerifyScreen } from "../../../src/components/OtpVerifyScreen";
+import { api } from "../../../src/lib/api";
 
 // ---------------------------------------------------------------------------
 // Shared style helpers (same look as signup/login/password-reset)
@@ -255,25 +255,25 @@ export default function VerifyEmailPage() {
   useEffect(() => {
     const token = typeof window !== "undefined" ? window.localStorage.getItem("auth_token") : null;
     if (!token) {
-      router.replace("/login");
+      router.replace("/school/login");
       return;
     }
     try {
       const userStr = window.localStorage.getItem("user");
       const user = userStr ? JSON.parse(userStr) : null;
       if (!user?.email) {
-        router.replace("/login");
+        router.replace("/school/login");
         return;
       }
       if (user.emailVerified === true) {
         const school = user?.School?.[0];
-        router.replace(school?.onboardingCompleted === false ? "/onboarding" : "/");
+        router.replace(school?.onboardingCompleted === false ? "/school/onboarding" : "/");
         return;
       }
       setEmail(user.email);
       setReady(true);
     } catch {
-      router.replace("/login");
+      router.replace("/school/login");
     }
   }, [router]);
 
@@ -294,7 +294,7 @@ export default function VerifyEmailPage() {
     if (res?.user) {
       window.localStorage.setItem("user", JSON.stringify(res.user));
       const school = res.user?.School?.[0];
-      router.replace(school?.onboardingCompleted === false ? "/onboarding" : "/");
+      router.replace(school?.onboardingCompleted === false ? "/school/onboarding" : "/");
     }
   };
 
@@ -307,7 +307,7 @@ export default function VerifyEmailPage() {
       window.localStorage.removeItem("auth_token");
       window.localStorage.removeItem("user");
     } catch {}
-    router.replace("/login");
+    router.replace("/school/login");
   };
 
   if (!ready) {

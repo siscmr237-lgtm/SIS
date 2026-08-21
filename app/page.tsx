@@ -9,7 +9,7 @@ export default function Page() {
   const status = useAuthGate();
 
   useEffect(() => {
-    if (status === "ready") router.replace("/dashboard");
+    if (status === "ready") router.replace("/school/dashboard");
   }, [status, router]);
 
   return <div className="p-6 text-sm text-gray-600">Loading...</div>;

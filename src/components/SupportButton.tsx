@@ -17,11 +17,11 @@ const GOLD = "#e6c482";
  * just be clutter: both OTP screens render the "Having trouble receiving your
  * code?" block inside OtpVerifyScreen.
  *
- * Everything else gets the button — including /login, /signup, /onboarding and
- * /teacher/set-password. Someone who cannot get through the front door is
- * exactly who needs to reach support, and those pages had nothing before.
+ * Everything else gets the button — including /school/login, /school/signup,
+ * /school/onboarding, /teacher/login and /teacher/set-password. Someone who
+ * cannot get through a front door is exactly who needs to reach support.
  */
-const ROUTES_WITH_THEIR_OWN_SUPPORT = ["/verify-email", "/password-reset"];
+const ROUTES_WITH_THEIR_OWN_SUPPORT = ["/school/verify-email", "/school/password-reset"];
 
 /**
  * Routes that get NO button at all — a different question from the list above,
@@ -36,8 +36,8 @@ const ROUTES_WITHOUT_SUPPORT = ["/admin"];
 
 /**
  * Matches the route itself and anything nested under it, but never a route that
- * merely starts with the same letters — `/password-reset-help` is a different
- * page from `/password-reset` and would keep the button.
+ * merely starts with the same letters — `/school/password-reset-help` would be
+ * a different page from `/school/password-reset` and would keep the button.
  */
 function matchesRoute(pathname: string | null, routes: string[]): boolean {
   if (!pathname) return false;

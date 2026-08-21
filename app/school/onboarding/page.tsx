@@ -3,11 +3,11 @@
 import { Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { api } from "../../src/lib/api";
-import { clampSectionCount, expandClassSections, MAX_SECTIONS } from "../../src/lib/classes";
-import { postImage, prepareImage } from "../../src/lib/uploadImage";
-import { EMPTY_UNIFORM_COLORS, UniformColors } from "../../src/lib/uniformColors";
-import { UniformColorPicker } from "../../src/components/onboarding/UniformColorPicker";
+import { api } from "../../../src/lib/api";
+import { clampSectionCount, expandClassSections, MAX_SECTIONS } from "../../../src/lib/classes";
+import { postImage, prepareImage } from "../../../src/lib/uploadImage";
+import { EMPTY_UNIFORM_COLORS, UniformColors } from "../../../src/lib/uniformColors";
+import { UniformColorPicker } from "../../../src/components/onboarding/UniformColorPicker";
 
 type SchoolType = "DAYCARE_NURSERY" | "DAYCARE_NURSERY_PRIMARY";
 
@@ -140,7 +140,7 @@ export default function OnboardingPage() {
     const userStr =
       typeof window !== "undefined" ? window.localStorage.getItem("user") : null;
     if (!userStr) {
-      router.replace("/login");
+      router.replace("/school/login");
       return;
     }
     try {
@@ -149,7 +149,7 @@ export default function OnboardingPage() {
         router.replace("/");
       }
     } catch {
-      router.replace("/login");
+      router.replace("/school/login");
     }
   }, [router]);
 
@@ -306,7 +306,7 @@ export default function OnboardingPage() {
       window.localStorage.removeItem("auth_token");
       window.localStorage.removeItem("user");
     } catch {}
-    router.replace("/login");
+    router.replace("/school/login");
   };
 
   return (

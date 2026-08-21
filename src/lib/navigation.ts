@@ -5,27 +5,27 @@ import { NavigationPage } from '../App';
 import { Student, Staff } from '../types';
 
 const PAGE_PATHS: Partial<Record<NavigationPage, string>> = {
-  dashboard: '/dashboard',
-  students: '/students',
-  staff: '/staff',
-  finance: '/finance',
-  expenses: '/expenses',
-  'report-cards': '/report-cards',
-  attendance: '/attendance',
-  timetable: '/timetable',
-  classes: '/classes',
-  subjects: '/subjects',
-  'tests-exams': '/tests-exams',
-  'enter-marks': '/enter-marks',
-  'class-ranking': '/class-ranking',
-  settings: '/settings',
+  dashboard: '/school/dashboard',
+  students: '/school/students',
+  staff: '/school/staff',
+  finance: '/school/finance',
+  expenses: '/school/expenses',
+  'report-cards': '/school/report-cards',
+  attendance: '/school/attendance',
+  timetable: '/school/timetable',
+  classes: '/school/classes',
+  subjects: '/school/subjects',
+  'tests-exams': '/school/tests-exams',
+  'enter-marks': '/school/enter-marks',
+  'class-ranking': '/school/class-ranking',
+  settings: '/school/settings',
 };
 
 // 'student-profile'/'staff-profile' aren't reached through generic navigate()
 // calls — they only ever happen via viewStudent/viewStaff below, which route
 // straight to the profile URL.
 export function pathForPage(page: NavigationPage): string {
-  return PAGE_PATHS[page] ?? '/dashboard';
+  return PAGE_PATHS[page] ?? '/school/dashboard';
 }
 
 export function useAppNavigation() {
@@ -37,8 +37,8 @@ export function useAppNavigation() {
     // answer to "why does it say Owing?" lives.
     viewStudent: (student: Student, tab?: string) =>
       router.push(
-        `/students/${encodeURIComponent(student.id)}${tab ? `?tab=${encodeURIComponent(tab)}` : ''}`,
+        `/school/students/${encodeURIComponent(student.id)}${tab ? `?tab=${encodeURIComponent(tab)}` : ''}`,
       ),
-    viewStaff: (staff: Staff) => router.push(`/staff/${encodeURIComponent(staff.code)}`),
+    viewStaff: (staff: Staff) => router.push(`/school/staff/${encodeURIComponent(staff.code)}`),
   };
 }
