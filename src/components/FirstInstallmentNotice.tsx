@@ -10,7 +10,7 @@ import { AlertTriangle } from 'lucide-react';
  * genuinely baffling from the outside: a parent hands over a lump sum, it is
  * recorded without naming a category, allocation fills the oldest fee-linked
  * charge first — which is almost always Registration, since that is what a
- * student is billed at enrolment — and Tuition's percentage requirement quietly
+ * student is billed at enrolment — and Tuition's upfront requirement quietly
  * fails. Every part of that is correct. The money is all present and correctly
  * recorded. What was missing was any way to see where it went, so the screen
  * said "not met" and left somebody to work it out.
@@ -36,8 +36,13 @@ import { AlertTriangle } from 'lucide-react';
 export interface Shortfall {
   feeKey: string;
   name: string | null;
-  percent: number;
+  /** What the category was billed. Context for `required`, not a divisor. */
   charged: number;
+  /**
+   * The amount that had to be paid toward this category. The school's own
+   * figure now, not a share of `charged` computed from a percentage — so it is
+   * shown as it stands rather than explained as an arithmetic step.
+   */
   required: number;
   paid: number;
   shortBy: number;
@@ -86,8 +91,8 @@ export function FirstInstallmentNotice({
             <>
               <p className="text-sm text-gray-600" style={{ marginTop: '0.25rem' }}>
                 {rows.length === 1
-                  ? 'One fee is still short of its required share:'
-                  : `${rows.length} fees are still short of their required share:`}
+                  ? 'One fee is still short of the amount required upfront:'
+                  : `${rows.length} fees are still short of the amount required upfront:`}
               </p>
               <div style={{ marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                 {rows.map((s) => (
@@ -102,11 +107,14 @@ export function FirstInstallmentNotice({
                       {s.name ?? 'This fee'}
                     </span>
                     <span className="text-xs text-gray-600" style={{ whiteSpace: 'nowrap' }}>
-                      {/* Spelled out rather than left as a bare shortfall: the
-                          percentage is what makes the required figure make
-                          sense, and the paid figure is what makes it clear the
-                          money was received but landed elsewhere. */}
-                      {s.percent}% of {s.charged.toLocaleString()} = {s.required.toLocaleString()} needed
+                      {/* Spelled out rather than left as a bare shortfall. The
+                          required figure is the school's own number, so it is
+                          stated and not derived on screen; the charged figure
+                          still earns its place by showing the requirement is a
+                          part of the bill and not the whole of it, and the paid
+                          figure is what makes clear the money was received but
+                          landed elsewhere. */}
+                      {s.required.toLocaleString()} needed of {s.charged.toLocaleString()}
                       {' · '}
                       {s.paid.toLocaleString()} paid
                       {' · '}

@@ -29,8 +29,11 @@ import { toast } from 'sonner';
 interface Row {
   name: string;
   amount: string;
-  included: boolean;
-  percent: string;
+  /**
+   * Carried, never edited here — see the note in save(). '' means the category
+   * asks nothing upfront, which is what a row added on this screen has.
+   */
+  firstInstallmentAmount: string;
 }
 
 interface Props {
@@ -127,8 +130,8 @@ export function StudentFeeOverrideDialog({
           (r?.fees ?? []).map((f: any) => ({
             name: f.name,
             amount: String(f.amount ?? 0),
-            included: f.firstInstallmentPercent != null,
-            percent: f.firstInstallmentPercent != null ? String(f.firstInstallmentPercent) : '100',
+            firstInstallmentAmount:
+              f.firstInstallmentAmount != null ? String(f.firstInstallmentAmount) : '',
           })),
         );
       })
@@ -143,7 +146,7 @@ export function StudentFeeOverrideDialog({
   };
   const addRow = () => {
     dirty.current = true; setError(null);
-    setRows(rs => [...rs, { name: '', amount: '0', included: false, percent: '100' }]);
+    setRows(rs => [...rs, { name: '', amount: '0', firstInstallmentAmount: '' }]);
   };
   const removeRow = (i: number) => {
     dirty.current = true; setError(null);
@@ -171,14 +174,20 @@ export function StudentFeeOverrideDialog({
           name: r.name.trim(),
           amount: Math.round(Number(r.amount)),
           // Sent back exactly as it was loaded. This dialog no longer EDITS the
-          // first-installment rule — that lives only in the Fee Categories
-          // dialog under Classes now — but it must still carry the existing
-          // value through, or saving an amount here would silently wipe a rule
-          // set somewhere else. A row added here has no rule yet, which is
-          // correct: null means "not configured", not "0%".
-          firstInstallmentPercent: r.included && r.percent.trim() !== ''
-            ? Math.round(Number(r.percent))
-            : null,
+          // first-installment rule — that lives in the First Installment dialog
+          // under Classes now — but it must still carry the existing value
+          // through, or saving an amount here would silently wipe a rule set
+          // somewhere else. A row added here has no rule yet, which is correct:
+          // null means "asks nothing upfront", not "a requirement of 0".
+          //
+          // Clamped on the way out, because lowering a waived amount BELOW an
+          // inherited requirement is exactly what this dialog is for — a
+          // scholarship dropping tuition to 5,000 must not leave a 15,000
+          // requirement standing on it, which the server would refuse and which
+          // no screen here would explain.
+          firstInstallmentAmount: r.firstInstallmentAmount.trim() === ''
+            ? null
+            : Math.min(Number(r.firstInstallmentAmount), Math.round(Number(r.amount))),
         })),
       });
       dirty.current = false;

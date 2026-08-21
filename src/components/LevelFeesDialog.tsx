@@ -10,6 +10,7 @@ import {
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { FirstInstallmentDialog, type FeeGroup, type LevelFeeRow } from './FirstInstallmentDialog';
 import { Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -19,7 +20,15 @@ import { toast } from 'sonner';
  * The level picker deliberately lists levels — "Class 1", "Nursery 1" — and
  * never sections. A fee structure belongs to the level and every section of it
  * shares one, so offering "Class 1 A" would imply a distinction that does not
- * exist. The sections covered are shown as read-only confirmation of that.
+ * exist.
+ *
+ * WHAT IT NO LONGER DOES: set the first installment. That moved to its own
+ * dialog, opened from the button on the left of the footer, because the two are
+ * separate decisions — what a level charges, and how much of it is due upfront
+ * — and asking both down one table left the amount, the figure people actually
+ * came to change, sharing a row with a checkbox and a percentage box. The
+ * requirement is still carried on every row here so that saving an amount
+ * cannot wipe it; it is simply not editable on this screen.
  *
  * Saving replaces the level's whole structure, so removing a row deletes that
  * fee, and re-bills every student of the level — including those who had already
@@ -44,18 +53,17 @@ import { toast } from 'sonner';
  * wants, and a user who cannot get out of the loop.
  */
 
-type FeeGroup = 'REGISTRATION' | 'OTHER_FEES';
-
-interface FeeRow {
-  /** Absent on a row the user just added; the server creates it. */
-  id?: number;
-  name: string;
-  amount: string;
-  includedInFirstInstallment: boolean;
-  percent: string;
-  /** One of the two fixed groups. Registration is out of the first-installment rule. */
-  group: FeeGroup;
-}
+/**
+ * The row shape is LevelFeeRow, defined alongside the First Installment dialog
+ * because both dialogs edit the same structure and only one of them can own the
+ * type without the dependency pointing both ways.
+ *
+ * firstInstallmentAmount is carried on every row but never edited HERE. This
+ * dialog decides what a level charges; how much of each charge is due upfront is
+ * the other dialog's question. The value still has to travel through this one,
+ * or saving an amount would silently wipe a requirement set next door.
+ */
+type FeeRow = LevelFeeRow;
 
 /**
  * The server's answer about the walk — never computed here. `nextLevel` is
@@ -104,7 +112,23 @@ interface ChangedFee {
 }
 
 const NAVY = '#0f2345';
-const MUTED = '#6B7280';
+
+/**
+ * One server fee to one editable row. Shared by the initial load and the two
+ * saves, because these three had drifted before: a field added to the load and
+ * missed in a save reads back correctly and is then written away as undefined.
+ */
+function toRow(f: any): FeeRow {
+  return {
+    id: f.id,
+    name: f.name,
+    amount: String(f.amount ?? 0),
+    // '' rather than '0': no requirement is not a requirement of zero, and the
+    // input has to come up blank for the distinction to survive a round trip.
+    firstInstallmentAmount: f.firstInstallmentAmount != null ? String(f.firstInstallmentAmount) : '',
+    group: (f.group ?? 'OTHER_FEES') as FeeGroup,
+  };
+}
 
 export function LevelFeesDialog({ open, onOpenChange, inWizard = false, onAllLevelsComplete }: Props) {
   const cache = useSisCache();
@@ -119,8 +143,15 @@ export function LevelFeesDialog({ open, onOpenChange, inWizard = false, onAllLev
    * point at which someone gives up.
    */
   const [zeroNotice, setZeroNotice] = useState<string | null>(null);
-  const [sections, setSections] = useState<string[]>([]);
   const [rows, setRows] = useState<FeeRow[]>([]);
+  const [installmentOpen, setInstallmentOpen] = useState(false);
+  /**
+   * Mirrors the `dirty` ref for RENDERING. The ref exists to be read inside a
+   * landing fetch without re-running it, which is exactly why it cannot drive the
+   * First Installment button — a ref change re-renders nothing. Both are kept in
+   * step rather than one replacing the other.
+   */
+  const [unsaved, setUnsaved] = useState(false);
   /**
    * Which group's fees are listed.
    *
@@ -181,21 +212,12 @@ export function LevelFeesDialog({ open, onOpenChange, inWizard = false, onAllLev
     setLoading(true);
     setError(null);
     dirty.current = false;
+    setUnsaved(false);
     api
       .get(`/classes/levels/${encodeURIComponent(level)}/fees`)
       .then((r: any) => {
         if (!alive || dirty.current) return;
-        setSections(r?.sections ?? []);
-        setRows(
-          (r?.fees ?? []).map((f: any) => ({
-            id: f.id,
-            name: f.name,
-            amount: String(f.amount ?? 0),
-            includedInFirstInstallment: f.firstInstallmentPercent != null,
-            group: (f.group ?? 'OTHER_FEES') as FeeGroup,
-            percent: f.firstInstallmentPercent != null ? String(f.firstInstallmentPercent) : '100',
-          })),
-        );
+        setRows((r?.fees ?? []).map(toRow));
       })
       .catch((e: any) => { if (alive) setError(e?.message || 'Could not load this level’s fees.'); })
       .finally(() => { if (alive) setLoading(false); });
@@ -204,20 +226,25 @@ export function LevelFeesDialog({ open, onOpenChange, inWizard = false, onAllLev
 
   const edit = (i: number, patch: Partial<FeeRow>) => {
     dirty.current = true;
+    setUnsaved(true);
     setError(null);
     setZeroNotice(null);
     setRows(rs => rs.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
   };
   const addRow = () => {
     dirty.current = true;
+    setUnsaved(true);
     setError(null);
     setZeroNotice(null);
     // A new fee lands in whichever group is being viewed. That is what makes the
-    // filter the only place a group is ever chosen.
-    setRows(rs => [...rs, { name: '', amount: '0', includedInFirstInstallment: false, percent: '100', group: groupFilter }]);
+    // filter the only place a group is ever chosen. It starts with no
+    // first-installment requirement, which is what a fee nobody has configured
+    // upfront payment for genuinely has.
+    setRows(rs => [...rs, { name: '', amount: '0', firstInstallmentAmount: '', group: groupFilter }]);
   };
   const removeRow = (i: number) => {
     dirty.current = true;
+    setUnsaved(true);
     setError(null);
     setRows(rs => rs.filter((_, idx) => idx !== i));
   };
@@ -264,6 +291,25 @@ export function LevelFeesDialog({ open, onOpenChange, inWizard = false, onAllLev
     setLevel(setup.nextLevel);
   };
 
+  /**
+   * Opens the First Installment dialog — but not over unsaved edits.
+   *
+   * That dialog states a requirement AGAINST an amount, and refuses one larger
+   * than the fee. Opened on top of an unsaved amount it would be validating
+   * against a figure that is not what the level charges, and the admin would be
+   * told a perfectly good requirement is too big — or, worse, allowed to set one
+   * that the real amount does not support. Saving first is one click and makes
+   * the number on the row the number being reasoned about.
+   */
+  const openInstallments = () => {
+    if (unsaved) {
+      setError('Save these fees first. The first installment is set against saved amounts.');
+      return;
+    }
+    setError(null);
+    setInstallmentOpen(true);
+  };
+
   /** Clears the detached-students notice, running any walk step it held back. */
   const dismissNotice = () => {
     setNotice(null);
@@ -284,12 +330,17 @@ export function LevelFeesDialog({ open, onOpenChange, inWizard = false, onAllLev
       seen.add(name.toLowerCase());
       const amt = Number(r.amount);
       if (!Number.isFinite(amt) || amt < 0) { setError(`"${name}": amount must be 0 or more.`); return; }
-      if (r.includedInFirstInstallment) {
-        const p = Number(r.percent);
-        if (!r.percent.trim() || !Number.isFinite(p) || p < 0 || p > 100) {
-          setError(`"${name}": first installment % must be between 0 and 100.`);
-          return;
-        }
+      // Lowering a fee below its own first-installment requirement is caught
+      // here as well as on the server, because the fix is on THIS screen: the
+      // amount just typed is the thing that is wrong, not the requirement set
+      // next door. The server refuses it either way.
+      const fi = Number(r.firstInstallmentAmount);
+      if (r.firstInstallmentAmount.trim() !== '' && Number.isFinite(fi) && fi > amt) {
+        setError(
+          `"${name}": its first installment of ${fi.toLocaleString()} is more than the amount ` +
+          `${Math.round(amt).toLocaleString()}. Raise the amount, or lower the first installment.`,
+        );
+        return;
       }
     }
     setSaving(true);
@@ -300,23 +351,20 @@ export function LevelFeesDialog({ open, onOpenChange, inWizard = false, onAllLev
           ...(r.id != null ? { id: r.id } : {}),
           name: r.name.trim(),
           amount: Math.round(Number(r.amount)),
-          firstInstallmentPercent: r.group === 'REGISTRATION' || !r.includedInFirstInstallment ? null : Math.round(Number(r.percent)),
+          // Carried through untouched. This dialog cannot set it; wiping it on
+          // every amount edit is the bug that not carrying it would cause.
+          firstInstallmentAmount:
+            r.group === 'REGISTRATION' || r.firstInstallmentAmount.trim() === ''
+              ? null
+              : Number(r.firstInstallmentAmount),
           group: r.group,
         })),
       });
       dirty.current = false;
+      setUnsaved(false);
       // Re-billing changed students' charges, so their fee status is stale too.
       cache.invalidateOn('level-fee:write');
-      setRows(
-        (res?.fees ?? []).map((f: any) => ({
-          id: f.id,
-          name: f.name,
-          amount: String(f.amount ?? 0),
-          includedInFirstInstallment: f.firstInstallmentPercent != null,
-            group: (f.group ?? 'OTHER_FEES') as FeeGroup,
-          percent: f.firstInstallmentPercent != null ? String(f.firstInstallmentPercent) : '100',
-        })),
-      );
+      setRows((res?.fees ?? []).map(toRow));
       const rb = res?.rebill;
       const billed = rb ? rb.created + rb.updated : 0;
       toast.success(
@@ -372,9 +420,19 @@ export function LevelFeesDialog({ open, onOpenChange, inWizard = false, onAllLev
               border: '1px solid #DDE3EC', backgroundColor: '#F5F7FA', color: NAVY,
             }}
           >
-            <span className="text-sm" style={{ fontWeight: 600 }}>
-              {progress.done} of {progress.total} level{progress.total === 1 ? '' : 's'} done — now: {level || '—'}
-            </span>
+            {/* Two lines, and the level on its own. On one line the level name
+                was the part that ran out of room, so the only thing that
+                changes between steps was the thing getting clipped.
+                overflowWrap over any ellipsis: a wrapped level name is longer,
+                a truncated one is wrong. */}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p className="text-sm" style={{ fontWeight: 600 }}>
+                {progress.done} of {progress.total} level{progress.total === 1 ? '' : 's'} done
+              </p>
+              <p className="text-sm" style={{ marginTop: 2, overflowWrap: 'anywhere' }}>
+                Now: {level || '—'}
+              </p>
+            </div>
             <span
               aria-hidden="true"
               style={{
@@ -424,11 +482,6 @@ export function LevelFeesDialog({ open, onOpenChange, inWizard = false, onAllLev
               </Select>
             </div>
           </div>
-          {sections.length > 0 && (
-            <p className="text-sm text-gray-500 mt-2">
-              Applies to: {sections.join(', ')}
-            </p>
-          )}
           {zeroNotice && (
             <div
               style={{
@@ -458,8 +511,7 @@ export function LevelFeesDialog({ open, onOpenChange, inWizard = false, onAllLev
               style={{ paddingBottom: 6, borderBottom: '1px solid #E5E7EB' }}
             >
               <span style={{ flex: 1 }}>Fee</span>
-              <span style={{ width: 120, textAlign: 'right' }}>Amount</span>
-              <span style={{ width: 150, textAlign: 'center' }}>First installment</span>
+              <span style={{ width: 110, textAlign: 'right' }}>Amount</span>
               <span style={{ width: 32 }} />
             </div>
 
@@ -483,44 +535,10 @@ export function LevelFeesDialog({ open, onOpenChange, inWizard = false, onAllLev
                   <Input
                     type="number"
                     min={0}
-                    style={{ width: 120, textAlign: 'right' }}
+                    style={{ width: 110, textAlign: 'right' }}
                     value={r.amount}
                     onChange={e => edit(i, { amount: e.target.value })}
                   />
-                  {/* Absent for the whole Registration list rather than per row:
-                      the server ignores firstInstallmentPercent on a Registration
-                      fee (see buildFirstInstallmentRule), so a control here would
-                      invite somebody to set a requirement that never applies. */}
-                  {groupFilter === 'REGISTRATION' ? (
-                    <div
-                      className="text-xs text-gray-400"
-                      style={{ width: 150, textAlign: 'center' }}
-                      title="Registration is never part of the first installment"
-                    >
-                      Not applicable
-                    </div>
-                  ) : (
-                  <div className="flex items-center gap-1" style={{ width: 150, justifyContent: 'center' }}>
-                    <input
-                      type="checkbox"
-                      checked={r.includedInFirstInstallment}
-                      onChange={e => edit(i, { includedInFirstInstallment: e.target.checked })}
-                      style={{ width: 16, height: 16, cursor: 'pointer' }}
-                      aria-label={`Include ${r.name || 'this fee'} in first installment`}
-                    />
-                    <Input
-                      type="number"
-                      min={0}
-                      max={100}
-                      value={r.includedInFirstInstallment ? r.percent : ''}
-                      onChange={e => edit(i, { percent: e.target.value })}
-                      disabled={!r.includedInFirstInstallment}
-                      placeholder="—"
-                      style={{ width: 72, textAlign: 'right' }}
-                    />
-                    <span className="text-sm text-gray-500">%</span>
-                  </div>
-                  )}
                   <Button
                     variant="ghost"
                     size="sm"
@@ -626,23 +644,40 @@ export function LevelFeesDialog({ open, onOpenChange, inWizard = false, onAllLev
               </div>
             )}
 
-            <div className="flex justify-end gap-2 mt-4" style={{ flexWrap: 'wrap' }}>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
-                  Cancel
-                </Button>
-                <Button onClick={save} disabled={saving}>
-                  {saving ? 'Saving...' : 'Save Fees'}
-                </Button>
-              </div>
+            <div
+              className="flex items-center justify-between mt-4"
+              style={{ gap: '0.5rem', flexWrap: 'wrap' }}
+            >
+              {/* Left, away from Save, because it does not save this dialog — it
+                  opens the other question. Sitting beside Save is how a button
+                  gets read as a second way to commit the form. */}
+              <Button variant="outline" onClick={openInstallments} disabled={saving}>
+                First Installment
+              </Button>
+              <Button onClick={save} disabled={saving}>
+                {saving ? 'Saving...' : 'Save Fees'}
+              </Button>
             </div>
-            {inWizard && (
-              <p className="text-xs" style={{ color: MUTED, marginTop: 6 }}>
-                Saving moves on to the next level that still needs fees.
-              </p>
-            )}
           </>
         )}
+        {/* Rendered inside this Dialog so it stacks over it rather than replacing
+            it: the level, and the amounts it is read against, stay on screen
+            behind. It is handed EVERY row, Registration included, because the save
+            endpoint replaces the level's structure as a unit — see its own note. */}
+        <FirstInstallmentDialog
+          open={installmentOpen}
+          onOpenChange={setInstallmentOpen}
+          level={level}
+          rows={rows}
+          onSaved={fees => {
+            // Re-synced from the server's answer, not from the draft that dialog
+            // held. Leaving these rows as they were would have the next Save Fees
+            // write their stale nulls over the requirement just set.
+            setRows((fees ?? []).map(toRow));
+            dirty.current = false;
+            setUnsaved(false);
+          }}
+        />
       </DialogContent>
     </Dialog>
   );
