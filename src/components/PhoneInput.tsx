@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
+import * as Popover from '@radix-ui/react-popover';
 
 /**
  * A phone number field: country picker on the left, national digits on the right,
@@ -39,9 +40,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
  *
  * STYLING is inline plus one component-scoped <style> block. src/index.css is a
  * pre-compiled Tailwind artifact, so a utility class not already in it renders
- * as nothing at all — and the four things below cannot be expressed inline at
- * all: :focus-within on the wrapper, :hover on the trigger, and the dropdown
- * rows' hover and selected states.
+ * as nothing at all — and the states below cannot be expressed inline at all:
+ * :focus-within on the wrapper, the trigger's hover, and the list rows' hover
+ * and selected states.
  */
 
 export interface PhoneCountry {
@@ -52,20 +53,12 @@ export interface PhoneCountry {
   digits: number;
   /** Shown greyed until something is typed. Shape mirrors `digits`. */
   example: string;
-  /**
-   * A regional-indicator pair, not an icon component — no flag library, as
-   * asked. Worth knowing: Windows ships no flag glyphs in Segoe UI Emoji, so
-   * these render as the two letters ("CM") there rather than a flag. That is a
-   * platform font gap, not a bug here, and the country name and dial code
-   * beside it carry the meaning on their own.
-   */
-  flag: string;
 }
 
 export const PHONE_COUNTRIES: PhoneCountry[] = [
-  { iso: 'CM', name: 'Cameroon', dial: '+237', digits: 9, example: '6XX XXX XXX', flag: '🇨🇲' },
-  { iso: 'NG', name: 'Nigeria', dial: '+234', digits: 10, example: 'XXX XXX XXXX', flag: '🇳🇬' },
-  { iso: 'US', name: 'USA', dial: '+1', digits: 10, example: 'XXX XXX XXXX', flag: '🇺🇸' },
+  { iso: 'CM', name: 'Cameroon', dial: '+237', digits: 9, example: '6XX XXX XXX' },
+  { iso: 'NG', name: 'Nigeria', dial: '+234', digits: 10, example: 'XXX XXX XXXX' },
+  { iso: 'US', name: 'USA', dial: '+1', digits: 10, example: 'XXX XXX XXXX' },
 ];
 
 /** Cameroon, as asked. Also the country every legacy row belongs to. */
@@ -117,14 +110,110 @@ export function isValidPhone(value: string | null | undefined): boolean {
   return national.length === country.digits;
 }
 
+/* ------------------------------------------------------------------------- *
+ * Flags
+ *
+ * Drawn here as SVG rather than written as emoji. The emoji flags these
+ * replace are regional-indicator pairs, and Windows ships no glyphs for them
+ * in Segoe UI Emoji — every Windows user saw the literal letters "CM", "NG",
+ * "US" instead of a flag. That is not a fallback worth keeping when the whole
+ * point of the picker is to be recognisable at a glance.
+ *
+ * No package and no image files: three flags of two or three flat bands each
+ * are a handful of <rect>s. All share one 21x14 viewBox so they line up in the
+ * list whatever their real-world aspect ratio, and each is capped with a
+ * hairline border so a white band still has an edge against a white menu.
+ * ------------------------------------------------------------------------- */
+
+const FLAG_W = 21;
+const FLAG_H = 14;
+
+function FlagFrame({ children }: { children: React.ReactNode }) {
+  return (
+    <svg
+      viewBox={`0 0 ${FLAG_W} ${FLAG_H}`}
+      width={FLAG_W}
+      height={FLAG_H}
+      aria-hidden="true"
+      focusable="false"
+      style={{ display: 'block', flex: '0 0 auto' }}
+    >
+      {children}
+      {/* Drawn last so it sits over the bands rather than under them. */}
+      <rect x="0.25" y="0.25" width={FLAG_W - 0.5} height={FLAG_H - 0.5} fill="none" stroke="rgba(0,0,0,0.18)" strokeWidth="0.5" />
+    </svg>
+  );
+}
+
+/** Green / red / yellow vertical bands, with the yellow star on the red one. */
+function FlagCM() {
+  return (
+    <FlagFrame>
+      <rect width="7" height="14" fill="#007A5E" />
+      <rect x="7" width="7" height="14" fill="#CE1126" />
+      <rect x="14" width="7" height="14" fill="#FCD116" />
+      <polygon
+        fill="#FCD116"
+        points="10.5,4 11.18,6.07 13.35,6.07 11.59,7.36 12.26,9.43 10.5,8.15 8.74,9.43 9.41,7.36 7.65,6.07 9.82,6.07"
+      />
+    </FlagFrame>
+  );
+}
+
+/** Green / white / green vertical bands. */
+function FlagNG() {
+  return (
+    <FlagFrame>
+      <rect width="7" height="14" fill="#008751" />
+      <rect x="7" width="7" height="14" fill="#FFFFFF" />
+      <rect x="14" width="7" height="14" fill="#008751" />
+    </FlagFrame>
+  );
+}
+
+/**
+ * Seven stripes rather than the true thirteen, and nine stars rather than
+ * fifty. At 14px tall a real stripe is barely one pixel: thirteen of them
+ * render as grey mush on any display that is not retina. Seven keeps each
+ * stripe a crisp 2px and still reads instantly as the stars and stripes, which
+ * is the entire job at this size.
+ */
+function FlagUS() {
+  return (
+    <FlagFrame>
+      <rect width="21" height="14" fill="#FFFFFF" />
+      {[0, 2, 4, 6].map((i) => (
+        <rect key={i} y={i * 2} width="21" height="2" fill="#B22234" />
+      ))}
+      <rect width="9" height="6" fill="#3C3B6E" />
+      {[1.5, 3.5, 5.5, 7.5].map((x) =>
+        [1.5, 4.5].map((y) => <circle key={`${x}-${y}`} cx={x} cy={y} r="0.5" fill="#FFFFFF" />),
+      )}
+      <circle cx="4.5" cy="3" r="0.5" fill="#FFFFFF" />
+    </FlagFrame>
+  );
+}
+
+const FLAGS: Record<PhoneCountry['iso'], () => React.ReactElement> = {
+  CM: FlagCM,
+  NG: FlagNG,
+  US: FlagUS,
+};
+
+function Flag({ iso }: { iso: PhoneCountry['iso'] }) {
+  const Component = FLAGS[iso];
+  return <Component />;
+}
+
 /**
  * Rendered once per instance. Duplicate identical <style> tags are inert, and
- * the alternative — asking all seven calling files to also mount a styles
- * provider — is the kind of setup step that gets forgotten on the eighth.
+ * the alternative — asking all six calling files to also mount a styles
+ * provider — is the kind of setup step that gets forgotten on the seventh.
  */
 const PHONE_CSS = `
 .sis-phone-box{display:flex;align-items:stretch;min-width:0;overflow:hidden;
-  border:1px solid #D1D5DB;background:#FFFFFF;transition:border-color .15s,box-shadow .15s}
+  border-style:solid;border-color:#D1D5DB;background:#FFFFFF;
+  transition:border-color .15s,box-shadow .15s}
 .sis-phone-box:focus-within{border-color:#2563EB;box-shadow:0 0 0 3px rgba(37,99,235,.12)}
 .sis-phone-box[data-disabled="true"]{background:#F9FAFB;opacity:.6}
 .sis-phone-trigger{display:flex;align-items:center;gap:6px;flex:0 0 auto;border:none;
@@ -135,17 +224,14 @@ const PHONE_CSS = `
 .sis-phone-trigger:focus-visible{outline:2px solid #2563EB;outline-offset:-2px}
 .sis-phone-field{flex:1;min-width:0;border:none;outline:none;background:transparent;
   font-size:.875rem;color:#111827;padding:0 12px;font-family:inherit}
-.sis-phone-list{position:absolute;z-index:60;top:calc(100% + 4px);left:0;min-width:220px;
-  margin:0;padding:4px;list-style:none;background:#FFFFFF;border:1px solid #E5E7EB;
-  border-radius:10px;box-shadow:0 10px 28px rgba(15,35,69,.18)}
+.sis-phone-list{min-width:200px;margin:0;padding:4px;list-style:none;background:#FFFFFF;
+  border:1px solid #E5E7EB;border-radius:10px;box-shadow:0 10px 28px rgba(15,35,69,.18)}
 .sis-phone-opt{display:flex;align-items:center;gap:8px;width:100%;padding:8px 10px;
   border:none;border-radius:6px;background:transparent;font-size:.875rem;color:#111827;
   text-align:left;cursor:pointer;font-family:inherit}
 .sis-phone-opt:hover{background:#F3F4F6}
 .sis-phone-opt[aria-selected="true"]{background:#2563EB;color:#FFFFFF}
 .sis-phone-opt[aria-selected="true"]:hover{background:#1D4ED8}
-.sis-phone-flag{font-size:1rem;line-height:1;
-  font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif}
 `;
 
 export function PhoneInput({
@@ -156,6 +242,7 @@ export function PhoneInput({
   id,
   height = 36,
   radius = 6,
+  borderWidth = 1,
   'aria-label': ariaLabel,
 }: {
   /** E.164, or a legacy bare national number. */
@@ -169,6 +256,8 @@ export function PhoneInput({
   height?: number;
   /** Likewise: 12 on signup, 8 in the console, 6 for shadcn's rounded-md. */
   radius?: number;
+  /** Likewise: signup's fields outline at 1.5px, everything else at 1. */
+  borderWidth?: number;
   'aria-label'?: string;
 }) {
   // Derived from the value, never held separately: two sources of truth for the
@@ -176,28 +265,6 @@ export function PhoneInput({
   // another.
   const { country, national } = useMemo(() => parsePhone(value), [value]);
   const [open, setOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  // Close on outside press and on Escape. Same shape as SupportButton's panel,
-  // deliberately — one dismissal behaviour for every popover in the app.
-  useEffect(() => {
-    if (!open) return;
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false);
-    };
-    const onPointerDown = (e: MouseEvent | TouchEvent) => {
-      const node = containerRef.current;
-      if (node && e.target instanceof Node && !node.contains(e.target)) setOpen(false);
-    };
-    document.addEventListener('keydown', onKeyDown);
-    document.addEventListener('mousedown', onPointerDown);
-    document.addEventListener('touchstart', onPointerDown);
-    return () => {
-      document.removeEventListener('keydown', onKeyDown);
-      document.removeEventListener('mousedown', onPointerDown);
-      document.removeEventListener('touchstart', onPointerDown);
-    };
-  }, [open]);
 
   const select = (next: PhoneCountry) => {
     // Re-emit under the new country, trimmed to ITS limit. Switching from a
@@ -207,10 +274,11 @@ export function PhoneInput({
     setOpen(false);
   };
 
-  // Arrow keys move between the three without opening the list, which is the
-  // one affordance a native <select> gave away for free.
+  // Arrow keys cycle the three without opening the list, which is the one
+  // affordance a native <select> gave away for free. Only while closed — once
+  // it is open the arrows belong to the list.
   const onTriggerKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+    if (open || (e.key !== 'ArrowDown' && e.key !== 'ArrowUp')) return;
     e.preventDefault();
     const i = PHONE_COUNTRIES.indexOf(country);
     const step = e.key === 'ArrowDown' ? 1 : -1;
@@ -218,35 +286,45 @@ export function PhoneInput({
   };
 
   return (
-    <div ref={containerRef} style={{ position: 'relative', minWidth: 0 }}>
+    /* Popover.Root renders no DOM of its own — it is context only — so the
+       bordered box below is this component's root element. */
+    <Popover.Root open={open} onOpenChange={setOpen}>
       <style>{PHONE_CSS}</style>
 
-      <div className="sis-phone-box" data-disabled={disabled ? 'true' : 'false'} style={{ height, borderRadius: radius }}>
-        <button
-          type="button"
-          className="sis-phone-trigger"
-          disabled={disabled}
-          aria-haspopup="listbox"
-          aria-expanded={open}
-          aria-label={`Country calling code, ${country.name} ${country.dial}`}
-          onClick={() => setOpen((v) => !v)}
-          onKeyDown={onTriggerKeyDown}
-        >
-          <span className="sis-phone-flag" aria-hidden="true">{country.flag}</span>
-          <span>{country.dial}</span>
-          {/* A caret drawn in CSS rather than an icon import: this component is
-              used on pages that pull in nothing else from lucide. */}
-          <span
-            aria-hidden="true"
-            style={{
-              width: 0,
-              height: 0,
-              borderLeft: '4px solid transparent',
-              borderRight: '4px solid transparent',
-              borderTop: '5px solid #6B7280',
-            }}
-          />
-        </button>
+      <div
+        className="sis-phone-box"
+        data-disabled={disabled ? 'true' : 'false'}
+        style={{ height, borderRadius: radius, borderWidth }}
+      >
+        <Popover.Trigger asChild>
+          <button
+            type="button"
+            className="sis-phone-trigger"
+            disabled={disabled}
+            // Radix defaults this to "dialog"; the content below is a listbox,
+            // and a trigger that announces the wrong kind of popup is worse
+            // than one that announces none.
+            aria-haspopup="listbox"
+            aria-label={`Country calling code, ${country.name} ${country.dial}`}
+            onKeyDown={onTriggerKeyDown}
+          >
+            <Flag iso={country.iso} />
+            <span>{country.dial}</span>
+            {/* A caret drawn with borders rather than an icon import: this
+                component is used on pages that pull in nothing else from
+                lucide. */}
+            <span
+              aria-hidden="true"
+              style={{
+                width: 0,
+                height: 0,
+                borderLeft: '4px solid transparent',
+                borderRight: '4px solid transparent',
+                borderTop: '5px solid #6B7280',
+              }}
+            />
+          </button>
+        </Popover.Trigger>
 
         <input
           id={id}
@@ -266,24 +344,48 @@ export function PhoneInput({
         />
       </div>
 
-      {open && (
-        <ul className="sis-phone-list" role="listbox" aria-label="Country calling code">
+      {/* PORTALLED, and that is the whole fix for the list not appearing.
+          Absolutely positioned, it was clipped by the nearest ancestor with
+          overflow:hidden — on signup that was the field wrapper itself, 44px
+          tall, so the list was rendered and then cut off entirely. A portal
+          puts it on document.body, outside every one of those ancestors,
+          which also covers the app shell's overflow-hidden and the scroll
+          container in <main>. Same approach as StudentFeeStatusPopover.
+
+          Radix anchors it to the trigger, flips it above when there is no room
+          below, and brings dismiss-on-outside-click and Escape with it — all
+          of which had to be hand-rolled before. */}
+      <Popover.Portal>
+        <Popover.Content
+          className="sis-phone-list"
+          role="listbox"
+          aria-label="Country calling code"
+          side="bottom"
+          align="start"
+          sideOffset={4}
+          collisionPadding={16}
+          style={{
+            // Above everything this app stacks: mobile header 30, sidebar
+            // overlay 40, sidebar 50, support button 60. Dialogs portal to the
+            // body too, and this has to clear those as well.
+            zIndex: 70,
+          }}
+        >
           {PHONE_COUNTRIES.map((c) => (
-            <li key={c.iso}>
-              <button
-                type="button"
-                className="sis-phone-opt"
-                role="option"
-                aria-selected={c.iso === country.iso}
-                onClick={() => select(c)}
-              >
-                <span className="sis-phone-flag" aria-hidden="true">{c.flag}</span>
-                <span>{c.name} ({c.dial})</span>
-              </button>
-            </li>
+            <button
+              key={c.iso}
+              type="button"
+              className="sis-phone-opt"
+              role="option"
+              aria-selected={c.iso === country.iso}
+              onClick={() => select(c)}
+            >
+              <Flag iso={c.iso} />
+              <span>{c.name} ({c.dial})</span>
+            </button>
           ))}
-        </ul>
-      )}
-    </div>
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
   );
 }

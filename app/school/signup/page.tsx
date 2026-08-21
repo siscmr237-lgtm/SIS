@@ -162,26 +162,26 @@ function SignupForm({ onSuccess }: { onSuccess: () => void }) {
           >
             Phone Number
           </label>
-          <div
-            onFocus={() => setFocused("phone")}
-            onBlur={groupBlur}
-            style={{
-              display: "flex",
-              alignItems: "stretch",
-              height: 44,
-              borderRadius: 12,
-              overflow: "hidden",
-              backgroundColor: "white",
-              ...fieldRingStyle(focused === "phone"),
-            }}
-          >
-            {/* One control, and a real one. The select this replaces had no
-                value and no onChange — picking NG changed nothing and only the
-                bare number was submitted — and it offered Ghana rather than
-                the USA. PhoneInput composes E.164, so the country actually
-                reaches the server. */}
-            <PhoneInput value={phoneNumber} onChange={setPhoneNumber} required height={44} radius={12} />
-          </div>
+          {/* One control, and a real one. The select this replaces had no
+              value and no onChange — picking NG changed nothing and only the
+              bare number was submitted — and it offered Ghana rather than the
+              USA. PhoneInput composes E.164, so the country actually reaches
+              the server.
+
+              Deliberately NOT wrapped. It used to sit inside a second bordered
+              box left over from that select, which did two visible kinds of
+              damage: its border drew a spare empty field alongside this one,
+              and its overflow:hidden clipped the country list to a 44px strip
+              so the picker looked dead. PhoneInput draws its own border and
+              focus ring — borderWidth matches this form's 1.5px fields. */}
+          <PhoneInput
+            value={phoneNumber}
+            onChange={setPhoneNumber}
+            required
+            height={44}
+            radius={12}
+            borderWidth={1.5}
+          />
         </div>
 
         {/* Email */}
