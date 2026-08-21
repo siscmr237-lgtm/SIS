@@ -144,13 +144,13 @@ export default function LoginPage() {
               className="text-3xl font-bold tracking-tight"
               style={{ color: "#0F172A" }}
             >
-              Login
+              Welcome back
             </h1>
             <p
               className="text-sm"
               style={{ color: "#6B7280", marginTop: "0.375rem" }}
             >
-              Welcome back — sign in to your school dashboard
+              Login to your school.
             </p>
           </div>
 
