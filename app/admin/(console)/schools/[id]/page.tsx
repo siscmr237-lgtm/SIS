@@ -8,6 +8,7 @@ import { PasswordResetControl } from "@/components/platform/PasswordResetControl
 import { hexForLabel } from "@/lib/uniformColors";
 import { RegistrationStatusBadge } from "@/components/platform/RegistrationStatusBadge";
 import { ApproveSchoolControl } from "@/components/platform/ApproveSchoolControl";
+import { RevertToPendingControl } from "@/components/platform/RevertToPendingControl";
 
 /**
  * One school. Identity, headcounts, and its admin accounts.
@@ -156,6 +157,31 @@ export default function SchoolDetailPage() {
             schoolId={school.id}
             schoolName={school.name}
             onApproved={(status) =>
+              setSchool((prev) => (prev ? { ...prev, registrationStatus: status } : prev))
+            }
+          />
+        </div>
+      )}
+
+      {/* The undo, in the same slot the approval occupied and under the same
+          rule: shown only for the one status it applies to. A school that is
+          not APPROVED has no access to take away, and the API refuses the call
+          anyway rather than dragging an INCOMPLETE school forward into a
+          submission it never made. */}
+      {school.registrationStatus === "APPROVED" && (
+        <div style={{ ...card, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, flexWrap: "wrap" }}>
+          <div style={{ minWidth: 0 }}>
+            <h2 style={{ fontSize: "0.9375rem", fontWeight: 600, margin: "0 0 3px", color: "#0F172A" }}>
+              Approved and live
+            </h2>
+            <p style={{ fontSize: "0.8125rem", color: "#64748B", margin: 0, lineHeight: 1.45 }}>
+              Send this school back to pending if it was approved by mistake, or if its details need redoing. Nothing is deleted.
+            </p>
+          </div>
+          <RevertToPendingControl
+            schoolId={school.id}
+            schoolName={school.name}
+            onReverted={(status) =>
               setSchool((prev) => (prev ? { ...prev, registrationStatus: status } : prev))
             }
           />
