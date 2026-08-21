@@ -99,7 +99,7 @@ export default function SchoolDetailPage() {
 
   return (
     <div style={{ maxWidth: 760 }}>
-      <Link href="/platform/schools" style={{ color: "#64748B", fontSize: "0.8125rem", textDecoration: "none" }}>
+      <Link href="/admin/schools" style={{ color: "#64748B", fontSize: "0.8125rem", textDecoration: "none" }}>
         ← Schools
       </Link>
 
@@ -136,7 +136,7 @@ export default function SchoolDetailPage() {
             <span style={label}>Staff</span>
             <div style={value}>
               {school.staffCount > 0 ? (
-                <Link href={`/platform/schools/${school.id}/staff`} style={{ color: "#1D4ED8", textDecoration: "none" }}>
+                <Link href={`/admin/schools/${school.id}/staff`} style={{ color: "#1D4ED8", textDecoration: "none" }}>
                   {school.staffCount}
                 </Link>
               ) : "0"}

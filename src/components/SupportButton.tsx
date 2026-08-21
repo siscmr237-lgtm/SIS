@@ -27,12 +27,12 @@ const ROUTES_WITH_THEIR_OWN_SUPPORT = ["/verify-email", "/password-reset"];
  * Routes that get NO button at all — a different question from the list above,
  * which is about pages that already offer support another way.
  *
- * /platform is the internal team console. This button offers a WhatsApp link to
+ * /admin is the internal team console. This button offers a WhatsApp link to
  * our own support line, so on those pages it would be us offering to help
  * ourselves. Excluded here, at the source, because the button is rendered from
  * the root layout and so reaches every route including the console's own shell.
  */
-const ROUTES_WITHOUT_SUPPORT = ["/platform"];
+const ROUTES_WITHOUT_SUPPORT = ["/admin"];
 
 /**
  * Matches the route itself and anything nested under it, but never a route that

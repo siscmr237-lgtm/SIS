@@ -13,8 +13,8 @@ import {
 /**
  * The console's own shell. Not the school app's.
  *
- * (console) is a route group, so these pages still live at /platform/*. It
- * exists so that /platform/login — which is reached before any session — sits
+ * (console) is a route group, so these pages still live at /admin/*. It
+ * exists so that /admin/login — which is reached before any session — sits
  * outside this gate while sharing the prefix.
  *
  * Nothing from the school app is mounted here: no Sidebar, no SisCacheProvider,
@@ -30,7 +30,7 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
 
   useEffect(() => {
     if (!getPlatformToken()) {
-      router.replace("/platform/login");
+      router.replace("/admin/login");
       return;
     }
     // The server is the authority on who this is, and on the role. A role read
@@ -44,7 +44,7 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
       })
       .catch(() => {
         clearPlatformSession();
-        router.replace("/platform/login");
+        router.replace("/admin/login");
       });
   }, [router]);
 
@@ -60,15 +60,15 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
     // Clears the console keys only. A school session in this same browser is
     // left exactly as it was.
     clearPlatformSession();
-    router.replace("/platform/login");
+    router.replace("/admin/login");
   };
 
   // Administrators is Founder-only. Hiding it is a courtesy; the API refuses a
   // Member outright, so a Member who types the URL still gets nothing.
   const nav = [
-    { href: "/platform/schools", label: "Schools" },
-    ...(me.role === "FOUNDER" ? [{ href: "/platform/administrators", label: "Administrators" }] : []),
-    { href: "/platform/account", label: "My Account" },
+    { href: "/admin/schools", label: "Schools" },
+    ...(me.role === "FOUNDER" ? [{ href: "/admin/administrators", label: "Administrators" }] : []),
+    { href: "/admin/account", label: "My Account" },
   ];
 
   return (

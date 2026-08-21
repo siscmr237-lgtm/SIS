@@ -95,7 +95,7 @@ export default function AdministratorDetailPage() {
   return (
     <div style={{ maxWidth: 560 }}>
       <button
-        onClick={() => router.push("/platform/administrators")}
+        onClick={() => router.push("/admin/administrators")}
         style={{ background: "none", border: "none", color: "#64748B", fontSize: "0.8125rem", cursor: "pointer", padding: 0, marginBottom: 12 }}
       >
         ← Administrators

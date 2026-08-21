@@ -106,7 +106,7 @@ export default function AdministratorsPage() {
               {rows.map((a) => (
                 <tr key={a.id}>
                   <td style={td}>
-                    <Link href={`/platform/administrators/${a.id}`} style={{ color: "#1D4ED8", textDecoration: "none" }}>
+                    <Link href={`/admin/administrators/${a.id}`} style={{ color: "#1D4ED8", textDecoration: "none" }}>
                       {a.name}
                     </Link>
                     {!a.isActive && (

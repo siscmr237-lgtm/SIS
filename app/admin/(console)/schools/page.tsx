@@ -82,7 +82,7 @@ export default function SchoolsPage() {
               {rows.map((s) => (
                 <tr key={s.id}>
                   <td style={{ ...td, whiteSpace: "normal" }}>
-                    <Link href={`/platform/schools/${s.id}`} style={link}>{s.name}</Link>
+                    <Link href={`/admin/schools/${s.id}`} style={link}>{s.name}</Link>
                   </td>
                   <td style={td}>{formatDate(s.signedUpAt)}</td>
                   <td style={{ ...td, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
@@ -94,7 +94,7 @@ export default function SchoolsPage() {
                       reads as a fault. */}
                   <td style={{ ...td, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
                     {s.staffCount > 0 ? (
-                      <Link href={`/platform/schools/${s.id}/staff`} style={link}>{s.staffCount}</Link>
+                      <Link href={`/admin/schools/${s.id}/staff`} style={link}>{s.staffCount}</Link>
                     ) : (
                       <span style={{ color: "#94A3B8" }}>0</span>
                     )}

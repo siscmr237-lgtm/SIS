@@ -54,7 +54,7 @@ export default function SchoolStaffPage() {
 
   return (
     <div style={{ maxWidth: 1000 }}>
-      <Link href={`/platform/schools/${id}`} style={{ color: "#64748B", fontSize: "0.8125rem", textDecoration: "none" }}>
+      <Link href={`/admin/schools/${id}`} style={{ color: "#64748B", fontSize: "0.8125rem", textDecoration: "none" }}>
         ← {data.school.name}
       </Link>
 

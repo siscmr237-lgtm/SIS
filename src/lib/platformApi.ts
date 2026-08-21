@@ -98,7 +98,7 @@ async function request(path: string, init?: RequestInit) {
     // the refusal behind a redirect and look like a bug.
     if (res.status === 401 && code === 'SESSION_INVALID' && typeof window !== 'undefined') {
       clearPlatformSession();
-      window.location.replace('/platform/login');
+      window.location.replace('/admin/login');
     }
     throw new PlatformApiError(body?.error || `Request failed (${res.status})`, res.status, code);
   }

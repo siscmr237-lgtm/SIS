@@ -24,7 +24,7 @@ export default function PlatformLoginPage() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (getPlatformToken()) router.replace("/platform/schools");
+    if (getPlatformToken()) router.replace("/admin/schools");
   }, [router]);
 
   const submit = async (e: React.FormEvent) => {
@@ -34,7 +34,7 @@ export default function PlatformLoginPage() {
     setError(null);
     try {
       await platformLogin(email.trim(), password);
-      router.replace("/platform/schools");
+      router.replace("/admin/schools");
     } catch (err: any) {
       setError(err?.message || "Sign in failed.");
     } finally {
