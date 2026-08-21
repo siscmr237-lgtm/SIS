@@ -113,7 +113,7 @@ function StepPhone({ onSuccess }: { onSuccess: (phone: string) => void }) {
           {/* Safe to compose a country code here: the lookup matches on
               digits now, so "+237679379134" finds an account stored as the
               bare "679379134" that every existing row holds. */}
-          <PhoneInput value={phone} onChange={setPhone} required height={44} />
+          <PhoneInput value={phone} onChange={setPhone} required height={44} radius={12} />
         </div>
 
         <Button

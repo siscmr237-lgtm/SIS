@@ -180,7 +180,7 @@ function SignupForm({ onSuccess }: { onSuccess: () => void }) {
                 bare number was submitted — and it offered Ghana rather than
                 the USA. PhoneInput composes E.164, so the country actually
                 reaches the server. */}
-            <PhoneInput value={phoneNumber} onChange={setPhoneNumber} required height={44} />
+            <PhoneInput value={phoneNumber} onChange={setPhoneNumber} required height={44} radius={12} />
           </div>
         </div>
 

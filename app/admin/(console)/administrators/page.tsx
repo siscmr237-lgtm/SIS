@@ -146,7 +146,7 @@ export default function AdministratorsPage() {
 
             <label style={{ display: "block", marginBottom: 12 }}>
               <span style={{ fontSize: "0.8125rem", color: "#374151" }}>Phone number</span>
-              <PhoneInput value={form.phoneNumber} onChange={(v) => setForm({ ...form, phoneNumber: v })} required />
+              <PhoneInput value={form.phoneNumber} onChange={(v) => setForm({ ...form, phoneNumber: v })} required radius={8} />
             </label>
 
             <label style={{ display: "block", marginBottom: 12 }}>
