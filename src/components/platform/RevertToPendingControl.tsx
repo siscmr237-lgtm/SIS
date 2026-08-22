@@ -10,10 +10,16 @@ import { ConfirmActionControl } from "./ConfirmActionControl";
  * approval that went out by mistake, and a school whose submitted details turn
  * out to need redoing.
  *
- * WHAT IT DOES NOT DO is the part worth stating. It moves one status column
- * and nothing else — no data is deleted, no sessions are ended, onboarding is
- * not unwound. The school's students, staff and settings are all still there,
- * and approving again puts it back exactly where it was. The school lands on
+ * IT TAKES EFFECT AT ONCE, and that is worth being clear about: the API checks
+ * this column on every request (requireApprovedSchool in the backend's
+ * roleGuards.js), so a school signed in and working at the moment of the click
+ * has its very next call refused — reads and writes alike, and its teachers'
+ * calls too. It does not wait for them to sign out or for a token to lapse.
+ *
+ * WHAT IT DOES NOT DO is the other half. It moves one status column and nothing
+ * else — no data is deleted, no sessions are ended, onboarding is not unwound.
+ * The school's students, staff and settings are all still there, and approving
+ * again puts it back exactly where it was. The school lands on
  * /school/pending-verification, which tells them their account is under review
  * rather than leaving them at a door that has silently stopped opening.
  *

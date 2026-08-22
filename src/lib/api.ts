@@ -1,8 +1,17 @@
+import {
+  pathForRegistrationStatus,
+  PENDING_VERIFICATION_PATH,
+  TEACHER_SCHOOL_REVIEW_PATH,
+} from './registrationRoutes';
+
 const runtimeApiUrl =
   (typeof process !== 'undefined' && (process as any).env?.NEXT_PUBLIC_API_URL) ||
   (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_URL) ||
   'http://localhost:4000/api';
 const BASE_URL = runtimeApiUrl;
+
+/** See redirectForNotApproved. Reset by the page load that redirect causes. */
+let notApprovedRedirectStarted = false;
 
 function clearSessionAndRedirect(genuineExpiry: boolean) {
   if (typeof window === 'undefined') return;
@@ -24,6 +33,65 @@ function clearSessionAndRedirect(genuineExpiry: boolean) {
   window.localStorage.removeItem('auth_token');
   window.localStorage.removeItem('user');
   window.location.replace(genuineExpiry ? `${door}?reason=expired` : door);
+}
+
+/**
+ * The school's account has stopped being usable mid-session: the platform team
+ * sent it back to pending while somebody was signed in and working.
+ *
+ * The server is the only thing that can notice this. The client gate runs when
+ * the app shell mounts, and the shell does not remount as a signed-in admin
+ * moves around the dashboard — so before this existed, a school that had just
+ * lost its approval kept reading and writing for as long as the tab stayed open.
+ * The server now refuses every school call with SCHOOL_NOT_APPROVED, and this is
+ * what turns that refusal into the screen the user should be looking at.
+ *
+ * THE SESSION IS LEFT ALONE. Nothing here clears the token: the login is fine,
+ * it is the school's standing that changed, and the page they are being sent to
+ * is one only a signed-in admin can read. Compare clearSessionAndRedirect above,
+ * which is for the opposite case.
+ *
+ * A full location.replace rather than a router push, and that is the point: it
+ * tears down every piece of in-flight dashboard state — open dialogs, half-typed
+ * forms, cached lists, pending requests — instead of leaving a live app shell
+ * sitting behind a redirect. "All actions stop" has to mean the app stops.
+ *
+ * Exported because one call does not come through request() below: postImage in
+ * ./uploadImage builds its own fetch to send FormData, and has to be able to ask
+ * for the same redirect.
+ */
+export function redirectForNotApproved(registrationStatus?: string) {
+  if (typeof window === 'undefined') return;
+
+  // A page load resets this, which is exactly the lifetime it needs: it is here
+  // so that several calls in flight at once, all coming back refused together,
+  // produce one navigation rather than one each.
+  if (notApprovedRedirectStarted) return;
+
+  // A teacher cannot be sent to the admin waiting page — that page forwards
+  // teachers to /teacher, whose next call would be refused again, and the two
+  // would bounce forever. Read from the stored user, the same way
+  // clearSessionAndRedirect picks its door.
+  let isTeacher = false;
+  try {
+    const raw = window.localStorage.getItem('user');
+    isTeacher = Boolean(raw) && JSON.parse(raw as string)?.actorType === 'teacher';
+  } catch { /* unparseable: treat as the admin case, which self-corrects */ }
+
+  // Whatever the payload does not name — including the 'APPROVED' that cannot
+  // logically accompany this refusal — lands on the waiting page, which reads
+  // the live status itself and forwards again if that is not where this school
+  // belongs.
+  const target = isTeacher
+    ? TEACHER_SCHOOL_REVIEW_PATH
+    : (pathForRegistrationStatus(registrationStatus) ?? PENDING_VERIFICATION_PATH);
+
+  // Already there. The destination pages make calls of their own, and a page
+  // navigating to itself would reload in a loop.
+  if (window.location.pathname === target) return;
+
+  notApprovedRedirectStarted = true;
+  window.location.replace(target);
 }
 
 // The only /auth/ endpoints reachable with no session yet — every other /auth/
@@ -103,6 +171,15 @@ async function request(path: string, init?: RequestInit) {
     // as "your session expired."
     if (res.status === 401 && !path.startsWith('/auth/') && code === 'SESSION_INVALID') {
       clearSessionAndRedirect(sentWithToken);
+    }
+
+    // The school's approval was withdrawn underneath this session. Narrow on
+    // both halves — the status AND the code — so no other 403 can ever navigate
+    // the browser: requireAdmin, requireTeacher and requireSchoolActor all
+    // answer 403 with code FORBIDDEN, and those are ordinary permission errors
+    // for a caller to display, not a reason to leave the page.
+    if (res.status === 403 && code === 'SCHOOL_NOT_APPROVED') {
+      redirectForNotApproved(body?.registrationStatus);
     }
 
     // The parsed body rides along on the error: some failures are structured

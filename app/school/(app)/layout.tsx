@@ -5,7 +5,7 @@ import { Menu } from "lucide-react";
 import { SisCacheProvider } from "@/lib/SisCache";
 import { Sidebar } from "@/components/Sidebar";
 import { MOBILE_DRAWER_CSS } from "@/components/mobileDrawerCss";
-import { useAuthGateWithRetry } from "@/lib/authGate";
+import { useAuthGateWithRetry, useRegistrationWatch } from "@/lib/authGate";
 import { AuthGateError } from "@/components/AuthGateError";
 
 // Shared shell for every internal section (Dashboard, Students, Staff, ...).
@@ -14,6 +14,10 @@ import { AuthGateError } from "@/components/AuthGateError";
 // redirect happened at login.
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { status, retry } = useAuthGateWithRetry();
+  // ...and because it does NOT remount as the admin moves around inside the
+  // shell, the watch re-asks on every navigation. Approval can be withdrawn
+  // mid-session, and the mount check alone would not notice until a reload.
+  useRegistrationWatch();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // "error" means the gate could not reach an answer — a network drop, or the

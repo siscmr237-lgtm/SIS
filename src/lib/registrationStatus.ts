@@ -1,4 +1,10 @@
 import { api } from './api';
+import {
+  pathForRegistrationStatus,
+  PENDING_VERIFICATION_PATH,
+  VERIFY_EMAIL_PATH,
+  type RegistrationStatus,
+} from './registrationRoutes';
 
 /**
  * Where a school stands in signing up, and the one place that decides what
@@ -13,7 +19,7 @@ import { api } from './api';
  * a school that was just approved on the waiting page, and it lets a school
  * that has not been approved into a dashboard it should not see.
  */
-export type RegistrationStatus = 'FAILED' | 'INCOMPLETE' | 'PENDING' | 'APPROVED';
+export type { RegistrationStatus };
 
 export interface RegistrationSnapshot {
   registrationStatus: RegistrationStatus;
@@ -22,7 +28,7 @@ export interface RegistrationSnapshot {
   schoolName?: string;
 }
 
-export const PENDING_VERIFICATION_PATH = '/school/pending-verification';
+export { PENDING_VERIFICATION_PATH };
 
 /** The live read. One call, one row, no caching anywhere in the path. */
 export async function fetchRegistrationSnapshot(): Promise<RegistrationSnapshot> {
@@ -50,18 +56,11 @@ export async function fetchRegistrationSnapshot(): Promise<RegistrationSnapshot>
  * safe direction to be wrong in.
  */
 export function routeForSnapshot(snap: RegistrationSnapshot): string | null {
-  if (snap.emailVerified === false) return '/school/verify-email';
+  if (snap.emailVerified === false) return VERIFY_EMAIL_PATH;
 
-  switch (snap.registrationStatus) {
-    case 'APPROVED':
-      return null;
-    case 'PENDING':
-      return PENDING_VERIFICATION_PATH;
-    case 'FAILED':
-    case 'INCOMPLETE':
-    default:
-      return '/school/onboarding';
-  }
+  // The status-to-screen table lives in ./registrationRoutes so that api.ts can
+  // read the same one when the server refuses a call outright.
+  return pathForRegistrationStatus(snap.registrationStatus);
 }
 
 /**

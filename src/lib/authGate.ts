@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import { fetchRegistrationSnapshot, routeForSnapshot } from './registrationStatus';
 
 export type AuthGateStatus = 'checking' | 'ready' | 'error';
@@ -132,4 +132,144 @@ export function useAuthGate(): AuthGateStatus {
 
 export function useAuthGateWithRetry(): AuthGate {
   return useAuthGateInternal();
+}
+
+/**
+ * Watches, while the app shell is already open, for this school losing its
+ * approval underneath it — and gets it out of the app the moment that happens.
+ *
+ * The gate above runs when the shell MOUNTS, and the shell does not remount as a
+ * signed-in admin moves between Students, Finance and the rest: those are
+ * client-side navigations under one layout. So a school sent back to pending ten
+ * minutes into a session was never asked about again, and carried on clicking
+ * around a dashboard it was no longer entitled to until something happened to
+ * reload the page.
+ *
+ * THE SERVER IS THE AUTHORITY, not this hook. Every school call is refused with
+ * SCHOOL_NOT_APPROVED (requireApprovedSchool, in the backend), so nothing this
+ * school clicks can actually take effect whatever the screen is still showing.
+ * What this adds is speed and honesty: it moves them off the dashboard on the
+ * click itself, rather than leaving them looking at a live-seeming page until
+ * one of its requests happens to come back refused — and it covers the page that
+ * paints entirely from the SWR cache and makes no request at all.
+ *
+ * THREE TRIGGERS, all of them real user activity:
+ *
+ *   Navigation. Every menu click re-asks. This is the one the shell's own mount
+ *   check cannot do.
+ *
+ *   Any pointer press anywhere in the app. Capture phase on the document, so no
+ *   handler can stop it from being seen, and pointerdown rather than click so it
+ *   starts a few frames earlier. This is what makes an ordinary click — opening
+ *   a dialog, ticking a box — enough to end the session's access, instead of
+ *   only the clicks that save something.
+ *
+ *   The tab coming back to the front, for the dashboard left open in a
+ *   background tab while the platform team sent the school back.
+ *
+ * Deliberately absent: any timer. A poll would keep asking on behalf of a school
+ * that is not there, and every authenticated call comes back with a refreshed
+ * token — so a heartbeat would silently make the rolling idle timeout in
+ * src/auth.js infinite. Activity is the trigger precisely because activity is
+ * what that timeout is already measuring.
+ *
+ * Deliberately NOT a status the shell renders on. Setting a 'checking' state
+ * here would blank the screen and unmount the children — losing scroll, form
+ * state and open dialogs — on every navigation and every click, to answer a
+ * question that is 'yes' for every school but the rare one being sent back. And
+ * a failed check changes nothing: a network drop or a 503 is unresolved, not
+ * permission withdrawn, so the previous answer stands. Nothing is let IN by this
+ * hook, which is what makes failing quiet safe.
+ */
+
+/**
+ * How long one answer is allowed to serve for. A person clicking through a
+ * dashboard generates a burst of presses; this is what turns that into one
+ * request rather than one per click, and it is short enough that "the click
+ * after the revert" is always a fresh read.
+ */
+const CHECK_THROTTLE_MS = 2500;
+
+export function useRegistrationWatch(): void {
+  const pathname = usePathname();
+
+  // Set in the effect BODY, not just cleared in its cleanup. React runs mount →
+  // unmount → mount in development, so a ref that is only ever set to false by
+  // the cleanup stays false for the rest of the session and silently disables
+  // everything below it. (That is not hypothetical: it is what this hook did
+  // when it was first written.)
+  const live = useRef(true);
+  useEffect(() => {
+    live.current = true;
+    return () => {
+      live.current = false;
+    };
+  }, []);
+
+  const lastCheckAt = useRef(0);
+
+  /**
+   * One checker for all three triggers, so they cannot drift into answering the
+   * same question differently.
+   *
+   * The exit is window.location.replace, not router.replace, and that is the
+   * point: it tears the whole application down — in-flight requests, open
+   * dialogs, half-typed forms, every cached list — rather than leaving a live
+   * app shell sitting behind a route change. Losing access should mean the app
+   * closes, which is also exactly what src/lib/api.ts does when the server
+   * refuses a call for the same reason.
+   */
+  const check = useCallback(async (throttled: boolean) => {
+    const now = Date.now();
+    if (throttled && now - lastCheckAt.current < CHECK_THROTTLE_MS) return;
+    lastCheckAt.current = now;
+
+    let snapshot;
+    try {
+      snapshot = await fetchRegistrationSnapshot();
+    } catch {
+      // Unresolved, not denied. See the note above.
+      return;
+    }
+    if (!live.current) return;
+
+    const destination = routeForSnapshot(snapshot);
+    if (!destination) return;
+    if (window.location.pathname === destination) return;
+    window.location.replace(destination);
+  }, []);
+
+  // TRIGGER ONE: navigation.
+  //
+  // The first run is the mount itself, which the gate above has already covered
+  // with the same call — skipping it keeps one navigation to one request.
+  const mounted = useRef(false);
+  useEffect(() => {
+    if (!mounted.current) {
+      mounted.current = true;
+      lastCheckAt.current = Date.now();
+      return;
+    }
+    void check(false);
+  }, [pathname, check]);
+
+  // TRIGGER TWO: any pointer press. TRIGGER THREE: the tab becoming visible.
+  //
+  // Both throttled, and sharing one throttle window on purpose: refocusing a tab
+  // and immediately clicking in it is one arrival, not two.
+  useEffect(() => {
+    const onInteraction = () => {
+      void check(true);
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') void check(true);
+    };
+
+    document.addEventListener('pointerdown', onInteraction, true);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => {
+      document.removeEventListener('pointerdown', onInteraction, true);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
+  }, [check]);
 }

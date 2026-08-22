@@ -5,7 +5,7 @@
 // it failed. Anything added later (student headshots, receipts) should call
 // this rather than write a third.
 
-import { BASE_URL } from './api';
+import { BASE_URL, redirectForNotApproved } from './api';
 import {
   formatBytes,
   ImageDecodeError,
@@ -78,14 +78,18 @@ export async function postImage(file: File, type: string, entityId?: string): Pr
   }
 
   if (!res.ok) {
-    // The API answers { error }. Read it rather than dumping the raw body,
-    // which previously put a JSON blob in front of the user.
+    // The API answers { code, error }. Read BOTH: the message is what a person
+    // sees, and the code is what tells the difference between failures that
+    // look identical from the status alone. Dumping the raw body, which is what
+    // this used to do, put a JSON blob in front of the user.
     let detail = '';
+    let code = '';
     try {
       const text = await res.text();
       try {
         const parsed = JSON.parse(text);
         detail = typeof parsed?.error === 'string' ? parsed.error : text;
+        code = typeof parsed?.code === 'string' ? parsed.code : '';
       } catch {
         detail = text;
       }
@@ -94,6 +98,18 @@ export async function postImage(file: File, type: string, entityId?: string): Pr
     if (res.status === 413) {
       throw new UploadError('The server rejected this image as too large. Please choose a smaller one.');
     }
+
+    // This call does not go through src/lib/api.ts — it posts FormData, so it
+    // builds its own fetch — and so it also misses the redirect that module
+    // performs when a school's approval has been withdrawn mid-session. Ask for
+    // it here, rather than reporting a withdrawn approval as an expired session:
+    // those are different problems with different remedies, and signing in again
+    // would not fix this one.
+    if (res.status === 403 && code === 'SCHOOL_NOT_APPROVED') {
+      redirectForNotApproved();
+      throw new UploadError(detail || 'The upload was refused.');
+    }
+
     if (res.status === 401 || res.status === 403) {
       throw new UploadError('Your session has expired. Please sign in again and retry the upload.');
     }
