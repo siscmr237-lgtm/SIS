@@ -14,7 +14,7 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, Di
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { DateFilterInput } from './DateFilterInput';
+import { ThreePartDateInput } from './ThreePartDateInput';
 import { statValueFontSize } from '../utils/statFigure';
 
 interface FinanceOverviewProps {
@@ -571,21 +571,21 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
                     from the three beside them. */}
                 <div>
                   <Label className="text-xs text-gray-500 mb-1">From Date</Label>
-                  <DateFilterInput
+                  <ThreePartDateInput
                     value={studentQuery.dateFrom}
-                    onChange={(v) => updateStudentFilter({ dateFrom: v })}
-                    style={{ borderRadius: 9999 }}
-                    /* The real input is invisible, so it cannot be reached by
-                       its visible Label the way a normal field would be. */
+                    onChange={(v) => updateStudentFilter({ dateFrom: v ?? '' })}
+                    /* The pill shape these filters wear. It rounds the outer
+                       corners of the group; the two dividers inside stay square. */
+                    radius={9999}
                     aria-label="From date"
                   />
                 </div>
                 <div>
                   <Label className="text-xs text-gray-500 mb-1">To Date</Label>
-                  <DateFilterInput
+                  <ThreePartDateInput
                     value={studentQuery.dateTo}
-                    onChange={(v) => updateStudentFilter({ dateTo: v })}
-                    style={{ borderRadius: 9999 }}
+                    onChange={(v) => updateStudentFilter({ dateTo: v ?? '' })}
+                    radius={9999}
                     aria-label="To date"
                   />
                 </div>
@@ -997,7 +997,7 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
                   </div>
                   <div>
                     <Label>Date</Label>
-                    <Input type="date" value={damageForm.entryDate} onChange={e => setDamageForm(f => ({ ...f, entryDate: e.target.value }))} />
+                    <ThreePartDateInput value={damageForm.entryDate} onChange={v => setDamageForm(f => ({ ...f, entryDate: v ?? '' }))} aria-label="Charge date" />
                   </div>
                 </div>
                 <div>

@@ -27,7 +27,7 @@ import {
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { PhoneInput } from "./PhoneInput";
-import { DateFilterInput } from "./DateFilterInput";
+import { ThreePartDateInput } from "./ThreePartDateInput";
 import { Textarea } from "./ui/textarea";
 
 /**
@@ -45,21 +45,29 @@ import { Textarea } from "./ui/textarea";
  * first line to last line instead, so it is exactly as wide as the grid is,
  * whatever the grid currently is.
  *
- * 40rem matches the breakpoint the staff dialog reaches for. Two inputs side by
- * side on a 360px screen leave about 150px each — narrower than a phone number
- * or a parent's full name, so the value scrolls out of its own box while it is
- * being typed. Stacking costs a little vertical scrolling and nothing else.
+ * The pairing is a CONTAINER query, not a media query. What decides whether two
+ * inputs fit side by side is the width of the dialog, and the dialog is no
+ * longer as wide as the screen — on a large monitor a 36rem dialog would have
+ * passed a `min-width: 40rem` screen test and paired its fields inside a box
+ * far too narrow for them. Asking the scroll area itself removes the guess:
+ * below 30rem of actual room the fields stack, wherever that happens.
+ *
+ * Two inputs side by side under 30rem leave about 150px each — narrower than a
+ * phone number or a parent's full name, so the value scrolls out of its own box
+ * while it is being typed. Stacking costs a little vertical scrolling and
+ * nothing else, and this form is meant to be scrolled.
  */
 const ADD_STUDENT_FORM_CSS = `
+  .sis-student-scroll { container-type: inline-size; }
   .sis-student-form,
   .sis-student-contact {
     display: grid;
     grid-template-columns: 1fr;
   }
-  .sis-student-form { gap: 1rem; }
+  .sis-student-form { gap: 0.875rem; }
   .sis-student-contact { gap: 0.75rem; }
   .sis-form-full { grid-column: 1 / -1; }
-  @media (min-width: 40rem) {
+  @container (min-width: 30rem) {
     .sis-student-form,
     .sis-student-contact {
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -216,8 +224,32 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
               Add Student
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl" style={{ display: 'flex', flexDirection: 'column', maxHeight: '90vh', overflow: 'hidden', padding: 0, gap: 0 }}>
-            <div style={{ padding: '1.5rem 1.5rem 1rem' }}>
+          {/* SIZED TO CLEAR THE SUPPORT BUTTON, NOT TO FIT THE FORM.
+              At 90vh the dialog is the screen, and because it is centred its
+              bottom edge lands 5vh up — inside the 54px support button fixed
+              1.25rem from the bottom at z-index 60, above this dialog's z-50.
+              The button sat on top of Save.
+
+              A centred box of height H on a viewport of height V leaves
+              (V - H) / 2 below it, so H = 100vh - 11rem keeps 88px clear of the
+              button's 74px on EVERY screen height rather than on the one this
+              was checked at. 38rem then caps it on a tall monitor, where the
+              subtraction alone would still allow an 800px-tall dialog.
+
+              The form does not have to fit. It scrolls — that is what the
+              middle section is for, and a form this long was always going to. */}
+          <DialogContent
+            className="max-w-xl"
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              maxHeight: 'min(calc(100vh - 11rem), 38rem)',
+              overflow: 'hidden',
+              padding: 0,
+              gap: 0,
+            }}
+          >
+            <div style={{ padding: '1.25rem 1.25rem 0.75rem' }}>
               <DialogHeader>
                 <DialogTitle>Add New Student</DialogTitle>
                 <DialogDescription>
@@ -225,7 +257,7 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
                 </DialogDescription>
               </DialogHeader>
             </div>
-            <div className="flex-1 overflow-y-auto" style={{ padding: '0 1.5rem 1rem', minHeight: 0 }}>
+            <div className="sis-student-scroll flex-1 overflow-y-auto" style={{ padding: '0 1.25rem 1rem', minHeight: 0 }}>
             <style>{ADD_STUDENT_FORM_CSS}</style>
             <div className="sis-student-form">
               <div className="sis-form-full">
@@ -240,16 +272,9 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
               </div>
               <div>
                 <Label>Date of Birth</Label>
-                {/* The same control as Enrollment Date below it and Hire Date
-                    in the Add New Staff dialog. It was the only date left in
-                    this form still wearing the browser's own widget, which on
-                    Chrome means a chevron the styled fields do not have and a
-                    value in the OS locale rather than the DD/MM/YYYY the rest
-                    of the app shows. */}
-                <DateFilterInput
+                <ThreePartDateInput
                   value={form.dateOfBirth}
-                  onChange={(v) => setForm((s) => ({ ...s, dateOfBirth: v }))}
-                  placeholder="Select date of birth"
+                  onChange={(v) => setForm((s) => ({ ...s, dateOfBirth: v ?? "" }))}
                   aria-label="Date of birth"
                 />
               </div>
@@ -292,16 +317,13 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
               </div>
               <div>
                 <Label>Enrollment Date</Label>
-                {/* The same control as Hire Date in the Add New Staff dialog,
-                    and the same component rather than a copy of it: a native
-                    date input cannot be made to match the selects beside it, so
-                    DateFilterInput lays a transparent one over a box that can
-                    be. Sharing it is what keeps the two dialogs identical when
-                    either is next touched. */}
-                <DateFilterInput
+                {/* The one date control this app has, shared with the Add New
+                    Staff dialog and every filter. Month | Day | Year rather
+                    than a native date input, which cannot be made to match the
+                    selects beside it. See ThreePartDateInput. */}
+                <ThreePartDateInput
                   value={form.enrollmentDate}
-                  onChange={(v) => setForm((s) => ({ ...s, enrollmentDate: v }))}
-                  placeholder="Select enrollment date"
+                  onChange={(v) => setForm((s) => ({ ...s, enrollmentDate: v ?? "" }))}
                   aria-label="Enrollment date"
                 />
               </div>
@@ -466,10 +488,10 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
               </div>
             </div>
             </div>
-            <div style={{ padding: '0 1.5rem' }}>
+            <div style={{ padding: '0 1.25rem' }}>
               {submitError && <p className="text-sm text-red-600 mb-3">{submitError}</p>}
             </div>
-            <div className="border-t" style={{ padding: '1rem 1.5rem', display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+            <div className="border-t" style={{ padding: '0.875rem 1.25rem', display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
               <DialogClose asChild>
                 <Button variant="outline" disabled={submitting}>Cancel</Button>
               </DialogClose>

@@ -28,6 +28,7 @@ import {
   DialogHeader, DialogTitle,
 } from './ui/dialog';
 import { Input } from './ui/input';
+import { ThreePartDateInput } from './ThreePartDateInput';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
 import {
@@ -1211,10 +1212,10 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                 </div>
                 <div>
                   <Label>Date of Birth</Label>
-                  <Input
-                    type="date"
+                  <ThreePartDateInput
                     value={editForm.dateOfBirth}
-                    onChange={e => setEditForm(f => ({ ...f, dateOfBirth: e.target.value }))}
+                    onChange={v => setEditForm(f => ({ ...f, dateOfBirth: v ?? '' }))}
+                    aria-label="Date of birth"
                   />
                 </div>
                 <div>
@@ -1265,10 +1266,10 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                 </div>
                 <div>
                   <Label>Enrollment Date</Label>
-                  <Input
-                    type="date"
+                  <ThreePartDateInput
                     value={editForm.enrollmentDate}
-                    onChange={e => setEditForm(f => ({ ...f, enrollmentDate: e.target.value }))}
+                    onChange={v => setEditForm(f => ({ ...f, enrollmentDate: v ?? '' }))}
+                    aria-label="Enrollment date"
                   />
                 </div>
                 <div className="col-span-2">
@@ -2098,10 +2099,10 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                 </div>
                 <div>
                   <Label>Date</Label>
-                  <Input
-                    type="date"
+                  <ThreePartDateInput
                     value={paymentForm.entryDate}
-                    onChange={e => setPaymentForm(f => ({ ...f, entryDate: e.target.value }))}
+                    onChange={v => setPaymentForm(f => ({ ...f, entryDate: v ?? '' }))}
+                    aria-label="Payment date"
                   />
                 </div>
                 <div>

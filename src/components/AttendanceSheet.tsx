@@ -6,9 +6,8 @@ import { api } from '@/lib/api';
 import { generateClassAttendanceSheet } from '../utils/pdfGenerator';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
-import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { DateFilterInput } from './DateFilterInput';
+import { ThreePartDateInput } from './ThreePartDateInput';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Download } from 'lucide-react';
 import { toast } from 'sonner';
@@ -237,7 +236,7 @@ export function AttendanceSheet({ audience }: { audience: 'admin' | 'teacher' })
 
           <div>
             <Label>From</Label>
-            <DateFilterInput value={from} onChange={setFrom} />
+            <ThreePartDateInput value={from} onChange={(v) => setFrom(v ?? '')} aria-label="From date" />
             <p className="text-xs text-gray-400" style={{ marginTop: 2 }}>
               A date on its own shows that one day
             </p>
@@ -245,7 +244,7 @@ export function AttendanceSheet({ audience }: { audience: 'admin' | 'teacher' })
 
           <div>
             <Label>To</Label>
-            <DateFilterInput value={to} onChange={setTo} disabled={!from} />
+            <ThreePartDateInput value={to} onChange={(v) => setTo(v ?? '')} disabled={!from} aria-label="To date" />
           </div>
 
           {/* Offered only when the level genuinely has more than one populated

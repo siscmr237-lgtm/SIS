@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
-import { Input } from './ui/input';
+import { ThreePartDateInput } from './ThreePartDateInput';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Badge } from './ui/badge';
-import { Calendar, Save } from 'lucide-react';
+import { Save } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useCachedResource } from '@/lib/SisCache';
 import { AttendanceSheet } from './AttendanceSheet';
@@ -112,15 +112,14 @@ export function Attendance() {
             <div className="flex flex-col sm:flex-row sm:items-end gap-3">
               <div className="flex-1">
                 <Label>Select Date</Label>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-                  <Input
-                    type="date"
-                    value={selectedDate}
-                    onChange={(e) => setSelectedDate(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
+                {/* The overlaid calendar icon went with the native input: the
+                    three cells fill the box, so an icon at left-3 would sit on
+                    top of the month. */}
+                <ThreePartDateInput
+                  value={selectedDate}
+                  onChange={(v) => setSelectedDate(v ?? '')}
+                  aria-label="Attendance date"
+                />
               </div>
               <Button size="sm" variant="outline" className="flex items-center gap-2" onClick={saveStaffAttendance} disabled={savingStaffAttendance}>
                 <Save size={16} />

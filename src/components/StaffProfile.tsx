@@ -17,6 +17,7 @@ import {
   DialogTitle,
 } from './ui/dialog';
 import { Input } from './ui/input';
+import { ThreePartDateInput } from './ThreePartDateInput';
 import { Label } from './ui/label';
 import {
   Select,
@@ -731,10 +732,10 @@ export function StaffProfile({ staff, onNavigate }: StaffProfileProps) {
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                     <Label>Date</Label>
-                    <Input
-                      type="date"
+                    <ThreePartDateInput
                       value={chargeForm.entryDate}
-                      onChange={e => setChargeForm(f => ({ ...f, entryDate: e.target.value }))}
+                      onChange={v => setChargeForm(f => ({ ...f, entryDate: v ?? '' }))}
+                      aria-label="Charge date"
                     />
                   </div>
                 </div>

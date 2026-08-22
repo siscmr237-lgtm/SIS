@@ -5,7 +5,7 @@ import { api } from '@/lib/api';
 import { generateStudentAttendanceSheet } from '../utils/pdfGenerator';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
-import { Input } from './ui/input';
+import { ThreePartDateInput } from './ThreePartDateInput';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Download } from 'lucide-react';
@@ -130,11 +130,11 @@ export function StudentAttendancePanel({
           </div>
           <div>
             <Label>From</Label>
-            <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+            <ThreePartDateInput value={from} onChange={(v) => setFrom(v ?? '')} aria-label="From date" />
           </div>
           <div>
             <Label>To</Label>
-            <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} disabled={!from} />
+            <ThreePartDateInput value={to} onChange={(v) => setTo(v ?? '')} disabled={!from} aria-label="To date" />
           </div>
         </div>
 

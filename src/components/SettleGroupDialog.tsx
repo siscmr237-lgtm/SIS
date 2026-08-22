@@ -8,7 +8,7 @@ import {
 } from './ui/dialog';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { DateFilterInput } from './DateFilterInput';
+import { ThreePartDateInput } from './ThreePartDateInput';
 
 /**
  * Settle every outstanding category in one fee group, in one action.
@@ -193,7 +193,7 @@ export function SettleGroupDialog({
               <>
                 <div>
                   <Label className="text-xs text-gray-500 mb-1">Date received</Label>
-                  <DateFilterInput value={entryDate} onChange={setEntryDate} />
+                  <ThreePartDateInput value={entryDate} onChange={(v) => setEntryDate(v ?? '')} aria-label="Date received" />
                 </div>
                 <div>
                   <Label className="text-xs text-gray-500 mb-1">Payment method (optional)</Label>

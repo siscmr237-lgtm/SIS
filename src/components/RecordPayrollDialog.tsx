@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from './ui/dialog';
 import { Input } from './ui/input';
+import { ThreePartDateInput } from './ThreePartDateInput';
 import { Label } from './ui/label';
 import {
   Select,
@@ -283,10 +284,10 @@ export function RecordPayrollDialog({
               </div>
               <div style={fieldGap}>
                 <Label>Payment date</Label>
-                <Input
-                  type="date"
+                <ThreePartDateInput
                   value={form.entryDate}
-                  onChange={(e) => setForm((f) => ({ ...f, entryDate: e.target.value }))}
+                  onChange={(v) => setForm((f) => ({ ...f, entryDate: v ?? '' }))}
+                  aria-label="Payment date"
                 />
               </div>
             </div>

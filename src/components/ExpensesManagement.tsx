@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
+import { ThreePartDateInput } from './ThreePartDateInput';
 import { Label } from './ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogClose } from './ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
@@ -79,7 +80,7 @@ export function ExpensesManagement() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>Date</Label>
-                  <Input type="date" value={form.date} onChange={e=>setForm(s=>({...s, date:e.target.value}))} />
+                  <ThreePartDateInput value={form.date} onChange={v=>setForm(s=>({...s, date:v ?? ''}))} aria-label="Expense date" />
                 </div>
                 <div>
                   <Label>Invoice Number</Label>

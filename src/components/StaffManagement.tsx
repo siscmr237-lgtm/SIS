@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
+import { ThreePartDateInput } from './ThreePartDateInput';
 import { Label } from './ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogClose } from './ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
@@ -197,7 +198,7 @@ export function StaffManagement({ onNavigate, onViewStaff }: StaffManagementProp
                     </div>
                     <div>
                       <Label>Date</Label>
-                      <Input type="date" value={workForm.date} onChange={e=>setWorkForm(s=>({...s, date:e.target.value}))} />
+                      <ThreePartDateInput value={workForm.date} onChange={v=>setWorkForm(s=>({...s, date:v ?? ''}))} aria-label="Work record date" />
                     </div>
                     <div>
                       <Label>Class</Label>

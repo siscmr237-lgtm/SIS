@@ -5,7 +5,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { PhoneInput } from './PhoneInput';
-import { DateFilterInput } from './DateFilterInput';
+import { ThreePartDateInput } from './ThreePartDateInput';
 import { isCompleteFullName, joinFullName, splitFullName } from '../utils/fullName';
 
 // The dialog collects ONE name and splits it on the way out. Both the props and
@@ -187,14 +187,10 @@ export function StaffForm({ mode, open, onOpenChange, initialValues, onSubmit }:
           </div>
           <div>
             <Label>Hire Date</Label>
-            {/* The control the finance and attendance date filters already use:
-                the native input sits invisible on top, so Chrome's chevron is
-                gone and the field wears the same calendar as the rest of the
-                app. The chosen date shows as DD/MM/YYYY, clear of the icon. */}
-            <DateFilterInput
+            {/* Month | Day | Year, the one date control this app has. */}
+            <ThreePartDateInput
               value={form.hireDate}
-              onChange={v => setForm(s => ({ ...s, hireDate: v }))}
-              placeholder="Select hire date"
+              onChange={v => setForm(s => ({ ...s, hireDate: v ?? '' }))}
               aria-label="Hire date"
             />
           </div>
