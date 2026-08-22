@@ -27,7 +27,45 @@ import {
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { PhoneInput } from "./PhoneInput";
+import { DateFilterInput } from "./DateFilterInput";
 import { Textarea } from "./ui/textarea";
+
+/**
+ * The Add New Student form grid.
+ *
+ * A scoped block rather than utilities, because the two things this needs are
+ * not in src/index.css and that file is frozen: a grid that is one column on a
+ * phone and two from 40rem up, and a way for a field to span the full width in
+ * BOTH of those states.
+ *
+ * grid-column: 1 / -1 is what makes the second one work. The utility for it,
+ * sis-form-full, is written as `span 2` — a span of two columns in a grid that
+ * only has one, which does not clamp: it makes an implicit second column and
+ * every "full width" field lands in a half-width grid of its own. `1 / -1` says
+ * first line to last line instead, so it is exactly as wide as the grid is,
+ * whatever the grid currently is.
+ *
+ * 40rem matches the breakpoint the staff dialog reaches for. Two inputs side by
+ * side on a 360px screen leave about 150px each — narrower than a phone number
+ * or a parent's full name, so the value scrolls out of its own box while it is
+ * being typed. Stacking costs a little vertical scrolling and nothing else.
+ */
+const ADD_STUDENT_FORM_CSS = `
+  .sis-student-form,
+  .sis-student-contact {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+  .sis-student-form { gap: 1rem; }
+  .sis-student-contact { gap: 0.75rem; }
+  .sis-form-full { grid-column: 1 / -1; }
+  @media (min-width: 40rem) {
+    .sis-student-form,
+    .sis-student-contact {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+`;
 import { ParentTypeahead, ParentMatch } from "./ParentTypeahead";
 import { buildParentPayload, ParentBaseline } from "@/utils/parentPayload";
 import { splitFullName } from "@/utils/fullName";
@@ -188,8 +226,9 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
               </DialogHeader>
             </div>
             <div className="flex-1 overflow-y-auto" style={{ padding: '0 1.5rem 1rem', minHeight: 0 }}>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2">
+            <style>{ADD_STUDENT_FORM_CSS}</style>
+            <div className="sis-student-form">
+              <div className="sis-form-full">
                 <Label>Full Name</Label>
                 <Input
                   placeholder="Enter full name"
@@ -247,6 +286,21 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
                 </Select>
               </div>
               <div>
+                <Label>Enrollment Date</Label>
+                {/* The same control as Hire Date in the Add New Staff dialog,
+                    and the same component rather than a copy of it: a native
+                    date input cannot be made to match the selects beside it, so
+                    DateFilterInput lays a transparent one over a box that can
+                    be. Sharing it is what keeps the two dialogs identical when
+                    either is next touched. */}
+                <DateFilterInput
+                  value={form.enrollmentDate}
+                  onChange={(v) => setForm((s) => ({ ...s, enrollmentDate: v }))}
+                  placeholder="Select enrollment date"
+                  aria-label="Enrollment date"
+                />
+              </div>
+              <div>
                 <Label>Parent Name</Label>
                 <ParentTypeahead
                   value={form.parentName}
@@ -265,17 +319,7 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
                   onChange={(v) => setForm((s) => ({ ...s, parentPhone: v }))}
                 />
               </div>
-              <div>
-                <Label>Enrollment Date</Label>
-                <Input
-                  type="date"
-                  value={form.enrollmentDate}
-                  onChange={(e) =>
-                    setForm((s) => ({ ...s, enrollmentDate: e.target.value }))
-                  }
-                />
-              </div>
-              <div className="col-span-2">
+              <div className="sis-form-full">
                 <Label>Address</Label>
                 <Input
                   placeholder="Enter address"
@@ -287,7 +331,7 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
               </div>
 
               {/* Medical History */}
-              <div className="col-span-2 border-t pt-4 mt-1">
+              <div className="sis-form-full border-t pt-4 mt-1">
                 <div className="flex items-center justify-between mb-3">
                   <p className="text-sm font-medium text-gray-700">
                     Medical History{" "}
@@ -305,7 +349,7 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
                 </div>
               </div>
               {!showMedicalHistory ? (
-                <div className="col-span-2">
+                <div className="sis-form-full">
                   <Button
                     type="button"
                     variant="outline"
@@ -317,7 +361,7 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
                 </div>
               ) : (
                 <>
-                  <div className="col-span-2">
+                  <div className="sis-form-full">
                     <Label>Allergies</Label>
                     <Textarea
                       placeholder="e.g. Penicillin, peanuts, latex..."
@@ -327,7 +371,7 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
                       }
                     />
                   </div>
-                  <div className="col-span-2">
+                  <div className="sis-form-full">
                     <Label>Existing Medical Conditions</Label>
                     <Textarea
                       placeholder="e.g. Asthma, sickle cell..."
@@ -337,7 +381,7 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
                       }
                     />
                   </div>
-                  <div className="col-span-2">
+                  <div className="sis-form-full">
                     <Label>Current Medications</Label>
                     <Textarea
                       placeholder="e.g. Salbutamol inhaler as needed..."
@@ -347,7 +391,7 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
                       }
                     />
                   </div>
-                  <div className="col-span-2">
+                  <div className="sis-form-full">
                     <Label>Additional Notes</Label>
                     <Textarea
                       placeholder="Any other information the school should know..."
@@ -361,15 +405,15 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
               )}
 
               {/* Pickup / Drop-off Contacts */}
-              <div className="col-span-2 border-t pt-4 mt-1">
+              <div className="sis-form-full border-t pt-4 mt-1">
                 <p className="text-sm font-medium text-gray-700 mb-3">
                   Pickup / Drop-off Contacts{" "}
                   <span className="text-gray-400 font-normal">(optional)</span>
                 </p>
               </div>
               {newContacts.map((c, i) => (
-                <div key={i} className="col-span-2">
-                  <div className="grid grid-cols-2 gap-3 p-3 border rounded-lg relative">
+                <div key={i} className="sis-form-full">
+                  <div className="sis-student-contact p-3 border rounded-lg relative">
                     <button
                       type="button"
                       onClick={() => removeContactRow(i)}
@@ -393,7 +437,7 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
                         onChange={(v) => updateContactRow(i, "phone", v)}
                       />
                     </div>
-                    <div className="col-span-2">
+                    <div className="sis-form-full">
                       <Label>
                         Relationship{" "}
                         <span className="text-gray-400 font-normal">(optional)</span>
@@ -409,7 +453,7 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
                   </div>
                 </div>
               ))}
-              <div className="col-span-2">
+              <div className="sis-form-full">
                 <Button type="button" variant="outline" onClick={addContactRow}>
                   <Plus size={15} className="mr-1" />
                   Add a pickup contact
