@@ -681,7 +681,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
 
   const handleDownloadStatement = async () => {
     if (!ledgerData) return;
-    let schoolInfo: { name: string; logo?: string } | undefined;
+    let schoolInfo: { name: string; logo?: string; motto?: string; academicYear?: string } | undefined;
     try {
       const userStr = window.localStorage.getItem('user');
       if (userStr) {

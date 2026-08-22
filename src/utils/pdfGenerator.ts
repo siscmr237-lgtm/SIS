@@ -175,11 +175,62 @@ async function getLogoDataUrl(logo: string): Promise<string | null> {
   return loadImageAsDataUrl(logo);
 }
 
+/**
+ * True on phones and tablets.
+ *
+ * A blob: URL opened in a new tab renders in the browser's own inline PDF
+ * viewer. On desktop that viewer has a download button; on mobile it generally
+ * does not, so the user is left looking at a sheet they cannot keep. Touch
+ * devices get a real file download instead.
+ *
+ * `(hover: none) and (pointer: coarse)` is the pair that means touch-only — a
+ * touchscreen laptop is coarse but still hovers, and a narrow desktop window is
+ * neither, so viewport width would be the wrong signal here. The userAgent test
+ * is a fallback for browsers that report neither media feature.
+ */
+function isTouchOnlyDevice(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    if (window.matchMedia('(hover: none) and (pointer: coarse)').matches) return true;
+  } catch {}
+  return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+}
+
+/**
+ * Hand a finished document to the user: a download on touch devices, a new tab
+ * on desktop where the inline viewer is the nicer read.
+ *
+ * The desktop branch falls back to a download when the tab does not open.
+ * Generators that await a logo fetch first have left the user-gesture window by
+ * the time they call this, which is exactly what popup blockers suppress, and a
+ * blocked tab is otherwise a button that silently does nothing.
+ */
+function deliverPdf(doc: jsPDF, filename: string) {
+  if (isTouchOnlyDevice()) {
+    doc.save(filename);
+    return;
+  }
+  const opened = window.open(doc.output('bloburl'), '_blank');
+  if (!opened) doc.save(filename);
+}
+
+/**
+ * Filesystem-safe filename fragment: no separators, no run of underscores.
+ *
+ * Letters are matched by Unicode property, not \w, so accented names survive —
+ * "Étienne" is a name here, and "_tienne.pdf" would be a bug with a real
+ * student's name in it.
+ */
+function pdfNamePart(value: string): string {
+  return value.replace(/[^\p{L}\p{N}.-]+/gu, '_').replace(/^_+|_+$/g, '') || 'Unknown';
+}
+
 interface LedgerPdfEntry {
   type: 'CHARGE' | 'PAYMENT';
   description: string;
   amount: number;
   entryDate: string;
+  paymentMethod?: string | null;
   category?: { name: string } | null;
 }
 
@@ -345,40 +396,49 @@ export async function generateFinancialSheet(
 ) {
   const doc = new jsPDF();
 
+  const HEADER_H = 52;
+
   // Header background
   doc.setFillColor(37, 99, 235);
-  doc.rect(0, 0, 210, 52, 'F');
+  doc.rect(0, 0, 210, HEADER_H, 'F');
 
-  // Logo — top-left
+  // Logo — left corner, vertically centred within the heading band.
   if (schoolInfo?.logo) {
     const dataUrl = await getLogoDataUrl(schoolInfo.logo);
     if (dataUrl) {
       try {
         const fmt = dataUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG';
-        doc.addImage(dataUrl, fmt, 8, 6, 30, 30);
+        const size = 30;
+        doc.addImage(dataUrl, fmt, 8, (HEADER_H - size) / 2, size, size);
       } catch {}
     }
   }
 
   doc.setTextColor(255, 255, 255);
 
-  // School name — centered
-  doc.setFontSize(18);
-  doc.text(schoolInfo?.name ?? SCHOOL_INFO.name, 105, 15, { align: 'center' });
+  // School name, motto and academic year stack down the centre. The cursor
+  // moves only for lines that actually render, so a school with no motto gets
+  // a tight block rather than a gap where the motto would have been.
+  let headY = 16;
 
-  // Motto — centered, italic, only if non-empty
+  doc.setFontSize(18);
+  doc.setFont('helvetica', 'bold');
+  doc.text(schoolInfo?.name ?? SCHOOL_INFO.name, 105, headY, { align: 'center' });
+  doc.setFont('helvetica', 'normal');
+
   const motto = schoolInfo?.motto?.trim();
   if (motto) {
+    headY += 7;
     doc.setFontSize(10);
     doc.setFont('helvetica', 'italic');
-    doc.text(motto, 105, 23, { align: 'center' });
+    doc.text(motto, 105, headY, { align: 'center' });
     doc.setFont('helvetica', 'normal');
   }
 
-  // Academic year — right-aligned
   if (schoolInfo?.academicYear) {
+    headY += 7;
     doc.setFontSize(9);
-    doc.text(`Academic Year: ${schoolInfo.academicYear}`, 195, 33, { align: 'right' });
+    doc.text(`Academic Year: ${schoolInfo.academicYear}`, 105, headY, { align: 'center' });
   }
 
   // Document title — centered
@@ -396,53 +456,66 @@ export async function generateFinancialSheet(
 
   const { entries, totalCharged, totalPaid, balance } = ledgerData;
 
-  if (entries.length === 0) {
+  // Payments only. Charges are already summarised in the totals row below, and
+  // a sheet a parent reads is a record of what was paid — so a student with no
+  // payments gets an empty table rather than a list of what they owe.
+  const payments = entries.filter((entry) => entry.type === 'PAYMENT');
+
+  let cursorY: number;
+
+  if (payments.length === 0) {
     doc.setFontSize(11);
     doc.setTextColor(150, 150, 150);
-    doc.text('No financial records found for this student.', 105, 107, { align: 'center' });
+    doc.text('No payment records found for this student.', 105, 107, { align: 'center' });
+    doc.setTextColor(0, 0, 0);
+    cursorY = 112;
   } else {
-    const tableData = entries.map(entry => [
-      new Date(entry.entryDate).toLocaleDateString('en-GB'),
-      entry.type === 'CHARGE' ? 'Charge' : 'Payment',
-      entry.category?.name ?? '—',
-      entry.description,
-      `${entry.amount.toLocaleString()} FCFA`,
-    ]);
-
     autoTable(doc, {
       startY: 95,
-      head: [['Date', 'Type', 'Category', 'Description', 'Amount (FCFA)']],
-      body: tableData,
+      head: [['Date', 'Category', 'Payment Type', 'Amount (FCFA)']],
+      body: payments.map((entry) => [
+        new Date(entry.entryDate).toLocaleDateString('en-GB'),
+        entry.category?.name ?? '—',
+        entry.paymentMethod ?? '—',
+        entry.amount.toLocaleString(),
+      ]),
       theme: 'striped',
       headStyles: { fillColor: [37, 99, 235] },
       styles: { fontSize: 9 },
+      margin: { left: 15, right: 15 },
       columnStyles: {
-        0: { cellWidth: 28 },
-        1: { cellWidth: 22 },
-        2: { cellWidth: 32 },
-        4: { cellWidth: 30, halign: 'right' },
+        0: { cellWidth: 30 },
+        1: { cellWidth: 60 },
+        2: { cellWidth: 50 },
+        3: { cellWidth: 40, halign: 'right' },
       },
     });
-
-    autoTable(doc, {
-      startY: (doc as any).lastAutoTable.finalY + 8,
-      body: [
-        ['Total Charged', `${totalCharged.toLocaleString()} FCFA`],
-        ['Total Paid',    `${totalPaid.toLocaleString()} FCFA`],
-        ['Balance Owed',  `${balance.toLocaleString()} FCFA`],
-      ],
-      theme: 'plain',
-      styles: { fontSize: 10 },
-      columnStyles: {
-        0: { cellWidth: 60, fontStyle: 'bold' },
-        1: { cellWidth: 60, halign: 'right' },
-      },
-      margin: { left: 110 },
-    });
+    cursorY = (doc as any).lastAutoTable.finalY;
   }
 
-  const url = doc.output('bloburl');
-  window.open(url, '_blank');
+  // The three totals sit side by side in one row, each column an even third of
+  // the 180mm content width.
+  autoTable(doc, {
+    startY: cursorY + 12,
+    head: [['Total Charged', 'Total Paid', 'Balance Owed']],
+    body: [[
+      `${totalCharged.toLocaleString()} FCFA`,
+      `${totalPaid.toLocaleString()} FCFA`,
+      `${balance.toLocaleString()} FCFA`,
+    ]],
+    theme: 'grid',
+    styles: { fontSize: 11, halign: 'center', cellPadding: 3 },
+    headStyles: { fillColor: [37, 99, 235], fontSize: 10, halign: 'center' },
+    margin: { left: 15, right: 15 },
+    columnStyles: {
+      0: { cellWidth: 60 },
+      1: { cellWidth: 60 },
+      2: { cellWidth: 60 },
+    },
+  });
+
+  const studentName = pdfNamePart(`${student.firstName} ${student.lastName}`);
+  deliverPdf(doc, `Financial_Sheet_${studentName}.pdf`);
 }
 
 export async function generateStaffFinancialSheet(
