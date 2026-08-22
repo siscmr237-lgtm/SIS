@@ -194,7 +194,21 @@ function DatePart({
   };
 
   return (
-    <Popover.Root open={open} onOpenChange={setOpen}>
+    /* modal, and it has to be, or the Day and Year lists cannot be scrolled.
+       Radix's Dialog locks scrolling with react-remove-scroll, which cancels
+       every wheel and touch-move whose target is not inside the dialog's own
+       content. These lists are portalled to document.body, so they ARE outside
+       it: the list rendered, showed a scrollbar, and refused to move.
+       modal makes Radix wrap this content in its own RemoveScroll, which pushes
+       a second lock on top of the dialog's. react-remove-scroll only lets the
+       topmost lock cancel anything, and the topmost one is now this list's, so
+       it permits scrolling inside itself. That is exactly how Radix's own Select
+       survives the same dialogs — it is modal by default for this reason.
+       Costs one thing worth knowing: while a list is open, pointer events
+       outside it are disabled, so moving straight from an open Month list to the
+       Day cell takes a click to dismiss and a click to open. Radix Select
+       behaves identically everywhere else in this app. */
+    <Popover.Root open={open} onOpenChange={setOpen} modal>
       <Popover.Trigger asChild>
         <button
           type="button"
@@ -241,6 +255,10 @@ function DatePart({
           collisionPadding={16}
           style={{
             minWidth: minListWidth,
+            // Radix measures the room it has and publishes it here. Without
+            // this the list keeps its 260px and runs off the bottom of a short
+            // viewport, taking its last options with it.
+            maxHeight: 'min(260px, var(--radix-popover-content-available-height, 260px))',
             // Above everything this app stacks: mobile header 30, sidebar
             // overlay 40, sidebar 50, support button 60. Dialogs portal to the
             // body too, so this has to clear those as well.
