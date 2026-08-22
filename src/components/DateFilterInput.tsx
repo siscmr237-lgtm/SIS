@@ -36,6 +36,11 @@ import { Calendar } from 'lucide-react';
  * untouched, so the filter is genuinely unset — nothing is sent to the API and
  * the transaction tables are not narrowed to a single day. The grey is the
  * signal that this is a hint rather than a selection.
+ *
+ * A form field is not a filter, though: an empty date there is something still
+ * to be entered, not "no narrowing applied". Those callers pass `placeholder`
+ * and get that wording in grey instead of today's date, so the field never
+ * reads as already filled in.
  */
 
 /** 'YYYY-MM-DD' → 'DD/MM/YYYY'. Empty for anything that isn't a full date. */
@@ -76,6 +81,8 @@ export function DateFilterInput({
   /** Extra styling for the visible box — the finance filters pass a pill radius. */
   style,
   className,
+  /** Grey hint shown while nothing is chosen. Defaults to today's date. */
+  placeholder,
   'aria-label': ariaLabel,
 }: {
   value: string;
@@ -83,6 +90,7 @@ export function DateFilterInput({
   disabled?: boolean;
   style?: React.CSSProperties;
   className?: string;
+  placeholder?: string;
   'aria-label'?: string;
 }) {
   const shown = toDisplayDate(value);
@@ -123,7 +131,7 @@ export function DateFilterInput({
             color: isPlaceholder ? '#9CA3AF' : '#111827',
           }}
         >
-          {isPlaceholder ? todayDisplayDate() : shown}
+          {isPlaceholder ? (placeholder ?? todayDisplayDate()) : shown}
         </span>
       </div>
 

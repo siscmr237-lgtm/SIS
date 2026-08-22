@@ -30,6 +30,7 @@ import { PhoneInput } from "./PhoneInput";
 import { Textarea } from "./ui/textarea";
 import { ParentTypeahead, ParentMatch } from "./ParentTypeahead";
 import { buildParentPayload, ParentBaseline } from "@/utils/parentPayload";
+import { splitFullName } from "@/utils/fullName";
 import {
   Select,
   SelectContent,
@@ -52,8 +53,7 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
   const [selectedClass, setSelectedClass] = useState<string>("all");
   const [openAdd, setOpenAdd] = useState(false);
   const [form, setForm] = useState({
-    firstName: "",
-    lastName: "",
+    fullName: "",
     dateOfBirth: "",
     gender: "",
     class: "",
@@ -189,23 +189,13 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
             </div>
             <div className="flex-1 overflow-y-auto" style={{ padding: '0 1.5rem 1rem', minHeight: 0 }}>
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>First Name</Label>
+              <div className="col-span-2">
+                <Label>Full Name</Label>
                 <Input
-                  placeholder="Enter first name"
-                  value={form.firstName}
+                  placeholder="Enter full name"
+                  value={form.fullName}
                   onChange={(e) =>
-                    setForm((s) => ({ ...s, firstName: e.target.value }))
-                  }
-                />
-              </div>
-              <div>
-                <Label>Last Name</Label>
-                <Input
-                  placeholder="Enter last name"
-                  value={form.lastName}
-                  onChange={(e) =>
-                    setForm((s) => ({ ...s, lastName: e.target.value }))
+                    setForm((s) => ({ ...s, fullName: e.target.value }))
                   }
                 />
               </div>
@@ -441,9 +431,10 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
                   setSubmitting(true);
                   setSubmitError(null);
                   try {
+                    const { firstName, lastName } = splitFullName(form.fullName);
                     const created = await api.post("/students", {
-                      firstName: form.firstName,
-                      lastName: form.lastName,
+                      firstName,
+                      lastName,
                       dateOfBirth: form.dateOfBirth,
                       gender: form.gender,
                       class: form.class,
@@ -472,8 +463,7 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
                     await refreshStudents();
                     setOpenAdd(false);
                     setForm({
-                      firstName: "",
-                      lastName: "",
+                      fullName: "",
                       dateOfBirth: "",
                       gender: "",
                       class: "",

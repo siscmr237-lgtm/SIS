@@ -35,6 +35,7 @@ import {
 } from './ui/select';
 import { ParentTypeahead, ParentMatch } from './ParentTypeahead';
 import { buildParentPayload, ParentBaseline } from '../utils/parentPayload';
+import { isCompleteFullName, joinFullName, splitFullName } from '../utils/fullName';
 
 interface LedgerEntry {
   id: string;
@@ -139,7 +140,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
   });
   const [showEdit, setShowEdit] = useState(false);
   const [editForm, setEditForm] = useState({
-    firstName: '', lastName: '', gender: '', dateOfBirth: '',
+    fullName: '', gender: '', dateOfBirth: '',
     enrollmentDate: '', address: '', parentName: '', parentPhone: '', class: '',
     allergies: '', medicalConditions: '', currentMedications: '', medicalNotes: '',
   });
@@ -608,9 +609,10 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
     setEditSubmitting(true);
     setEditError(null);
     try {
+      const { firstName, lastName } = splitFullName(editForm.fullName);
       const updated = await api.put(`/students/${student.id}`, {
-        firstName: editForm.firstName.trim(),
-        lastName: editForm.lastName.trim(),
+        firstName,
+        lastName,
         gender: editForm.gender,
         dateOfBirth: editForm.dateOfBirth || undefined,
         enrollmentDate: editForm.enrollmentDate || undefined,
@@ -623,8 +625,8 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
         medicalNotes: editForm.medicalNotes.trim() || null,
       });
       setDisplayInfo({
-        firstName: editForm.firstName.trim(),
-        lastName: editForm.lastName.trim(),
+        firstName,
+        lastName,
         gender: editForm.gender,
         dateOfBirth: editForm.dateOfBirth,
         enrollmentDate: editForm.enrollmentDate,
@@ -935,8 +937,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                 size="sm"
                 onClick={() => {
                   setEditForm({
-                    firstName: displayInfo.firstName,
-                    lastName: displayInfo.lastName,
+                    fullName: joinFullName(displayInfo.firstName, displayInfo.lastName),
                     gender: displayInfo.gender,
                     dateOfBirth: displayInfo.dateOfBirth ? displayInfo.dateOfBirth.split('T')[0] : '',
                     enrollmentDate: displayInfo.enrollmentDate ? displayInfo.enrollmentDate.split('T')[0] : '',
@@ -1200,20 +1201,12 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
               </div>
               <div className="flex-1 overflow-y-auto" style={{ padding: '0 1.5rem 1rem', minHeight: 0 }}>
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>First Name</Label>
+                <div className="col-span-2">
+                  <Label>Full Name</Label>
                   <Input
-                    value={editForm.firstName}
-                    onChange={e => setEditForm(f => ({ ...f, firstName: e.target.value }))}
-                    placeholder="First name"
-                  />
-                </div>
-                <div>
-                  <Label>Last Name</Label>
-                  <Input
-                    value={editForm.lastName}
-                    onChange={e => setEditForm(f => ({ ...f, lastName: e.target.value }))}
-                    placeholder="Last name"
+                    value={editForm.fullName}
+                    onChange={e => setEditForm(f => ({ ...f, fullName: e.target.value }))}
+                    placeholder="Full name"
                   />
                 </div>
                 <div>
@@ -1426,7 +1419,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                 </DialogClose>
                 <Button
                   onClick={handleEditSave}
-                  disabled={editSubmitting || !editForm.firstName.trim() || !editForm.lastName.trim()}
+                  disabled={editSubmitting || !isCompleteFullName(editForm.fullName)}
                 >
                   {editSubmitting ? 'Saving...' : 'Save Changes'}
                 </Button>
