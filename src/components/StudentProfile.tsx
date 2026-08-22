@@ -29,7 +29,8 @@ import {
 } from './ui/dialog';
 import { Input } from './ui/input';
 import { ThreePartDateInput } from './ThreePartDateInput';
-import { dialogShell, dialogFrame, DIALOG_BODY } from './dialogSizing';
+import { PayFeesDialog, PayFeesSubmission } from './PayFeesDialog';
+import { dialogShell, dialogFrame } from './dialogSizing';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
 import {
@@ -236,7 +237,6 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
     return () => document.removeEventListener('mousedown', handle);
   }, [showActionsMenu]);
 
-  const today = new Date().toISOString().split('T')[0];
   /**
    * What this student still owes, per category — the list the Record Payment
    * dialog offers and the ceiling it enforces.
@@ -254,50 +254,6 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
   const [owingLoading, setOwingLoading] = useState(false);
   /** Which group a settle-all has been opened for, if any. */
   const [settleGroup, setSettleGroup] = useState<'REGISTRATION' | 'OTHER_FEES' | null>(null);
-  /**
-   * The Pay Fees dialog's working state: one amount per fee, keyed by feeKey,
-   * plus the date and the method the whole hand-over shares.
-   *
-   * A STRING per row, and ABSENT rather than 0 when untouched. '' is what "left
-   * empty" looks like and it is the thing submit skips; a number would make an
-   * untouched row indistinguishable from one somebody deliberately zeroed, since
-   * Number('') is 0.
-   */
-  const [payAmounts, setPayAmounts] = useState<Record<string, string>>({});
-  const [payDate, setPayDate] = useState(today);
-  const [payMethod, setPayMethod] = useState('');
-
-  /**
-   * Type an amount against one fee.
-   *
-   * Digits only, and never more than that fee's own outstanding balance. The cap
-   * is applied to the VALUE rather than shown as a warning beside it: an amount
-   * that cannot be recorded should not be typable, and the server refuses it
-   * anyway, so leaving it in the box only defers the refusal to submit time.
-   */
-  const setPayAmount = (fee: { key: string; owing: number }, raw: string) => {
-    setSubmitError(null);
-    const digits = raw.replace(/[^\d]/g, '');
-    const next = digits === '' ? '' : String(Math.min(Number(digits), fee.owing));
-    setPayAmounts((prev) => ({ ...prev, [fee.key]: next }));
-  };
-
-  /**
-   * What this submit would record in total — the figure to check against the
-   * cash actually in hand before pressing the button.
-   *
-   * Counts only rows that can be paid against, so a stale amount left in a row
-   * that has since been settled elsewhere cannot inflate it.
-   */
-  const payTotal = useMemo(
-    () => owingCategories.reduce((sum, c) => {
-      if (!c.payable || c.owing <= 0) return sum;
-      const n = Number(payAmounts[c.key]);
-      return Number.isFinite(n) && n > 0 ? sum + Math.round(n) : sum;
-    }, 0),
-    [owingCategories, payAmounts],
-  );
-
   const loadOwing = async () => {
     setOwingLoading(true);
     try {
@@ -312,9 +268,8 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
 
   const openPaymentDialog = async () => {
     setSubmitError(null);
-    setPayAmounts({});
-    setPayMethod('');
-    setPayDate(new Date().toISOString().split('T')[0]);
+    // PayFeesDialog clears its own amounts, date and method whenever it opens,
+    // so there is nothing to reset here beyond the error.
     setShowPayment(true);
     await loadOwing();
   };
@@ -632,32 +587,31 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
    * Rows left empty are skipped, and so are rows already settled: `owing <= 0`
    * disables the input, so a fully-paid fee cannot contribute an amount at all.
    */
-  const handlePaymentSubmit = async () => {
+  const handlePaymentSubmit = async ({ entries, entryDate, paymentMethod, total }: PayFeesSubmission) => {
     setSubmitError(null);
-
-    const entries = owingCategories
-      .filter((c) => c.payable && c.owing > 0)
-      .map((c) => ({
-        feeKey: c.key,
-        name: c.name,
-        owing: c.owing,
-        amount: Math.round(Number(payAmounts[c.key])),
-      }))
-      .filter((e) => Number.isFinite(e.amount) && e.amount > 0);
 
     if (entries.length === 0) {
       setSubmitError('Enter an amount against at least one fee.');
       return;
     }
-    // Belt and braces. The inputs clamp as they are typed and the server caps
-    // again, but an owing figure that went stale between load and submit would
-    // slip past the first, and a message naming the fee is more use than a 400.
-    const over = entries.find((e) => e.amount > e.owing);
-    if (over) {
-      setSubmitError(`${over.name} has only ${over.owing.toLocaleString()} FCFA outstanding.`);
-      return;
+    // Belt and braces. The dialog's inputs clamp as they are typed and the
+    // server caps again, but an owing figure that went stale between load and
+    // submit would slip past the first, and a message naming the fee is more use
+    // than a 400. Checked HERE because owingCategories lives here — the dialog
+    // is handed the figures, it does not own them.
+    const byKey = new Map(owingCategories.map((c) => [c.key, c]));
+    for (const e of entries) {
+      const fee = byKey.get(e.feeKey);
+      if (!fee) {
+        setSubmitError('That fee is no longer on this student\'s account.');
+        return;
+      }
+      if (e.amount > fee.owing) {
+        setSubmitError(`${fee.name} has only ${fee.owing.toLocaleString()} FCFA outstanding.`);
+        return;
+      }
     }
-    if (!payDate) {
+    if (!entryDate) {
       setSubmitError('Choose the date the money was received.');
       return;
     }
@@ -666,20 +620,17 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
     try {
       const res: any = await api.post('/ledger/payments', {
         studentId: student.id,
-        entryDate: payDate,
-        paymentMethod: payMethod || undefined,
+        entryDate,
+        paymentMethod: paymentMethod || undefined,
         // Each row names the fee it settles, which is what makes paying Tuition
         // clear Tuition instead of the oldest charge on the account.
-        entries: entries.map((e) => ({ feeKey: e.feeKey, amount: e.amount })),
+        entries,
       });
       cache.invalidateOn('ledger:write');
       setShowPayment(false);
-      setPayAmounts({});
-      setPayMethod('');
-      setPayDate(new Date().toISOString().split('T')[0]);
       const recorded = res?.recorded ?? entries.length;
       toast.success(
-        `${recorded} payment${recorded === 1 ? '' : 's'} recorded — ${(res?.total ?? payTotal).toLocaleString()} FCFA`,
+        `${recorded} payment${recorded === 1 ? '' : 's'} recorded — ${(res?.total ?? total).toLocaleString()} FCFA`,
       );
       // BOTH, and loadOwing is the one that used to be missing here. This dialog
       // caps against owingCategories, so leaving them stale after a payment left
@@ -2076,187 +2027,27 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
             </DialogContent>
           </Dialog>
 
-          {/* Pay Fees dialog — a table of this student's fees, one amount per
-              row, recorded together.
+          {/* Pay Fees — a table of this student's fees, paid together.
 
-              dialogFrame rather than dialogShell: this is the one dialog on the
-              page whose middle can grow without limit (a class with a dozen
-              fees), and losing sight of the Record Payment button while typing
-              amounts is exactly what should not happen when handling money. So
-              the header and footer stay pinned and only the table scrolls. */}
-          <Dialog open={showPayment} onOpenChange={(open) => { setShowPayment(open); if (!open) setSubmitError(null); }}>
-            <DialogContent style={dialogFrame(880)}>
-              <DialogHeader>
-                <DialogTitle>Pay Fees</DialogTitle>
-                <DialogDescription>
-                  Enter what was received against each fee. Every row with an amount becomes
-                  its own payment, tagged to that fee — recorded together, or not at all.
-                </DialogDescription>
-              </DialogHeader>
+              Its own component now, and not only for size. The dialog needs a
+              pinned header, a scrolling middle and a pinned footer of its own,
+              which is a layout with real structure rather than a form inlined
+              into this file — and having it standalone is what lets it be
+              measured directly at a phone viewport instead of through a copy.
 
-              {/* A <style> element because these are media queries and a table's
-                  cell rules, neither of which a style attribute can express —
-                  and not Tailwind classes because src/index.css is a frozen
-                  pre-compiled build where a utility that is not already in it
-                  renders as nothing. Same arrangement as [data-profile-fields]
-                  further up this file.
-
-                  768px is where the payment details move from below the table to
-                  beside it: at 640 the two columns would leave the Fee name about
-                  180px, which is narrower than the fee names actually are. */}
-              <style>{`
-                [data-pay-grid] {
-                  display: grid;
-                  grid-template-columns: minmax(0, 1fr);
-                  gap: 1.25rem;
-                }
-                @media (min-width: 768px) {
-                  [data-pay-grid] { grid-template-columns: minmax(0, 1fr) 232px; align-items: start; }
-                }
-                [data-pay-table] { width: 100%; border-collapse: collapse; }
-                [data-pay-table] th,
-                [data-pay-table] td { padding: 0.4rem 0.6rem; text-align: left; vertical-align: middle; }
-                [data-pay-table] thead th {
-                  font-size: 0.6875rem; font-weight: 500; color: #6B7280;
-                  text-transform: uppercase; letter-spacing: 0.04em;
-                  border-bottom: 1px solid #E5E7EB; background: #F9FAFB;
-                }
-                [data-pay-table] tbody td { border-bottom: 1px solid #F3F4F6; }
-                [data-pay-table] tbody tr:last-child td { border-bottom: none; }
-                /* The group heading rows: a label across the table, not a fee. */
-                [data-pay-table] tr[data-pay-group] td {
-                  font-size: 0.6875rem; font-weight: 600; color: #6B7280;
-                  text-transform: uppercase; letter-spacing: 0.04em;
-                  padding-top: 0.85rem; border-bottom: none;
-                }
-                [data-pay-num] { text-align: right; white-space: nowrap; }
-                [data-pay-total] td {
-                  border-top: 1px solid #E5E7EB; font-weight: 600;
-                  background: #F9FAFB;
-                }
-              `}</style>
-
-              <div style={DIALOG_BODY}>
-                <div data-pay-grid="">
-                  {/* LEFT (or top, on a phone) — the fees themselves. */}
-                  <div>
-                    {owingLoading ? (
-                      <p className="text-sm text-gray-500">Loading fees…</p>
-                    ) : owingCategories.length === 0 ? (
-                      <p className="text-sm text-gray-500">This student has no fee categories yet.</p>
-                    ) : (
-                      /* overflowX on the wrapper, so a long fee name scrolls the
-                         table inside its own box rather than widening the dialog. */
-                      <div style={{ border: '1px solid #E5E7EB', borderRadius: 8, overflowX: 'auto' }}>
-                        <table data-pay-table="">
-                          <thead>
-                            <tr>
-                              <th>Fee</th>
-                              <th data-pay-num="">Total</th>
-                              <th data-pay-num="" style={{ width: 148 }}>Paid</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {/* EVERY fee in this student's structure, both groups,
-                                including the ones with nothing left to pay — the
-                                same completeness the category picker had. A group
-                                with no fees renders nothing at all rather than a
-                                heading over an empty list: a school with no
-                                registration fee is perfectly valid. */}
-                            {(['REGISTRATION', 'OTHER_FEES'] as const).flatMap((g) => {
-                              const inGroup = owingCategories.filter((c) => (c.group ?? 'OTHER_FEES') === g);
-                              if (inGroup.length === 0) return [];
-                              return [
-                                <tr key={`hdr-${g}`} data-pay-group="">
-                                  <td colSpan={3}>{g === 'REGISTRATION' ? 'Registration' : 'Other Fees'}</td>
-                                </tr>,
-                                ...inGroup.map((c) => {
-                                  // Settled and unpayable are different facts and
-                                  // the placeholder says which; both lock the row,
-                                  // because neither can legally take money.
-                                  const settled = c.owing <= 0;
-                                  const locked = settled || !c.payable;
-                                  return (
-                                    <tr key={c.key}>
-                                      <td className="text-sm" style={{ overflowWrap: 'anywhere' }}>{c.name}</td>
-                                      <td className="text-sm" data-pay-num="">{c.charged.toLocaleString()}</td>
-                                      <td data-pay-num="">
-                                        <Input
-                                          type="text"
-                                          inputMode="numeric"
-                                          aria-label={`Amount paid for ${c.name}`}
-                                          value={locked ? '' : (payAmounts[c.key] ?? '')}
-                                          onChange={(e) => setPayAmount(c, e.target.value)}
-                                          disabled={locked}
-                                          placeholder={
-                                            settled ? 'Completed'
-                                              : !c.payable ? 'Unavailable'
-                                              : `Owing ${c.owing.toLocaleString()}`
-                                          }
-                                          style={{ textAlign: 'right' }}
-                                        />
-                                      </td>
-                                    </tr>
-                                  );
-                                }),
-                              ];
-                            })}
-                          </tbody>
-                          {/* The figure to check against the cash in hand before
-                              pressing the button. */}
-                          <tfoot>
-                            <tr data-pay-total="">
-                              <td className="text-sm">Total being paid</td>
-                              <td />
-                              <td className="text-sm" data-pay-num="">
-                                {payTotal.toLocaleString()} FCFA
-                              </td>
-                            </tr>
-                          </tfoot>
-                        </table>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* RIGHT (or below, on a phone) — what the whole hand-over
-                      shares. One date and one method cover every row: this is one
-                      person handing over money once, not several transactions. */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    <div>
-                      <Label>Date</Label>
-                      <ThreePartDateInput
-                        value={payDate}
-                        onChange={(v) => setPayDate(v ?? '')}
-                        aria-label="Payment date"
-                      />
-                    </div>
-                    <div>
-                      <Label>Payment Method</Label>
-                      <Select value={payMethod} onValueChange={setPayMethod}>
-                        <SelectTrigger><SelectValue placeholder="Select method" /></SelectTrigger>
-                        <SelectContent>
-                          {PAYMENT_METHODS.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {submitError && <p className="text-sm" style={{ color: '#B91C1C' }}>{submitError}</p>}
-              <div className="flex justify-end gap-2">
-                <DialogClose asChild>
-                  <Button variant="outline" disabled={submitting}>Cancel</Button>
-                </DialogClose>
-                {/* Disabled until something would actually be recorded — an
-                    enabled button that can only produce "enter an amount" is a
-                    button that lies about being ready. */}
-                <Button onClick={handlePaymentSubmit} disabled={submitting || payTotal <= 0}>
-                  {submitting ? 'Saving…' : 'Record Payment'}
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+              The figures stay here: owingCategories is what the cap is checked
+              against and what the server recomputes from, so the dialog is
+              handed them rather than fetching its own. */}
+          <PayFeesDialog
+            open={showPayment}
+            onOpenChange={(open) => { setShowPayment(open); if (!open) setSubmitError(null); }}
+            categories={owingCategories}
+            loading={owingLoading}
+            submitting={submitting}
+            error={submitError}
+            methods={PAYMENT_METHODS}
+            onSubmit={handlePaymentSubmit}
+          />
         </div>
       )}
 

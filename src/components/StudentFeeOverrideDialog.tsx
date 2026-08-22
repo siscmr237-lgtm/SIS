@@ -7,7 +7,7 @@ import { Button } from './ui/button';
 import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
 } from './ui/dialog';
-import { dialogShell } from './dialogSizing';
+import { DialogSizing, dialogWidth } from './dialogSizing';
 import { Input } from './ui/input';
 import { Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -184,20 +184,25 @@ export function StudentFeeOverrideDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent style={dialogShell(680)}>
-        <DialogHeader>
-          <DialogTitle>{wasOverridden ? 'Custom fees' : 'Edit this student’s fees'}</DialogTitle>
-          {wasOverridden && (
-            <DialogDescription>
-              {studentName} is on a custom fee structure and does not follow {classLevel} fee changes.
-            </DialogDescription>
-          )}
-        </DialogHeader>
+      {/* Fixed head, scrolling middle, fixed foot — see dialogSizing for why the
+          height cap is a stylesheet rule and not an inline style. The fee rows
+          are the only part that can grow without limit, so they are the only
+          part that scrolls; Save stays on screen at every viewport height. */}
+      <DialogContent data-dialog-frame="" style={dialogWidth(680)}>
+        <DialogSizing />
 
-        {loading ? (
-          <p className="text-sm text-gray-500 py-4">Loading fees...</p>
-        ) : (
-          <>
+        <div data-dialog-head="">
+          <DialogHeader>
+            <DialogTitle>{wasOverridden ? 'Custom fees' : 'Edit this student’s fees'}</DialogTitle>
+            {wasOverridden && (
+              <DialogDescription>
+                {studentName} is on a custom fee structure and does not follow {classLevel} fee changes.
+              </DialogDescription>
+            )}
+          </DialogHeader>
+          {/* The column heads belong with the title, not with the rows: they
+              have to stay put while the rows move under them. */}
+          {!loading && (
             <div
               className="flex items-center gap-2 text-sm text-gray-500"
               style={{ paddingBottom: 6, borderBottom: '1px solid #E5E7EB', marginTop: 12 }}
@@ -206,8 +211,20 @@ export function StudentFeeOverrideDialog({
               <span style={{ width: 120, textAlign: 'right' }}>Amount</span>
               <span style={{ width: 32 }} />
             </div>
+          )}
+        </div>
 
-            <div className="space-y-2" style={{ maxHeight: 300, overflowY: 'auto', paddingTop: 8 }}>
+        {loading ? (
+          <div data-dialog-body="">
+            <p className="text-sm text-gray-500 py-4">Loading fees...</p>
+          </div>
+        ) : (
+          <>
+            {/* No maxHeight of its own any more. The frame decides how tall the
+                scrolling area is, and a fixed 300px inside a box that already
+                scrolls gave two nested scrollbars where the outer one moved and
+                the rows stayed where they were. */}
+            <div className="space-y-2" data-dialog-body="" data-role="fee-rows" style={{ paddingTop: 8 }}>
               {rows.length === 0 && (
                 <p className="text-sm text-gray-500">
                   No fees — this student would owe nothing. Add one below if that is not intended.
@@ -241,7 +258,8 @@ export function StudentFeeOverrideDialog({
               ))}
             </div>
 
-            <div className="flex items-center justify-between mt-2">
+            <div data-dialog-foot="">
+            <div className="flex items-center justify-between" style={{ gap: '0.75rem', flexWrap: 'wrap' }}>
               <Button variant="outline" size="sm" onClick={addRow} className="flex items-center gap-2">
                 <Plus size={16} />
                 Add Fee
@@ -279,7 +297,10 @@ export function StudentFeeOverrideDialog({
                 </div>
               </div>
             ) : (
-              <div className="flex items-center justify-between mt-4">
+              <div
+                className="flex items-center justify-between mt-4"
+                style={{ gap: '0.75rem', flexWrap: 'wrap' }}
+              >
                 <div>
                   {wasOverridden && (
                     <Button variant="outline" size="sm" onClick={() => setConfirmRemove(true)}>
@@ -287,7 +308,7 @@ export function StudentFeeOverrideDialog({
                     </Button>
                   )}
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2" style={{ marginLeft: 'auto' }}>
                   <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
                     Cancel
                   </Button>
@@ -297,6 +318,7 @@ export function StudentFeeOverrideDialog({
                 </div>
               </div>
             )}
+            </div>
           </>
         )}
       </DialogContent>
