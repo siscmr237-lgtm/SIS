@@ -23,9 +23,11 @@ import { ConfirmActionControl } from "./ConfirmActionControl";
  * /school/pending-verification, which tells them their account is under review
  * rather than leaving them at a door that has silently stopped opening.
  *
- * The dialog is shared with ApproveSchoolControl via ConfirmActionControl; the
- * amber tone is what separates the two buttons on a page that shows them in
- * the same slot.
+ * The dialog is shared with ApproveSchoolControl via ConfirmActionControl. The
+ * amber tone is kept even though the school page now puts this button alone at
+ * its foot rather than in the approval's slot: amber still says "this closes
+ * something" at a glance, and the two controls remain one status apart, so a
+ * school going PENDING swaps this button for the green one.
  */
 export function RevertToPendingControl({
   schoolId,
@@ -39,7 +41,7 @@ export function RevertToPendingControl({
 }) {
   return (
     <ConfirmActionControl
-      label="Send Back to Pending"
+      label="Mark Waiting"
       tone="withdraw"
       title={`Send ${schoolName} back to pending? They will lose access to their dashboard.`}
       body="Nothing is deleted — their students, staff and settings stay exactly as they are, and approving again restores access."

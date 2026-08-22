@@ -9,6 +9,7 @@ import { hexForLabel } from "@/lib/uniformColors";
 import { RegistrationStatusBadge } from "@/components/platform/RegistrationStatusBadge";
 import { ApproveSchoolControl } from "@/components/platform/ApproveSchoolControl";
 import { RevertToPendingControl } from "@/components/platform/RevertToPendingControl";
+import { PhoneChangeControl } from "@/components/platform/PhoneChangeControl";
 
 /**
  * One school. Identity, headcounts, and its admin accounts.
@@ -16,6 +17,12 @@ import { RevertToPendingControl } from "@/components/platform/RevertToPendingCon
  * The uniform is THREE COLOUR LABELS on a single Json column — shirt, trouser,
  * gown. There is no uniform description field on School, so none is invented
  * here; the section shows the garments it actually has.
+ *
+ * THE ONE STATUS ACTION SITS AT THE FOOT, not the head. Approving a PENDING
+ * school still leads, because that is a decision the page is asking for. The
+ * reverse — marking an approved school as waiting again — is not asked for by
+ * anything; it is reached for, rarely, and it belongs out of the way of the
+ * details somebody came to read. See the note above it.
  */
 interface SchoolAdmin {
   id: number;
@@ -163,31 +170,6 @@ export default function SchoolDetailPage() {
         </div>
       )}
 
-      {/* The undo, in the same slot the approval occupied and under the same
-          rule: shown only for the one status it applies to. A school that is
-          not APPROVED has no access to take away, and the API refuses the call
-          anyway rather than dragging an INCOMPLETE school forward into a
-          submission it never made. */}
-      {school.registrationStatus === "APPROVED" && (
-        <div style={{ ...card, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, flexWrap: "wrap" }}>
-          <div style={{ minWidth: 0 }}>
-            <h2 style={{ fontSize: "0.9375rem", fontWeight: 600, margin: "0 0 3px", color: "#0F172A" }}>
-              Approved and live
-            </h2>
-            <p style={{ fontSize: "0.8125rem", color: "#64748B", margin: 0, lineHeight: 1.45 }}>
-              Send this school back to pending if it was approved by mistake, or if its details need redoing. Nothing is deleted.
-            </p>
-          </div>
-          <RevertToPendingControl
-            schoolId={school.id}
-            schoolName={school.name}
-            onReverted={(status) =>
-              setSchool((prev) => (prev ? { ...prev, registrationStatus: status } : prev))
-            }
-          />
-        </div>
-      )}
-
       <div style={card}>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 14 }}>
           <div><span style={label}>Students</span><div style={value}>{school.studentCount}</div></div>
@@ -250,16 +232,72 @@ export default function SchoolDetailPage() {
                     <div style={{ ...value, overflowWrap: "anywhere" }}>{a.email || "—"}</div>
                   </div>
                 </div>
-                <PasswordResetControl
-                  endpoint={`/platform/school-admins/${a.id}/password`}
-                  mode="reset"
-                  subjectName={a.name}
-                />
+                {/* The two credential controls, side by side. Both are bordered
+                    white buttons of the same size, and both may drop a message
+                    underneath — hence align-items:flex-start, so one reporting
+                    a result does not shove the other down the page.
+
+                    Wrapping is allowed: at the narrowest console width two
+                    buttons of this length do not fit on one line, and a row
+                    that overflows would put the second one off the edge. */}
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 8, flexWrap: "wrap" }}>
+                  <PasswordResetControl
+                    endpoint={`/platform/school-admins/${a.id}/password`}
+                    mode="reset"
+                    subjectName={a.name}
+                  />
+                  <PhoneChangeControl
+                    adminId={a.id}
+                    adminName={a.name}
+                    currentPhone={a.phoneNumber}
+                    // Written straight back into the loaded school, so the Phone
+                    // field above updates without a reload. The server's value,
+                    // not the field's — it is the one that was actually stored.
+                    onSaved={(phoneNumber) =>
+                      setSchool((prev) =>
+                        prev
+                          ? {
+                              ...prev,
+                              admins: prev.admins.map((x) =>
+                                x.id === a.id ? { ...x, phoneNumber } : x,
+                              ),
+                            }
+                          : prev,
+                      )
+                    }
+                  />
+                </div>
               </div>
             ))}
           </div>
         )}
       </div>
+
+      {/* Marking a school as waiting again, alone at the foot of the page and
+          deliberately outside every card.
+
+          It used to head an "Approved and live" card explaining itself. The
+          card is gone: it announced a status the badge under the school's name
+          already gives, and put the page's only destructive-feeling control
+          above everything a team member actually comes here to read. On its own
+          down here it is still findable and no longer in the way. The dialog it
+          opens carries the warning the card's paragraph used to.
+
+          Still shown for APPROVED only. That has not changed and is not
+          cosmetic: a school that is not approved has no access to take away,
+          and the API refuses the call rather than dragging an INCOMPLETE school
+          forward into a submission it never made. */}
+      {school.registrationStatus === "APPROVED" && (
+        <div style={{ marginTop: 8, marginBottom: 16 }}>
+          <RevertToPendingControl
+            schoolId={school.id}
+            schoolName={school.name}
+            onReverted={(status) =>
+              setSchool((prev) => (prev ? { ...prev, registrationStatus: status } : prev))
+            }
+          />
+        </div>
+      )}
     </div>
   );
 }

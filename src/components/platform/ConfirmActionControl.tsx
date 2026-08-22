@@ -19,8 +19,8 @@ import { useEffect, useRef, useState } from "react";
 /**
  * What the action does to the school on the other end of it. Only the colour
  * differs, but the distinction is the point: green for the button that opens
- * a school's access and amber for the one that closes it again, so the two are
- * not one mis-aimed click apart on a page that shows them in the same place.
+ * a school's access and amber for the one that closes it again, so a glance is
+ * enough to tell which of the two a page is currently offering.
  *
  * Amber and not red: this is reversible and touches a single status column,
  * so dressing it as a deletion would cry wolf.
