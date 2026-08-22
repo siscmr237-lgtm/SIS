@@ -7,6 +7,7 @@ import { Button } from './ui/button';
 import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
 } from './ui/dialog';
+import { dialogShell } from './dialogSizing';
 import { Input } from './ui/input';
 import { Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -183,7 +184,7 @@ export function StudentFeeOverrideDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent style={{ maxWidth: 680 }}>
+      <DialogContent style={dialogShell(680)}>
         <DialogHeader>
           <DialogTitle>{wasOverridden ? 'Custom fees' : 'Edit this student’s fees'}</DialogTitle>
           {wasOverridden && (

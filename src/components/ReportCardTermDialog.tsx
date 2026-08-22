@@ -6,6 +6,7 @@ import { Button } from './ui/button';
 import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
 } from './ui/dialog';
+import { dialogShell } from './dialogSizing';
 import { Label } from './ui/label';
 
 /**
@@ -48,7 +49,7 @@ export function ReportCardTermDialog({
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!busy) onOpenChange(v); }}>
       {/* Width inline: max-w-md is not in the pre-compiled stylesheet. */}
-      <DialogContent style={{ maxWidth: 448 }}>
+      <DialogContent style={dialogShell(448)}>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
