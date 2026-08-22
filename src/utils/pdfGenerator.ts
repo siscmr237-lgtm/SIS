@@ -232,6 +232,17 @@ interface LedgerPdfEntry {
   entryDate: string;
   paymentMethod?: string | null;
   category?: { name: string } | null;
+  /**
+   * WHICH FEE this row is for, resolved server-side.
+   *
+   * NOT the same thing as `category`. That is the ChargeCategory relation, and a
+   * fee payment does not use it: POST /ledger/payment writes categoryId: null on
+   * purpose and records the fee in one of classLevelFeeId / studentFeeOverrideId /
+   * settlesEntryId instead. So a Category column reading category?.name got null
+   * for every payment and printed a dash down the whole sheet. GET
+   * /ledger/student/:id now resolves the name through feeKeyOf() and sends it here.
+   */
+  feeName?: string | null;
 }
 
 /**
@@ -445,14 +456,19 @@ export async function generateFinancialSheet(
   doc.setFontSize(13);
   doc.text('Individual Financial Sheet', 105, 44, { align: 'center' });
 
-  // Student info
+  // Student info — one row, and no heading above it.
+  //
+  // The heading said nothing the three labelled values did not already say, and
+  // stacking them cost three lines of vertical space before the table started.
+  //
+  // Fixed x positions rather than measured-and-spaced, so the three columns land
+  // in the same place on every sheet whatever the name happens to be. Name gets
+  // the 90mm to Class because it is the one value with no bound on its length.
   doc.setTextColor(0, 0, 0);
-  doc.setFontSize(12);
-  doc.text('Student Information', 20, 62);
   doc.setFontSize(10);
-  doc.text(`Name: ${student.firstName} ${student.lastName}`, 20, 70);
-  doc.text(`Student ID: ${student.id}`, 20, 77);
-  doc.text(`Class: ${student.class}`, 20, 84);
+  doc.text(`Student Name: ${student.firstName} ${student.lastName}`, 20, 62);
+  doc.text(`Class: ${student.class}`, 110, 62);
+  doc.text(`Student ID: ${student.id}`, 155, 62);
 
   const { entries, totalCharged, totalPaid, balance } = ledgerData;
 
@@ -466,16 +482,22 @@ export async function generateFinancialSheet(
   if (payments.length === 0) {
     doc.setFontSize(11);
     doc.setTextColor(150, 150, 150);
-    doc.text('No payment records found for this student.', 105, 107, { align: 'center' });
+    doc.text('No payment records found for this student.', 105, 86, { align: 'center' });
     doc.setTextColor(0, 0, 0);
-    cursorY = 112;
+    cursorY = 91;
   } else {
     autoTable(doc, {
-      startY: 95,
-      head: [['Date', 'Category', 'Payment Type', 'Amount (FCFA)']],
+      // 95 was chosen when a three-line student block ended at y=84. That block
+      // is one line at y=62 now, so the table starts where it used to leave a gap.
+      startY: 74,
+      head: [['Date', 'Fee', 'Payment Type', 'Amount (FCFA)']],
       body: payments.map((entry) => [
         new Date(entry.entryDate).toLocaleDateString('en-GB'),
-        entry.category?.name ?? '—',
+        // feeName, NOT category?.name — see LedgerPdfEntry.feeName for why the
+        // latter was null on every payment and printed a dash down the column.
+        // The dash is still the fallback, for a payment genuinely recorded
+        // before payments named the fee they settle.
+        entry.feeName ?? entry.category?.name ?? '—',
         entry.paymentMethod ?? '—',
         entry.amount.toLocaleString(),
       ]),
@@ -504,8 +526,16 @@ export async function generateFinancialSheet(
       `${balance.toLocaleString()} FCFA`,
     ]],
     theme: 'grid',
-    styles: { fontSize: 11, halign: 'center', cellPadding: 3 },
-    headStyles: { fillColor: [37, 99, 235], fontSize: 10, halign: 'center' },
+    // ROW HEIGHT MATCHES THE RECORDS TABLE, which is what fontSize and
+    // cellPadding between them decide. The records table above sets only
+    // fontSize: 9 and takes autoTable's default padding, so this one says the
+    // same and says nothing about padding — an explicit cellPadding: 3 here was
+    // the reason these rows stood taller than every row above them.
+    styles: { fontSize: 9, halign: 'center' },
+    // Grey, not the header blue. These are totals derived from the table above,
+    // not a second table of their own, and a second band of the same strong blue
+    // read as a competing heading.
+    headStyles: { fillColor: [107, 114, 128], halign: 'center' },
     margin: { left: 15, right: 15 },
     columnStyles: {
       0: { cellWidth: 60 },
