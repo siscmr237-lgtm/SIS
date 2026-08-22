@@ -16,7 +16,6 @@ import { StudentFlagNotices } from './StudentFlagNotices';
 import { AcademicYearSelect, useAcademicYear } from '../lib/academicYear';
 import { formatTermLabel } from '../utils/academicTerm';
 import { StudentFeeOverrideDialog } from './StudentFeeOverrideDialog';
-import { AddChargeDialog } from './AddChargeDialog';
 import { StudentAttendancePanel } from './StudentAttendancePanel';
 import { ReportCardTermDialog } from './ReportCardTermDialog';
 import { downloadReportCard } from '@/lib/reportCard';
@@ -30,6 +29,7 @@ import {
 } from './ui/dialog';
 import { Input } from './ui/input';
 import { ThreePartDateInput } from './ThreePartDateInput';
+import { dialogShell, dialogFrame, DIALOG_BODY } from './dialogSizing';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
 import {
@@ -55,6 +55,15 @@ interface LedgerEntry {
    * Charged breakdown instead.
    */
   isFeeStructureCharge?: boolean;
+  /**
+   * Which fee this row settles, by name, resolved by the server.
+   *
+   * Not interchangeable with `category`: a fee payment is tagged through
+   * classLevelFeeId / studentFeeOverrideId / settlesEntryId and carries
+   * categoryId: null, so category is empty on every payment. Read by the
+   * financial-sheet PDF's Fee column.
+   */
+  feeName?: string | null;
 }
 
 interface LedgerData {
@@ -81,7 +90,12 @@ interface StudentProfileProps {
 
 type Tab = 'general' | 'finance' | 'marks' | 'attendance';
 
-const PAYMENT_METHODS = ['Cash', 'Bank Transfer', 'Mobile Money', 'Cheque'];
+/**
+ * The two ways this school actually receives money. Deliberately short: the
+ * Pay Fees dialog offers exactly these, and a method nobody uses is a wrong
+ * answer somebody can pick by accident.
+ */
+const PAYMENT_METHODS = ['Cash', 'Mobile Money'];
 
 const VALID_TABS: Tab[] = ['general', 'finance', 'marks', 'attendance'];
 
@@ -176,7 +190,6 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
   const [ledgerLoading, setLedgerLoading] = useState(false);
   const [ledgerError, setLedgerError] = useState<string | null>(null);
   const [showFeeOverride, setShowFeeOverride] = useState(false);
-  const [showAddCharge, setShowAddCharge] = useState(false);
   // Whether this student is detached from their class level's fee structure.
   // Seeded from the record we were handed and refreshed after an override edit.
   const [feesOverridden, setFeesOverridden] = useState<boolean>(Boolean((student as any).feesOverridden));
@@ -241,12 +254,49 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
   const [owingLoading, setOwingLoading] = useState(false);
   /** Which group a settle-all has been opened for, if any. */
   const [settleGroup, setSettleGroup] = useState<'REGISTRATION' | 'OTHER_FEES' | null>(null);
-  const [paymentForm, setPaymentForm] = useState({
-    feeKey: '', description: '', amount: '', entryDate: today, paymentMethod: '',
-  });
+  /**
+   * The Pay Fees dialog's working state: one amount per fee, keyed by feeKey,
+   * plus the date and the method the whole hand-over shares.
+   *
+   * A STRING per row, and ABSENT rather than 0 when untouched. '' is what "left
+   * empty" looks like and it is the thing submit skips; a number would make an
+   * untouched row indistinguishable from one somebody deliberately zeroed, since
+   * Number('') is 0.
+   */
+  const [payAmounts, setPayAmounts] = useState<Record<string, string>>({});
+  const [payDate, setPayDate] = useState(today);
+  const [payMethod, setPayMethod] = useState('');
 
-  /** The category currently selected, and therefore the cap that applies. */
-  const selectedOwing = owingCategories.find((c) => c.key === paymentForm.feeKey) ?? null;
+  /**
+   * Type an amount against one fee.
+   *
+   * Digits only, and never more than that fee's own outstanding balance. The cap
+   * is applied to the VALUE rather than shown as a warning beside it: an amount
+   * that cannot be recorded should not be typable, and the server refuses it
+   * anyway, so leaving it in the box only defers the refusal to submit time.
+   */
+  const setPayAmount = (fee: { key: string; owing: number }, raw: string) => {
+    setSubmitError(null);
+    const digits = raw.replace(/[^\d]/g, '');
+    const next = digits === '' ? '' : String(Math.min(Number(digits), fee.owing));
+    setPayAmounts((prev) => ({ ...prev, [fee.key]: next }));
+  };
+
+  /**
+   * What this submit would record in total — the figure to check against the
+   * cash actually in hand before pressing the button.
+   *
+   * Counts only rows that can be paid against, so a stale amount left in a row
+   * that has since been settled elsewhere cannot inflate it.
+   */
+  const payTotal = useMemo(
+    () => owingCategories.reduce((sum, c) => {
+      if (!c.payable || c.owing <= 0) return sum;
+      const n = Number(payAmounts[c.key]);
+      return Number.isFinite(n) && n > 0 ? sum + Math.round(n) : sum;
+    }, 0),
+    [owingCategories, payAmounts],
+  );
 
   const loadOwing = async () => {
     setOwingLoading(true);
@@ -262,7 +312,9 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
 
   const openPaymentDialog = async () => {
     setSubmitError(null);
-    setPaymentForm({ feeKey: '', description: '', amount: '', entryDate: new Date().toISOString().split('T')[0], paymentMethod: '' });
+    setPayAmounts({});
+    setPayMethod('');
+    setPayDate(new Date().toISOString().split('T')[0]);
     setShowPayment(true);
     await loadOwing();
   };
@@ -568,39 +620,73 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
     setShowFeeOverride(true);
   };
 
+  /**
+   * Record every fee the table has an amount against, as ONE act.
+   *
+   * Sent to POST /ledger/payments, which writes the rows inside a single
+   * transaction. Looping POST /ledger/payment from here would put each fee in
+   * its own request, so a cap rejection or a dropped connection partway through
+   * would leave some fees paid, some not, and nothing on screen saying which —
+   * the one outcome that must not be possible with money.
+   *
+   * Rows left empty are skipped, and so are rows already settled: `owing <= 0`
+   * disables the input, so a fully-paid fee cannot contribute an amount at all.
+   */
   const handlePaymentSubmit = async () => {
     setSubmitError(null);
-    // Validated here for a quick answer, and again on the server, which is the
-    // authority — this dialog is not the only thing that can reach the endpoint.
-    if (!selectedOwing) {
-      setSubmitError('Choose which fee this payment is for.');
+
+    const entries = owingCategories
+      .filter((c) => c.payable && c.owing > 0)
+      .map((c) => ({
+        feeKey: c.key,
+        name: c.name,
+        owing: c.owing,
+        amount: Math.round(Number(payAmounts[c.key])),
+      }))
+      .filter((e) => Number.isFinite(e.amount) && e.amount > 0);
+
+    if (entries.length === 0) {
+      setSubmitError('Enter an amount against at least one fee.');
       return;
     }
-    const amt = Number(paymentForm.amount);
-    if (!Number.isFinite(amt) || amt <= 0) {
-      setSubmitError('Enter an amount greater than zero.');
+    // Belt and braces. The inputs clamp as they are typed and the server caps
+    // again, but an owing figure that went stale between load and submit would
+    // slip past the first, and a message naming the fee is more use than a 400.
+    const over = entries.find((e) => e.amount > e.owing);
+    if (over) {
+      setSubmitError(`${over.name} has only ${over.owing.toLocaleString()} FCFA outstanding.`);
       return;
     }
-    if (amt > selectedOwing.owing) {
-      setSubmitError(`That is more than the ${selectedOwing.owing.toLocaleString()} FCFA still owed for ${selectedOwing.name}.`);
+    if (!payDate) {
+      setSubmitError('Choose the date the money was received.');
       return;
     }
+
     setSubmitting(true);
     try {
-      await api.post('/ledger/payment', {
+      const res: any = await api.post('/ledger/payments', {
         studentId: student.id,
-        // What ties the money to the category it settles, so paying Tuition
-        // clears Tuition instead of the oldest charge on the account.
-        feeKey: selectedOwing.key,
-        description: paymentForm.description || `${selectedOwing.name} payment`,
-        amount: Math.round(amt),
-        entryDate: paymentForm.entryDate,
-        paymentMethod: paymentForm.paymentMethod,
+        entryDate: payDate,
+        paymentMethod: payMethod || undefined,
+        // Each row names the fee it settles, which is what makes paying Tuition
+        // clear Tuition instead of the oldest charge on the account.
+        entries: entries.map((e) => ({ feeKey: e.feeKey, amount: e.amount })),
       });
       cache.invalidateOn('ledger:write');
       setShowPayment(false);
-      setPaymentForm({ feeKey: '', description: '', amount: '', entryDate: new Date().toISOString().split('T')[0], paymentMethod: '' });
-      await refreshLedger();
+      setPayAmounts({});
+      setPayMethod('');
+      setPayDate(new Date().toISOString().split('T')[0]);
+      const recorded = res?.recorded ?? entries.length;
+      toast.success(
+        `${recorded} payment${recorded === 1 ? '' : 's'} recorded — ${(res?.total ?? payTotal).toLocaleString()} FCFA`,
+      );
+      // BOTH, and loadOwing is the one that used to be missing here. This dialog
+      // caps against owingCategories, so leaving them stale after a payment left
+      // the next open offering a fee that had just been settled — and left the
+      // Settle Registration button showing for a group that no longer owed
+      // anything, since that button reads the same list.
+      await Promise.all([refreshLedger(), loadOwing()]);
     } catch (e: any) {
       setSubmitError(e.message || 'Failed to record payment');
     } finally {
@@ -871,11 +957,6 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                 >
                   Download Financial Sheet
                 </button>
-                {/* Two items, not the one "Edit Fees / Add Charge" that used to
-                    stand here. Editing a fee structure and raising a one-off
-                    charge are different acts on different data — and the
-                    combined item could only be named by listing both, which is
-                    a menu admitting it does not know what it does. */}
                 <button
                   className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
                   onClick={() => { setShowFeeOverride(true); setShowActionsMenu(false); }}
@@ -884,15 +965,9 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                 </button>
                 <button
                   className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
-                  onClick={() => { setShowAddCharge(true); setShowActionsMenu(false); }}
-                >
-                  Add Charge
-                </button>
-                <button
-                  className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
                   onClick={() => { openPaymentDialog(); setShowActionsMenu(false); }}
                 >
-                  Record Payment
+                  Pay Fees
                 </button>
               </div>
             )}
@@ -1085,7 +1160,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
             open={showAddContact}
             onOpenChange={(open) => { setShowAddContact(open); if (!open) setContactError(null); }}
           >
-            <DialogContent className="max-w-md">
+            <DialogContent style={dialogShell(448)}>
               <DialogHeader>
                 <DialogTitle>Add Pickup Contact</DialogTitle>
                 <DialogDescription>
@@ -1142,7 +1217,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
             open={!!editingContact}
             onOpenChange={(open) => { if (!open) { setEditingContact(null); setContactError(null); } }}
           >
-            <DialogContent className="max-w-md">
+            <DialogContent style={dialogShell(448)}>
               <DialogHeader>
                 <DialogTitle>Edit Pickup Contact</DialogTitle>
               </DialogHeader>
@@ -1200,7 +1275,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
             open={showEdit}
             onOpenChange={(open) => { setShowEdit(open); if (!open) setEditError(null); }}
           >
-            <DialogContent className="max-w-2xl" style={{ display: 'flex', flexDirection: 'column', maxHeight: '90vh', overflow: 'hidden', padding: 0, gap: 0 }}>
+            <DialogContent style={{ ...dialogFrame(672), padding: 0, gap: 0 }}>
               <div style={{ padding: '1.5rem 1.5rem 1rem' }}>
                 <DialogHeader>
                   <DialogTitle>Edit Student</DialogTitle>
@@ -1443,7 +1518,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
             open={showDeleteConfirm}
             onOpenChange={(open) => { setShowDeleteConfirm(open); if (!open) setDeleteError(null); }}
           >
-            <DialogContent className="max-w-md">
+            <DialogContent style={dialogShell(448)}>
               <DialogHeader>
                 <DialogTitle>Delete {displayInfo.firstName} {displayInfo.lastName}?</DialogTitle>
                 <DialogDescription>
@@ -1486,26 +1561,25 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
             shortfalls={(student as any).firstInstallmentShortfalls}
           />
 
-          {/* Settle a whole group in one action. Offered per group, and only
-              while that group actually has something outstanding — an action
-              that is always available but sometimes does nothing is worse than
-              one that is absent. The amounts come from the server. */}
-          {(['REGISTRATION', 'OTHER_FEES'] as const)
-            .filter((g) => owingCategories.some((c) => (c.group ?? 'OTHER_FEES') === g && c.payable && c.owing > 0))
-            .length > 0 && (
+          {/* Settle a whole group in one action — REGISTRATION only. The
+              companion "Settle Other Fees" button is gone, so this is no longer
+              a list over both groups: Other Fees are paid from the Pay Fees
+              table, which can take every one of them in a single submit.
+
+              Still offered only while Registration actually has something
+              outstanding — an action that is always available but sometimes does
+              nothing is worse than one that is absent. Amounts come from the
+              server. */}
+          {owingCategories.some((c) => (c.group ?? 'OTHER_FEES') === 'REGISTRATION' && c.payable && c.owing > 0) && (
             <div className="flex gap-2 flex-wrap" style={{ justifyContent: 'flex-end' }}>
-              {(['REGISTRATION', 'OTHER_FEES'] as const)
-                .filter((g) => owingCategories.some((c) => (c.group ?? 'OTHER_FEES') === g && c.payable && c.owing > 0))
-                .map((g) => (
-                  <Button key={g} variant="outline" size="sm" onClick={() => setSettleGroup(g)}>
-                    Settle {g === 'REGISTRATION' ? 'Registration' : 'Other Fees'}
-                  </Button>
-                ))}
+              <Button variant="outline" size="sm" onClick={() => setSettleGroup('REGISTRATION')}>
+                Settle Registration
+              </Button>
             </div>
           )}
 
-          {/* Desktop: action row. Already wraps, which is what lets a fourth
-              button join it without a breakpoint of its own. */}
+          {/* Desktop: action row. Wraps, so a long school name or a narrow
+              window cannot push a button off the edge. */}
           <div className="hidden md:flex gap-2 justify-end flex-wrap">
             <Button variant="outline" onClick={handleDownloadStatement} disabled={!ledgerData}>
               <FileText size={16} className="mr-1" />
@@ -1514,12 +1588,9 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
             <Button variant="outline" onClick={() => setShowFeeOverride(true)}>
               Edit This Student&apos;s Fees
             </Button>
-            <Button variant="outline" onClick={() => setShowAddCharge(true)}>
-              Add Charge
-            </Button>
             <Button onClick={openPaymentDialog}>
               <Plus size={16} className="mr-1" />
-              Record Payment
+              Pay Fees
             </Button>
           </div>
 
@@ -1702,7 +1773,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
               own category, untagged money fills oldest-first), and the two would
               eventually disagree about the same student. */}
           <Dialog open={showOwingBreakdown} onOpenChange={setShowOwingBreakdown}>
-            <DialogContent className="max-w-2xl">
+            <DialogContent style={dialogShell(672)}>
               <DialogHeader>
                 <DialogTitle>What is owed</DialogTitle>
                 <DialogDescription>
@@ -1812,7 +1883,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
               if (!open) { setEditingEntryId(null); setEntryError(null); }
             }}
           >
-            <DialogContent className="max-w-2xl">
+            <DialogContent style={dialogShell(672)}>
               <DialogHeader>
                 <DialogTitle>All charges</DialogTitle>
                 <DialogDescription>
@@ -1965,21 +2036,6 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
             }}
           />
 
-          <AddChargeDialog
-            open={showAddCharge}
-            onOpenChange={setShowAddCharge}
-            studentCode={String(student.id)}
-            studentName={`${displayInfo.firstName} ${displayInfo.lastName}`}
-            onAdded={() => {
-              // The ledger has a new line and the student owes more, so both the
-              // statement and the per-category owing figures Record Payment caps
-              // against are stale. feesOverridden is deliberately NOT re-read: a
-              // standalone charge carries no fee linkage and cannot have changed it.
-              void refreshLedger();
-              void loadOwing();
-            }}
-          />
-
           {/* Delete-a-record confirmation. Deliberately not window.confirm: what
               deleting costs differs by row kind, and saying so is the point of
               asking at all. */}
@@ -1989,7 +2045,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
               if (!open && !entryBusy) { setEntryPendingDelete(null); setEntryError(null); }
             }}
           >
-            <DialogContent>
+            <DialogContent style={dialogShell(448)}>
               <DialogHeader>
                 <DialogTitle>
                   Delete this {entryPendingDelete?.type === 'CHARGE' ? 'charge' : 'payment'}?
@@ -2020,141 +2076,183 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
             </DialogContent>
           </Dialog>
 
-          {/* Record Payment dialog */}
+          {/* Pay Fees dialog — a table of this student's fees, one amount per
+              row, recorded together.
+
+              dialogFrame rather than dialogShell: this is the one dialog on the
+              page whose middle can grow without limit (a class with a dozen
+              fees), and losing sight of the Record Payment button while typing
+              amounts is exactly what should not happen when handling money. So
+              the header and footer stay pinned and only the table scrolls. */}
           <Dialog open={showPayment} onOpenChange={(open) => { setShowPayment(open); if (!open) setSubmitError(null); }}>
-            <DialogContent className="max-w-md">
+            <DialogContent style={dialogFrame(880)}>
               <DialogHeader>
-                <DialogTitle>Record Payment</DialogTitle>
+                <DialogTitle>Pay Fees</DialogTitle>
+                <DialogDescription>
+                  Enter what was received against each fee. Every row with an amount becomes
+                  its own payment, tagged to that fee — recorded together, or not at all.
+                </DialogDescription>
               </DialogHeader>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', paddingTop: '0.5rem' }}>
-                {/* Category FIRST: the amount has no meaning, and no ceiling,
-                    until we know which fee the money is for. */}
-                <div>
-                  <Label>Paying for</Label>
-                  <Select
-                    value={paymentForm.feeKey}
-                    onValueChange={(v) => {
-                      setSubmitError(null);
-                      // Deliberately does NOT pre-fill the amount. A pre-filled
-                      // figure gets accepted without being read, and "the whole
-                      // outstanding balance" is a guess about what was handed
-                      // over. The amount owed is shown as guidance instead.
-                      setPaymentForm(f => ({ ...f, feeKey: v, amount: '' }));
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder={owingLoading ? 'Loading…' : 'Select fee'} />
-                    </SelectTrigger>
-                    {/* EVERY category in this student's fee structure is listed,
-                        including the ones with nothing to pay. Hiding those was
-                        what made a class of five categories show three, with no
-                        way to tell "already paid" from "never charged" from
-                        "this class has no such fee". The ones that cannot take
-                        money are greyed and explain themselves when picked
-                        rather than being disabled, since a row that does not
-                        respond to a click reads as broken. */}
-                    <SelectContent>
-                      {/* Grouped, and a group with no categories renders nothing
-                          at all rather than a heading over an empty list — a
-                          school with no registration fee is perfectly valid. */}
-                      {(['REGISTRATION', 'OTHER_FEES'] as const).flatMap((g) => {
-                        const inGroup = owingCategories.filter((c) => (c.group ?? 'OTHER_FEES') === g);
-                        if (inGroup.length === 0) return [];
-                        return [
-                          <div
-                            key={`hdr-${g}`}
-                            className="text-xs"
-                            style={{ color: '#6B7280', fontWeight: 600, padding: '6px 8px 2px' }}
-                          >
-                            {g === 'REGISTRATION' ? 'Registration' : 'Other Fees'}
-                          </div>,
-                          ...inGroup.map(c => (
-                            <SelectItem
-                              key={c.key}
-                              value={c.key}
-                              style={c.owing > 0 ? undefined : { color: '#9CA3AF' }}
-                            >
-                              {c.owing > 0
-                                ? `${c.name} — ${c.owing.toLocaleString()} owing`
-                                : `${c.name} — ${c.charged > 0 ? 'fully paid' : 'nothing charged'}`}
-                            </SelectItem>
-                          )),
-                        ];
-                      })}
-                    </SelectContent>
-                  </Select>
-                  {!owingLoading && owingCategories.length === 0 && (
-                    <p className="text-sm text-gray-500" style={{ marginTop: 4 }}>
-                      This student has no fee categories yet.
-                    </p>
-                  )}
-                  {/* Why the category that was just picked cannot take money. */}
-                  {selectedOwing && selectedOwing.owing <= 0 && (
-                    <p className="text-sm" style={{ marginTop: 4, color: '#e0552e' }}>
-                      {selectedOwing.charged > 0
-                        ? `${displayInfo.firstName} has fully paid ${selectedOwing.name}. There is nothing left to pay against it.`
-                        : `${selectedOwing.name} does not have a charged amount, so there is nothing to pay toward it yet.`}
-                    </p>
-                  )}
+
+              {/* A <style> element because these are media queries and a table's
+                  cell rules, neither of which a style attribute can express —
+                  and not Tailwind classes because src/index.css is a frozen
+                  pre-compiled build where a utility that is not already in it
+                  renders as nothing. Same arrangement as [data-profile-fields]
+                  further up this file.
+
+                  768px is where the payment details move from below the table to
+                  beside it: at 640 the two columns would leave the Fee name about
+                  180px, which is narrower than the fee names actually are. */}
+              <style>{`
+                [data-pay-grid] {
+                  display: grid;
+                  grid-template-columns: minmax(0, 1fr);
+                  gap: 1.25rem;
+                }
+                @media (min-width: 768px) {
+                  [data-pay-grid] { grid-template-columns: minmax(0, 1fr) 232px; align-items: start; }
+                }
+                [data-pay-table] { width: 100%; border-collapse: collapse; }
+                [data-pay-table] th,
+                [data-pay-table] td { padding: 0.4rem 0.6rem; text-align: left; vertical-align: middle; }
+                [data-pay-table] thead th {
+                  font-size: 0.6875rem; font-weight: 500; color: #6B7280;
+                  text-transform: uppercase; letter-spacing: 0.04em;
+                  border-bottom: 1px solid #E5E7EB; background: #F9FAFB;
+                }
+                [data-pay-table] tbody td { border-bottom: 1px solid #F3F4F6; }
+                [data-pay-table] tbody tr:last-child td { border-bottom: none; }
+                /* The group heading rows: a label across the table, not a fee. */
+                [data-pay-table] tr[data-pay-group] td {
+                  font-size: 0.6875rem; font-weight: 600; color: #6B7280;
+                  text-transform: uppercase; letter-spacing: 0.04em;
+                  padding-top: 0.85rem; border-bottom: none;
+                }
+                [data-pay-num] { text-align: right; white-space: nowrap; }
+                [data-pay-total] td {
+                  border-top: 1px solid #E5E7EB; font-weight: 600;
+                  background: #F9FAFB;
+                }
+              `}</style>
+
+              <div style={DIALOG_BODY}>
+                <div data-pay-grid="">
+                  {/* LEFT (or top, on a phone) — the fees themselves. */}
+                  <div>
+                    {owingLoading ? (
+                      <p className="text-sm text-gray-500">Loading fees…</p>
+                    ) : owingCategories.length === 0 ? (
+                      <p className="text-sm text-gray-500">This student has no fee categories yet.</p>
+                    ) : (
+                      /* overflowX on the wrapper, so a long fee name scrolls the
+                         table inside its own box rather than widening the dialog. */
+                      <div style={{ border: '1px solid #E5E7EB', borderRadius: 8, overflowX: 'auto' }}>
+                        <table data-pay-table="">
+                          <thead>
+                            <tr>
+                              <th>Fee</th>
+                              <th data-pay-num="">Total</th>
+                              <th data-pay-num="" style={{ width: 148 }}>Paid</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {/* EVERY fee in this student's structure, both groups,
+                                including the ones with nothing left to pay — the
+                                same completeness the category picker had. A group
+                                with no fees renders nothing at all rather than a
+                                heading over an empty list: a school with no
+                                registration fee is perfectly valid. */}
+                            {(['REGISTRATION', 'OTHER_FEES'] as const).flatMap((g) => {
+                              const inGroup = owingCategories.filter((c) => (c.group ?? 'OTHER_FEES') === g);
+                              if (inGroup.length === 0) return [];
+                              return [
+                                <tr key={`hdr-${g}`} data-pay-group="">
+                                  <td colSpan={3}>{g === 'REGISTRATION' ? 'Registration' : 'Other Fees'}</td>
+                                </tr>,
+                                ...inGroup.map((c) => {
+                                  // Settled and unpayable are different facts and
+                                  // the placeholder says which; both lock the row,
+                                  // because neither can legally take money.
+                                  const settled = c.owing <= 0;
+                                  const locked = settled || !c.payable;
+                                  return (
+                                    <tr key={c.key}>
+                                      <td className="text-sm" style={{ overflowWrap: 'anywhere' }}>{c.name}</td>
+                                      <td className="text-sm" data-pay-num="">{c.charged.toLocaleString()}</td>
+                                      <td data-pay-num="">
+                                        <Input
+                                          type="text"
+                                          inputMode="numeric"
+                                          aria-label={`Amount paid for ${c.name}`}
+                                          value={locked ? '' : (payAmounts[c.key] ?? '')}
+                                          onChange={(e) => setPayAmount(c, e.target.value)}
+                                          disabled={locked}
+                                          placeholder={
+                                            settled ? 'Completed'
+                                              : !c.payable ? 'Unavailable'
+                                              : `Owing ${c.owing.toLocaleString()}`
+                                          }
+                                          style={{ textAlign: 'right' }}
+                                        />
+                                      </td>
+                                    </tr>
+                                  );
+                                }),
+                              ];
+                            })}
+                          </tbody>
+                          {/* The figure to check against the cash in hand before
+                              pressing the button. */}
+                          <tfoot>
+                            <tr data-pay-total="">
+                              <td className="text-sm">Total being paid</td>
+                              <td />
+                              <td className="text-sm" data-pay-num="">
+                                {payTotal.toLocaleString()} FCFA
+                              </td>
+                            </tr>
+                          </tfoot>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* RIGHT (or below, on a phone) — what the whole hand-over
+                      shares. One date and one method cover every row: this is one
+                      person handing over money once, not several transactions. */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <div>
+                      <Label>Date</Label>
+                      <ThreePartDateInput
+                        value={payDate}
+                        onChange={(v) => setPayDate(v ?? '')}
+                        aria-label="Payment date"
+                      />
+                    </div>
+                    <div>
+                      <Label>Payment Method</Label>
+                      <Select value={payMethod} onValueChange={setPayMethod}>
+                        <SelectTrigger><SelectValue placeholder="Select method" /></SelectTrigger>
+                        <SelectContent>
+                          {PAYMENT_METHODS.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <Label>Amount (FCFA)</Label>
-                  <Input
-                    type="number"
-                    min="1"
-                    max={selectedOwing ? selectedOwing.owing : undefined}
-                    value={paymentForm.amount}
-                    onChange={e => setPaymentForm(f => ({ ...f, amount: e.target.value }))}
-                    // The owed figure lives here, as guidance rather than as a
-                    // value that would be submitted unread.
-                    placeholder={selectedOwing && selectedOwing.owing > 0
-                      ? `${selectedOwing.owing.toLocaleString()} still owing for ${selectedOwing.name}`
-                      : '0'}
-                    disabled={!selectedOwing || selectedOwing.owing <= 0}
-                  />
-                  {selectedOwing && selectedOwing.owing > 0 && Number(paymentForm.amount) > selectedOwing.owing && (
-                    <p className="text-xs" style={{ marginTop: 4, color: '#B91C1C' }}>
-                      Above the {selectedOwing.owing.toLocaleString()} owing for {selectedOwing.name}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <Label>Notes</Label>
-                  <Input
-                    value={paymentForm.description}
-                    onChange={e => setPaymentForm(f => ({ ...f, description: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <Label>Date</Label>
-                  <ThreePartDateInput
-                    value={paymentForm.entryDate}
-                    onChange={v => setPaymentForm(f => ({ ...f, entryDate: v ?? '' }))}
-                    aria-label="Payment date"
-                  />
-                </div>
-                <div>
-                  <Label>Payment Method</Label>
-                  <Select value={paymentForm.paymentMethod} onValueChange={(v) => setPaymentForm(f => ({ ...f, paymentMethod: v }))}>
-                    <SelectTrigger><SelectValue placeholder="Select method" /></SelectTrigger>
-                    <SelectContent>
-                      {PAYMENT_METHODS.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                {submitError && <p className="text-sm text-red-600">{submitError}</p>}
               </div>
+
+              {submitError && <p className="text-sm" style={{ color: '#B91C1C' }}>{submitError}</p>}
               <div className="flex justify-end gap-2">
                 <DialogClose asChild>
                   <Button variant="outline" disabled={submitting}>Cancel</Button>
                 </DialogClose>
-                {/* A category with nothing owing is listed and selectable so it
-                    can explain itself, but it can never be paid against. */}
-                <Button
-                  onClick={handlePaymentSubmit}
-                  disabled={submitting || !selectedOwing || selectedOwing.owing <= 0}
-                >
-                  {submitting ? 'Saving...' : 'Record Payment'}
+                {/* Disabled until something would actually be recorded — an
+                    enabled button that can only produce "enter an amount" is a
+                    button that lies about being ready. */}
+                <Button onClick={handlePaymentSubmit} disabled={submitting || payTotal <= 0}>
+                  {submitting ? 'Saving…' : 'Record Payment'}
                 </Button>
               </div>
             </DialogContent>
