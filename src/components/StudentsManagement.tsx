@@ -240,12 +240,17 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
               </div>
               <div>
                 <Label>Date of Birth</Label>
-                <Input
-                  type="date"
+                {/* The same control as Enrollment Date below it and Hire Date
+                    in the Add New Staff dialog. It was the only date left in
+                    this form still wearing the browser's own widget, which on
+                    Chrome means a chevron the styled fields do not have and a
+                    value in the OS locale rather than the DD/MM/YYYY the rest
+                    of the app shows. */}
+                <DateFilterInput
                   value={form.dateOfBirth}
-                  onChange={(e) =>
-                    setForm((s) => ({ ...s, dateOfBirth: e.target.value }))
-                  }
+                  onChange={(v) => setForm((s) => ({ ...s, dateOfBirth: v }))}
+                  placeholder="Select date of birth"
+                  aria-label="Date of birth"
                 />
               </div>
               <div>
