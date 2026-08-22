@@ -202,10 +202,6 @@ export function SetupChecklist({ onNavigate, onOpenWizardStep }: Props) {
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
           <div>
             <h2 className="text-xl">Get your school ready</h2>
-            <p className="text-sm" style={{ color: MUTED, marginTop: 2 }}>
-              A few things to set up. You can do them in any order, and the rest of the app works
-              meanwhile.
-            </p>
           </div>
           {/* Kept visible while collapsed: the count is the reason to keep the
               card at all when the list itself is hidden. */}
