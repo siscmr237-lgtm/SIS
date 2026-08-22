@@ -16,6 +16,7 @@ import { StudentFlagNotices } from './StudentFlagNotices';
 import { AcademicYearSelect, useAcademicYear } from '../lib/academicYear';
 import { formatTermLabel } from '../utils/academicTerm';
 import { StudentFeeOverrideDialog } from './StudentFeeOverrideDialog';
+import { AddChargeDialog } from './AddChargeDialog';
 import { StudentAttendancePanel } from './StudentAttendancePanel';
 import { ReportCardTermDialog } from './ReportCardTermDialog';
 import { downloadReportCard } from '@/lib/reportCard';
@@ -175,6 +176,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
   const [ledgerLoading, setLedgerLoading] = useState(false);
   const [ledgerError, setLedgerError] = useState<string | null>(null);
   const [showFeeOverride, setShowFeeOverride] = useState(false);
+  const [showAddCharge, setShowAddCharge] = useState(false);
   // Whether this student is detached from their class level's fee structure.
   // Seeded from the record we were handed and refreshed after an override edit.
   const [feesOverridden, setFeesOverridden] = useState<boolean>(Boolean((student as any).feesOverridden));
@@ -869,15 +871,22 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                 >
                   Download Financial Sheet
                 </button>
-                {/* Record Charge lived here. Charges are now raised inside
-                    Edit This Student's Fees, which is where their money is
-                    arranged — one place instead of two entry points that
-                    created different kinds of charge. */}
+                {/* Two items, not the one "Edit Fees / Add Charge" that used to
+                    stand here. Editing a fee structure and raising a one-off
+                    charge are different acts on different data — and the
+                    combined item could only be named by listing both, which is
+                    a menu admitting it does not know what it does. */}
                 <button
                   className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
                   onClick={() => { setShowFeeOverride(true); setShowActionsMenu(false); }}
                 >
-                  Edit Fees / Add Charge
+                  Edit Fees
+                </button>
+                <button
+                  className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
+                  onClick={() => { setShowAddCharge(true); setShowActionsMenu(false); }}
+                >
+                  Add Charge
                 </button>
                 <button
                   className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
@@ -1495,7 +1504,8 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
             </div>
           )}
 
-          {/* Desktop: three-button row */}
+          {/* Desktop: action row. Already wraps, which is what lets a fourth
+              button join it without a breakpoint of its own. */}
           <div className="hidden md:flex gap-2 justify-end flex-wrap">
             <Button variant="outline" onClick={handleDownloadStatement} disabled={!ledgerData}>
               <FileText size={16} className="mr-1" />
@@ -1503,6 +1513,9 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
             </Button>
             <Button variant="outline" onClick={() => setShowFeeOverride(true)}>
               Edit This Student&apos;s Fees
+            </Button>
+            <Button variant="outline" onClick={() => setShowAddCharge(true)}>
+              Add Charge
             </Button>
             <Button onClick={openPaymentDialog}>
               <Plus size={16} className="mr-1" />
@@ -1949,6 +1962,21 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                 setFeesOverridden(Boolean(fresh?.feesOverridden));
               } catch {}
               await refreshLedger();
+            }}
+          />
+
+          <AddChargeDialog
+            open={showAddCharge}
+            onOpenChange={setShowAddCharge}
+            studentCode={String(student.id)}
+            studentName={`${displayInfo.firstName} ${displayInfo.lastName}`}
+            onAdded={() => {
+              // The ledger has a new line and the student owes more, so both the
+              // statement and the per-category owing figures Record Payment caps
+              // against are stale. feesOverridden is deliberately NOT re-read: a
+              // standalone charge carries no fee linkage and cannot have changed it.
+              void refreshLedger();
+              void loadOwing();
             }}
           />
 

@@ -8,7 +8,6 @@ import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
 } from './ui/dialog';
 import { Input } from './ui/input';
-import { Label } from './ui/label';
 import { Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -48,14 +47,16 @@ interface Props {
 }
 
 /**
- * Raising a charge is intentionally independent of the fee structure below it.
+ * CHARGES ARE NOT RAISED HERE. They were, as a section at the bottom, and the
+ * menu item had to be called "Edit Fees / Add Charge" to admit it — the name a
+ * screen doing two jobs is forced to give itself.
  *
- * A charge posts straight to /ledger/charge as its own ledger line with no fee
- * linkage, so it never becomes a StudentFeeOverride row and therefore cannot flip
- * feesOverridden. That matters: a fine is unrelated to which fees a student is
- * billed, and settling it through the structure would silently convert a student
- * on standard class fees to custom ones. It is payable on its own instead, via
- * the settlesEntryId link the Record Payment dialog uses.
+ * Worse than the name: the two halves committed differently. Everything above
+ * is a draft until Save, while Add charge posted the instant it was pressed, so
+ * one screen asked somebody to hold two commit models at once. A charge is also
+ * not a fee — it carries no fee linkage precisely so that raising one cannot
+ * flip a student onto custom fees — which makes the shared screen a claim about
+ * the data that was not true. See AddChargeDialog, which owns it now.
  */
 export function StudentFeeOverrideDialog({
   open, onOpenChange, studentCode, studentName, overridden, onChanged,
@@ -71,48 +72,6 @@ export function StudentFeeOverrideDialog({
   const [error, setError] = useState<string | null>(null);
   // A background load must not discard edits in progress.
   const dirty = useRef(false);
-
-  // Charge form — independent of `rows`, which is the fee structure.
-  const [chargeName, setChargeName] = useState('');
-  const [chargeAmount, setChargeAmount] = useState('');
-  const [chargeNote, setChargeNote] = useState('');
-  const [chargeBusy, setChargeBusy] = useState(false);
-  const [chargeMsg, setChargeMsg] = useState<{ ok: boolean; text: string } | null>(null);
-
-  const addCharge = async () => {
-    const amt = Number(chargeAmount);
-    if (!chargeName.trim()) {
-      setChargeMsg({ ok: false, text: 'Give the charge a name.' });
-      return;
-    }
-    if (!Number.isFinite(amt) || amt <= 0) {
-      setChargeMsg({ ok: false, text: 'Enter an amount greater than zero.' });
-      return;
-    }
-    setChargeBusy(true);
-    setChargeMsg(null);
-    try {
-      // No fee linkage sent, so this lands as a standalone charge. That is what
-      // keeps the student's fee structure — and feesOverridden — untouched.
-      await api.post('/ledger/charge', {
-        studentId: studentCode,
-        description: chargeName.trim(),
-        note: chargeNote.trim() || undefined,
-        amount: Math.round(amt),
-        entryDate: new Date().toISOString().split('T')[0],
-      });
-      cache.invalidateOn('ledger:write');
-      setChargeMsg({ ok: true, text: `“${chargeName.trim()}” added. It can now be paid on its own.` });
-      setChargeName('');
-      setChargeAmount('');
-      setChargeNote('');
-      onChanged();
-    } catch (e: any) {
-      setChargeMsg({ ok: false, text: e?.message || 'Could not add the charge.' });
-    } finally {
-      setChargeBusy(false);
-    }
-  };
 
   useEffect(() => {
     if (!open) { setConfirmRemove(false); return; }
@@ -292,65 +251,6 @@ export function StudentFeeOverrideDialog({
             </div>
 
             {error && <p className="text-sm mt-2" style={{ color: '#B91C1C' }}>{error}</p>}
-
-            {/* Raising a charge.
-                Lives here because this is where a student's money is arranged,
-                but it is deliberately NOT part of the fee structure above and
-                does NOT go through Save. A charge is its own independent ledger
-                line, posted the moment Add charge is pressed, so raising one
-                cannot flip this student onto custom fees — a fine has nothing to
-                do with their fee structure. It becomes individually payable in
-                Record Payment straight away. */}
-            <div
-              style={{
-                marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid #E5E7EB',
-              }}
-            >
-              <p className="text-sm" style={{ fontWeight: 600 }}>Add a charge</p>
-              <p className="text-sm text-gray-500" style={{ marginTop: 2, marginBottom: 8 }}>
-                A one-off charge such as a fine or a replaced book. Separate from the fees above —
-                it does not change {studentName}’s fee structure, and it can be paid on its own.
-              </p>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-                <div style={{ flex: '1 1 160px', minWidth: 140 }}>
-                  <Label>Charge name</Label>
-                  <Input
-                    value={chargeName}
-                    onChange={(e) => { setChargeName(e.target.value); setChargeMsg(null); }}
-                    placeholder="e.g. Broken window"
-                    disabled={chargeBusy}
-                  />
-                </div>
-                <div style={{ width: 120 }}>
-                  <Label>Amount</Label>
-                  <Input
-                    type="number"
-                    min="1"
-                    value={chargeAmount}
-                    onChange={(e) => { setChargeAmount(e.target.value); setChargeMsg(null); }}
-                    placeholder="0"
-                    disabled={chargeBusy}
-                  />
-                </div>
-                <div style={{ flex: '1 1 200px', minWidth: 160 }}>
-                  <Label>Description</Label>
-                  <Input
-                    value={chargeNote}
-                    onChange={(e) => setChargeNote(e.target.value)}
-                    placeholder="Reason (optional)"
-                    disabled={chargeBusy}
-                  />
-                </div>
-                <Button variant="outline" onClick={addCharge} disabled={chargeBusy}>
-                  {chargeBusy ? 'Adding...' : 'Add charge'}
-                </Button>
-              </div>
-              {chargeMsg && (
-                <p className="text-sm" style={{ marginTop: 6, color: chargeMsg.ok ? '#05603D' : '#B91C1C' }}>
-                  {chargeMsg.text}
-                </p>
-              )}
-            </div>
 
             {confirmRemove ? (
               <div
