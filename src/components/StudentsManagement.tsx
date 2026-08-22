@@ -221,7 +221,7 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
           <DialogTrigger asChild>
             <Button className="flex items-center gap-2">
               <Plus size={20} />
-              Add Student
+              Admit Student
             </Button>
           </DialogTrigger>
           {/* SIZED TO CLEAR THE SUPPORT BUTTON, NOT TO FIT THE FORM.
