@@ -1,13 +1,13 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import type { CSSProperties } from 'react';
 import { api } from '@/lib/api';
 import { useSisCache } from '@/lib/SisCache';
 import { Button } from './ui/button';
 import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
 } from './ui/dialog';
-import { DialogSizing, dialogWidth } from './dialogSizing';
 import { Input } from './ui/input';
 import { Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -25,6 +25,47 @@ import { toast } from 'sonner';
  * Inline styles for the notices because src/index.css is a pre-compiled Tailwind
  * build and an arbitrary colour utility would silently render as nothing.
  */
+
+/**
+ * The three bands of this dialog, as inline styles on the elements themselves.
+ *
+ * DialogContent caps its own height and lays itself out as a flex column (see
+ * ui/dialog.tsx). These give that column its shape: the head and the foot never
+ * shrink, and the middle takes what is left and scrolls.
+ *
+ * `minHeight: 0` on the middle is load-bearing. A flex item defaults to
+ * min-height:auto and refuses to shrink below its own content, so without it the
+ * middle pushes the dialog past its own max-height and nothing scrolls anywhere.
+ *
+ * Inline rather than a data attribute matched by a stylesheet: there is no
+ * indirection to wire up wrongly, and it is what DevTools shows under
+ * element.style.
+ */
+const HEAD: CSSProperties = {
+  flex: '0 0 auto',
+  // Right padding clears the close button, which sits at top-4 right-4.
+  padding: '1.25rem 3rem 0.75rem 1.25rem',
+};
+const BODY: CSSProperties = {
+  // 'auto' basis, NOT 0. flex-basis:0 is the right answer when the container
+  // has a definite height, but this dialog's height is auto with only a
+  // max-height above it: a 0 basis means the middle contributes nothing to the
+  // intrinsic height, so the box shrink-wraps to head+foot and the fee list
+  // collapses. Measured at 390x844 with 20 fees: 16px of 1516px, in a 299px
+  // dialog. An 'auto' basis grows to the content and then shrinks under the cap,
+  // which is what min-height:0 below is here to permit.
+  flex: '1 1 auto',
+  minHeight: 0,
+  overflowY: 'auto',
+  overscrollBehavior: 'contain',
+  padding: '0 1.25rem 1rem',
+};
+const FOOT: CSSProperties = {
+  flex: '0 0 auto',
+  borderTop: '1px solid #E5E7EB',
+  padding: '0.875rem 1.25rem',
+  background: '#FFFFFF',
+};
 
 interface Row {
   name: string;
@@ -188,10 +229,8 @@ export function StudentFeeOverrideDialog({
           height cap is a stylesheet rule and not an inline style. The fee rows
           are the only part that can grow without limit, so they are the only
           part that scrolls; Save stays on screen at every viewport height. */}
-      <DialogContent data-dialog-frame="" style={dialogWidth(680)}>
-        <DialogSizing />
-
-        <div data-dialog-head="">
+      <DialogContent style={{ maxWidth: 'min(680px, calc(100vw - 2rem))', padding: 0, gap: 0 }}>
+        <div style={HEAD}>
           <DialogHeader>
             <DialogTitle>{wasOverridden ? 'Custom fees' : 'Edit this student’s fees'}</DialogTitle>
             {wasOverridden && (
@@ -215,7 +254,7 @@ export function StudentFeeOverrideDialog({
         </div>
 
         {loading ? (
-          <div data-dialog-body="">
+          <div style={BODY}>
             <p className="text-sm text-gray-500 py-4">Loading fees...</p>
           </div>
         ) : (
@@ -224,7 +263,7 @@ export function StudentFeeOverrideDialog({
                 scrolling area is, and a fixed 300px inside a box that already
                 scrolls gave two nested scrollbars where the outer one moved and
                 the rows stayed where they were. */}
-            <div className="space-y-2" data-dialog-body="" data-role="fee-rows" style={{ paddingTop: 8 }}>
+            <div className="space-y-2" data-role="fee-rows" style={{ ...BODY, paddingTop: 8 }}>
               {rows.length === 0 && (
                 <p className="text-sm text-gray-500">
                   No fees — this student would owe nothing. Add one below if that is not intended.
@@ -258,7 +297,7 @@ export function StudentFeeOverrideDialog({
               ))}
             </div>
 
-            <div data-dialog-foot="">
+            <div style={FOOT}>
             <div className="flex items-center justify-between" style={{ gap: '0.75rem', flexWrap: 'wrap' }}>
               <Button variant="outline" size="sm" onClick={addRow} className="flex items-center gap-2">
                 <Plus size={16} />

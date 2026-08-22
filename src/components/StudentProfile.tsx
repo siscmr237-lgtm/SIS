@@ -30,7 +30,6 @@ import {
 import { Input } from './ui/input';
 import { ThreePartDateInput } from './ThreePartDateInput';
 import { PayFeesDialog, PayFeesSubmission } from './PayFeesDialog';
-import { dialogShell, dialogFrame } from './dialogSizing';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
 import {
@@ -1111,7 +1110,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
             open={showAddContact}
             onOpenChange={(open) => { setShowAddContact(open); if (!open) setContactError(null); }}
           >
-            <DialogContent style={dialogShell(448)}>
+            <DialogContent style={{ maxWidth: 'min(448px, calc(100vw - 2rem))', overflowY: 'auto' }}>
               <DialogHeader>
                 <DialogTitle>Add Pickup Contact</DialogTitle>
                 <DialogDescription>
@@ -1168,7 +1167,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
             open={!!editingContact}
             onOpenChange={(open) => { if (!open) { setEditingContact(null); setContactError(null); } }}
           >
-            <DialogContent style={dialogShell(448)}>
+            <DialogContent style={{ maxWidth: 'min(448px, calc(100vw - 2rem))', overflowY: 'auto' }}>
               <DialogHeader>
                 <DialogTitle>Edit Pickup Contact</DialogTitle>
               </DialogHeader>
@@ -1226,7 +1225,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
             open={showEdit}
             onOpenChange={(open) => { setShowEdit(open); if (!open) setEditError(null); }}
           >
-            <DialogContent style={{ ...dialogFrame(672), padding: 0, gap: 0 }}>
+            <DialogContent style={{ maxWidth: 'min(672px, calc(100vw - 2rem))', padding: 0, gap: 0 }}>
               <div style={{ padding: '1.5rem 1.5rem 1rem' }}>
                 <DialogHeader>
                   <DialogTitle>Edit Student</DialogTitle>
@@ -1469,7 +1468,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
             open={showDeleteConfirm}
             onOpenChange={(open) => { setShowDeleteConfirm(open); if (!open) setDeleteError(null); }}
           >
-            <DialogContent style={dialogShell(448)}>
+            <DialogContent style={{ maxWidth: 'min(448px, calc(100vw - 2rem))', overflowY: 'auto' }}>
               <DialogHeader>
                 <DialogTitle>Delete {displayInfo.firstName} {displayInfo.lastName}?</DialogTitle>
                 <DialogDescription>
@@ -1724,7 +1723,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
               own category, untagged money fills oldest-first), and the two would
               eventually disagree about the same student. */}
           <Dialog open={showOwingBreakdown} onOpenChange={setShowOwingBreakdown}>
-            <DialogContent style={dialogShell(672)}>
+            <DialogContent style={{ maxWidth: 'min(672px, calc(100vw - 2rem))', overflowY: 'auto' }}>
               <DialogHeader>
                 <DialogTitle>What is owed</DialogTitle>
                 <DialogDescription>
@@ -1834,7 +1833,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
               if (!open) { setEditingEntryId(null); setEntryError(null); }
             }}
           >
-            <DialogContent style={dialogShell(672)}>
+            <DialogContent style={{ maxWidth: 'min(672px, calc(100vw - 2rem))', overflowY: 'auto' }}>
               <DialogHeader>
                 <DialogTitle>All charges</DialogTitle>
                 <DialogDescription>
@@ -1996,7 +1995,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
               if (!open && !entryBusy) { setEntryPendingDelete(null); setEntryError(null); }
             }}
           >
-            <DialogContent style={dialogShell(448)}>
+            <DialogContent style={{ maxWidth: 'min(448px, calc(100vw - 2rem))', overflowY: 'auto' }}>
               <DialogHeader>
                 <DialogTitle>
                   Delete this {entryPendingDelete?.type === 'CHARGE' ? 'charge' : 'payment'}?

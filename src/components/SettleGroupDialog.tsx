@@ -9,7 +9,6 @@ import {
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { ThreePartDateInput } from './ThreePartDateInput';
-import { dialogShell } from './dialogSizing';
 
 /**
  * Settle every outstanding category in one fee group, in one action.
@@ -122,11 +121,9 @@ export function SettleGroupDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      {/* Sized rather than classed: see dialogSizing. This dialog and Pay
-          Fees were the two that ran off the top and bottom of a short viewport
-          with nothing scrollable, because max-w-md is not in the frozen
-          stylesheet and DialogContent caps its height nowhere. */}
-      <DialogContent style={dialogShell(448)}>
+      {/* Width inline because max-w-md is not in the frozen stylesheet and
+          renders as nothing. The height cap comes from DialogContent itself. */}
+      <DialogContent style={{ maxWidth: 'min(448px, calc(100vw - 2rem))', overflowY: 'auto' }}>
         <DialogHeader>
           <DialogTitle>Settle {label}</DialogTitle>
           <DialogDescription>

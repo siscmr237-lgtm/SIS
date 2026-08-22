@@ -46,9 +46,42 @@ function DialogOverlay({
   );
 }
 
+/**
+ * EVERY dialog in this app is capped to the screen, right here on the element.
+ *
+ * WHY IT LIVES ON THE PRIMITIVE. This content is `position: fixed; top: 50%;
+ * translate-y: -50%` with, by default, no max-height at all. That centring is
+ * what turns "too tall" into "unusable": a dialog taller than the viewport is
+ * pushed equally off the top AND the bottom, so the title goes above the screen
+ * and the buttons below it, and Radix's modal has locked body scroll so neither
+ * can be reached. Capping it anywhere other than on this element leaves some
+ * caller able to miss the cap.
+ *
+ * WHY INLINE AND NOT A CLASS OR A STYLESHEET RULE. src/index.css is a frozen
+ * pre-compiled Tailwind build, so a utility that is not already in it renders as
+ * nothing, silently -- `max-w-md` was doing exactly that. And an inline style is
+ * the one place that cannot fail to reach the element or lose a specificity
+ * fight: it is what DevTools shows under element.style, which is where anyone
+ * checking this will look.
+ *
+ * vh, not dvh. `dvh` would track the viewport more precisely while a phone's
+ * address bar is showing, but an inline declaration has nowhere to fall back to
+ * -- on a browser that does not know the unit the whole declaration is invalid
+ * and max-height reverts to `none`, which is the bug itself. `vh` is understood
+ * everywhere, so every browser gets a real cap.
+ *
+ * flex column, so a caller can hand the scrolling to ONE child: head and foot
+ * `flex: 0 0 auto`, the middle `flex: 1 1 0; min-height: 0; overflow-y: auto`.
+ * (`grid` is gone from the class list below because this replaces it; `gap-4`
+ * still applies, and still spaces the children.)
+ *
+ * A caller's own `style` is spread last and therefore wins -- that is how the
+ * tall dialogs set padding: 0 and their own maxWidth.
+ */
 function DialogContent({
   className,
   children,
+  style,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content>) {
   return (
@@ -57,9 +90,15 @@ function DialogContent({
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          "bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border p-6 shadow-lg duration-200 sm:max-w-lg",
+          "bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border p-6 shadow-lg duration-200 sm:max-w-lg",
           className,
         )}
+        style={{
+          maxHeight: "calc(100vh - 2rem)",
+          display: "flex",
+          flexDirection: "column",
+          ...style,
+        }}
         {...props}
       >
         {children}

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import type { CSSProperties } from 'react';
 import { Button } from './ui/button';
 import {
   Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle,
@@ -9,7 +10,6 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { ThreePartDateInput } from './ThreePartDateInput';
-import { DialogSizing, dialogWidth } from './dialogSizing';
 
 /**
  * Pay several of one student's fees from a single hand-over of money.
@@ -51,6 +51,47 @@ export interface PayFeesSubmission {
   total: number;
 }
 
+/**
+ * The three bands of this dialog, as inline styles on the elements themselves.
+ *
+ * DialogContent caps its own height and lays itself out as a flex column (see
+ * ui/dialog.tsx). These give that column its shape: the head and the foot never
+ * shrink, and the middle takes what is left and scrolls.
+ *
+ * `minHeight: 0` on the middle is load-bearing. A flex item defaults to
+ * min-height:auto and refuses to shrink below its own content, so without it the
+ * middle pushes the dialog past its own max-height and nothing scrolls anywhere.
+ *
+ * Inline rather than a data attribute matched by a stylesheet: there is no
+ * indirection to wire up wrongly, and it is what DevTools shows under
+ * element.style.
+ */
+const HEAD: CSSProperties = {
+  flex: '0 0 auto',
+  // Right padding clears the close button, which sits at top-4 right-4.
+  padding: '1.25rem 3rem 0.75rem 1.25rem',
+};
+const BODY: CSSProperties = {
+  // 'auto' basis, NOT 0. flex-basis:0 is the right answer when the container
+  // has a definite height, but this dialog's height is auto with only a
+  // max-height above it: a 0 basis means the middle contributes nothing to the
+  // intrinsic height, so the box shrink-wraps to head+foot and the fee list
+  // collapses. Measured at 390x844 with 20 fees: 16px of 1516px, in a 299px
+  // dialog. An 'auto' basis grows to the content and then shrinks under the cap,
+  // which is what min-height:0 below is here to permit.
+  flex: '1 1 auto',
+  minHeight: 0,
+  overflowY: 'auto',
+  overscrollBehavior: 'contain',
+  padding: '0 1.25rem 1rem',
+};
+const FOOT: CSSProperties = {
+  flex: '0 0 auto',
+  borderTop: '1px solid #E5E7EB',
+  padding: '0.875rem 1.25rem',
+  background: '#FFFFFF',
+};
+
 const PAY_FEES_CSS = [
   '[data-pay-table]{width:100%;border-collapse:collapse}',
   '[data-pay-table] th,[data-pay-table] td{padding:.4rem .6rem;text-align:left;vertical-align:middle}',
@@ -68,12 +109,6 @@ const PAY_FEES_CSS = [
   '  text-transform:uppercase;letter-spacing:.04em;',
   '  padding-top:.85rem;border-bottom:none}',
   '[data-pay-num]{text-align:right;white-space:nowrap}',
-  /* The footer's two controls sit side by side and wrap to their own lines when
-     there is no room, which is what keeps the foot short on a narrow phone. */
-  '[data-pay-when]{display:flex;gap:.75rem;flex-wrap:wrap}',
-  '[data-pay-when] > *{flex:1 1 150px;min-width:0}',
-  '[data-pay-commit]{display:flex;align-items:center;gap:.75rem;',
-  '  flex-wrap:wrap;margin-top:.75rem}',
 ].join('\n');
 
 const GROUPS = ['REGISTRATION', 'OTHER_FEES'] as const;
@@ -149,11 +184,13 @@ export function PayFeesDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent data-dialog-frame="" style={dialogWidth(880)}>
-        <DialogSizing />
+      <DialogContent style={{ maxWidth: 'min(880px, calc(100vw - 2rem))', padding: 0, gap: 0 }}>
+        {/* Only the table's cell rules are left in CSS -- padding on every th/td,
+            a sticky thead, the group rows. None of that is expressible inline,
+            and none of it is what sizes the dialog. */}
         <style>{PAY_FEES_CSS}</style>
 
-        <div data-dialog-head="">
+        <div style={HEAD}>
           <DialogHeader>
             <DialogTitle>Pay Fees</DialogTitle>
             <DialogDescription>
@@ -163,7 +200,7 @@ export function PayFeesDialog({
           </DialogHeader>
         </div>
 
-        <div data-dialog-body="" data-role="pay-body">
+        <div style={BODY} data-role="pay-body">
           {loading ? (
             <p className="text-sm text-gray-500" style={{ paddingTop: '0.5rem' }}>Loading fees…</p>
           ) : categories.length === 0 ? (
@@ -235,9 +272,11 @@ export function PayFeesDialog({
         {/* Everything the whole hand-over shares, plus the commit. One date and
             one method cover every row: this is one person handing over money
             once, not several transactions. */}
-        <div data-dialog-foot="">
-          <div data-pay-when="">
-            <div>
+        <div style={FOOT}>
+          {/* Side by side, wrapping to their own lines when there is no room —
+              which is what keeps the foot short on a narrow phone. */}
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <div style={{ flex: '1 1 150px', minWidth: 0 }}>
               <Label>Date</Label>
               <ThreePartDateInput
                 value={entryDate}
@@ -245,7 +284,7 @@ export function PayFeesDialog({
                 aria-label="Payment date"
               />
             </div>
-            <div>
+            <div style={{ flex: '1 1 150px', minWidth: 0 }}>
               <Label>Payment Method</Label>
               <Select value={paymentMethod} onValueChange={setPaymentMethod}>
                 <SelectTrigger><SelectValue placeholder="Select method" /></SelectTrigger>
@@ -260,7 +299,7 @@ export function PayFeesDialog({
             <p className="text-sm" style={{ color: '#B91C1C', marginTop: '0.6rem' }}>{error}</p>
           )}
 
-          <div data-pay-commit="">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', marginTop: '0.75rem' }}>
             <span className="text-sm" style={{ color: '#374151' }}>
               Total being paid <strong>{total.toLocaleString()}</strong> FCFA
             </span>
