@@ -1,8 +1,8 @@
-import { AlertTriangle, Filter, Info, Receipt, Search, Trash2 } from 'lucide-react';
+import { AlertTriangle, ChevronDown, ChevronLeft, ChevronRight, Filter, Info, Receipt, Search, Trash2 } from 'lucide-react';
 import { AcademicYearSelect, useAcademicYear } from '@/lib/academicYear';
 import { PaymentStatusDot, useStudentPaymentStatuses } from './PaymentStatus';
 import { ZeroMarkDot, useStudentsWithZeroMarks } from './MarkStatus';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api } from '../lib/api';
 import { useCachedResource, useSisCache } from '../lib/SisCache';
 import { formatTermLabel } from '../utils/academicTerm';
@@ -14,6 +14,7 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, Di
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { DateFilterInput } from './DateFilterInput';
 import { ThreePartDateInput } from './ThreePartDateInput';
 import { statValueFontSize } from '../utils/statFigure';
 
@@ -136,6 +137,16 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
   const [studentRows, setStudentRows] = useState<StudentRow[]>([]);
   const [studentLoading, setStudentLoading] = useState(true);
   const [studentTotalPages, setStudentTotalPages] = useState(1);
+  // The filters start collapsed behind their own button. The height the panel
+  // opens to is measured, not guessed: it is five filters on one line at lg and
+  // three stacked rows on a phone, so a fixed max-height would either clip the
+  // tall case or let the ease coast to a stop early in the short one. The
+  // observer keeps that number honest across breakpoint changes, and stays
+  // cheap because the inner box's own height never moves while the wrapper
+  // around it is the thing animating.
+  const [studentFiltersOpen, setStudentFiltersOpen] = useState(false);
+  const [studentFiltersHeight, setStudentFiltersHeight] = useState(0);
+  const studentFiltersInnerRef = useRef<HTMLDivElement | null>(null);
   // Class names are reference data, cached and shared with the other sections.
   // The money on this screen is not — see fetchDashboard and the two table
   // fetchers below, all of which go straight to the network every time.
@@ -257,6 +268,22 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
 
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Track the filter panel's natural height so the open/close transition has a
+  // real pixel target to ease toward. The inner box is always in the layout —
+  // the wrapper around it is what collapses — so this reads correctly even while
+  // the panel is closed, and re-reads itself when the grid reflows from five
+  // columns to two.
+  useEffect(() => {
+    const el = studentFiltersInnerRef.current;
+    if (!el) return;
+    const measure = () => setStudentFiltersHeight(Math.ceil(el.getBoundingClientRect().height));
+    measure();
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
   }, []);
 
   // Re-fetch the Student Transactions page whenever its page or any filter changes.
@@ -436,6 +463,57 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
         @media (max-width: 1023.98px) {
           [data-fin-filters] > [data-fin-filter="term"] { grid-column: span 2; }
         }
+        /* THE FILTERS REVEAL. Height comes from React (measured, so the ease
+           lands exactly on the panel's own height); everything else is here.
+           visibility is what keeps a collapsed panel out of the tab order and
+           away from screen readers, and it is delayed by the full length of the
+           collapse so the content cannot blank out mid-animation. The inner box
+           slides its last few pixels down into place, which reads as the panel
+           unfolding rather than a box simply getting taller. */
+        [data-fin-filter-panel] {
+          overflow: hidden;
+          opacity: 0;
+          visibility: hidden;
+          transition:
+            height 300ms cubic-bezier(0.4, 0, 0.2, 1),
+            opacity 160ms ease,
+            visibility 0s linear 300ms;
+        }
+        [data-fin-filter-panel] > div {
+          transform: translateY(-6px);
+          transition: transform 300ms cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        [data-fin-filter-panel][data-open="true"] {
+          opacity: 1;
+          visibility: visible;
+          transition:
+            height 300ms cubic-bezier(0.4, 0, 0.2, 1),
+            opacity 220ms ease 60ms,
+            visibility 0s;
+        }
+        [data-fin-filter-panel][data-open="true"] > div { transform: none; }
+        /* The toggle's own hover, open and focus states, written out rather
+           than as classes because the Tailwind stylesheet this app ships is
+           pre-compiled: hover:bg-gray-50 is not in it, so the class would be
+           silently dead. */
+        [data-fin-filters-toggle] { background-color: #FFFFFF; cursor: pointer; }
+        [data-fin-filters-toggle]:hover { background-color: #F9FAFB; }
+        [data-fin-filters-toggle][data-open="true"] { background-color: #F3F4F6; }
+        [data-fin-filters-toggle]:focus-visible {
+          outline: 2px solid rgba(15, 35, 69, 0.45);
+          outline-offset: 2px;
+        }
+        [data-fin-filters-chevron] {
+          transition: transform 300ms cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        [data-fin-filters-toggle][data-open="true"] [data-fin-filters-chevron] {
+          transform: rotate(180deg);
+        }
+        @media (prefers-reduced-motion: reduce) {
+          [data-fin-filter-panel],
+          [data-fin-filter-panel] > div,
+          [data-fin-filters-chevron] { transition: none; }
+        }
         [data-fin-scroll] {
           overflow-x: auto;
           background:
@@ -519,82 +597,113 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
       </div>
 
       <Card className="mb-8">
-        <div className="p-4 border-b">
-          <h2 className="text-base font-medium mb-3">Student Transactions</h2>
-          <div className="border rounded-lg p-3">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-              <div className="flex items-center gap-2 shrink-0">
-                <Filter size={16} className="text-gray-400" />
-                <span className="text-sm font-medium text-gray-600">Filters</span>
-              </div>
-              <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 flex-1" style={{ minWidth: 0 }} data-fin-filters="">
-                <div>
-                  <Label className="text-xs text-gray-500 mb-1">Class</Label>
-                  <Select value={studentQuery.classFilter} onValueChange={(v: string) => updateStudentFilter({ classFilter: v })}>
-                    <SelectTrigger style={{ borderRadius: 9999 }}><SelectValue placeholder="All Classes" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Classes</SelectItem>
-                      {classOptions.map(name => (
-                        <SelectItem key={name} value={name}>{name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-xs text-gray-500 mb-1">Academic Year</Label>
-                  <AcademicYearSelect
-                    value={studentQuery.academicYear}
-                    onChange={(v) => updateStudentFilter({ academicYear: v })}
-                    years={yearStatus?.years ?? academicYearOptions}
-                    includeAll
-                    allLabel="All"
-                    style={{ borderRadius: 9999 }}
-                  />
-                </div>
-                <div data-fin-filter="term">
-                  <Label className="text-xs text-gray-500 mb-1">Term</Label>
-                  <Select value={studentQuery.term} onValueChange={(v: string) => updateStudentFilter({ term: v })}>
-                    <SelectTrigger style={{ borderRadius: 9999 }}><SelectValue placeholder="All" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All</SelectItem>
-                      {TERM_OPTIONS.map(t => (
-                        <SelectItem key={t} value={t}>{formatTermLabel(t)}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                {/* Matched to the three selects above: same pill radius, same
-                    h-9 px-3 box, and the calendar 12px in from the right where
-                    their chevrons sit. Before this the icon was a size-20 on the
-                    LEFT at left-3 with the browser's own arrow crowding the
-                    right edge, so these two read as a different kind of control
-                    from the three beside them. */}
-                <div>
-                  <Label className="text-xs text-gray-500 mb-1">From Date</Label>
-                  <ThreePartDateInput
-                    value={studentQuery.dateFrom}
-                    onChange={(v) => updateStudentFilter({ dateFrom: v ?? '' })}
-                    /* The pill shape these filters wear. It rounds the outer
-                       corners of the group; the two dividers inside stay square. */
-                    radius={9999}
-                    aria-label="From date"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs text-gray-500 mb-1">To Date</Label>
-                  <ThreePartDateInput
-                    value={studentQuery.dateTo}
-                    onChange={(v) => updateStudentFilter({ dateTo: v ?? '' })}
-                    radius={9999}
-                    aria-label="To date"
-                  />
+        {/* Filters, search box and table share one 1rem rhythm. The gap on
+            this column sets title -> Filters button -> search box, and the
+            block's own p-4 sets search box -> the rule the table starts at,
+            so the three sit evenly apart. The filter panel is nested inside
+            the button's own wrapper, which is what lets it open and close
+            without moving the search box out of that rhythm. */}
+        <div className="p-4 border-b" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <h2 className="text-base font-medium">Student Transactions</h2>
+
+          <div>
+            <button
+              type="button"
+              onClick={() => setStudentFiltersOpen(o => !o)}
+              aria-expanded={studentFiltersOpen}
+              aria-controls="student-filters"
+              data-fin-filters-toggle=""
+              data-open={studentFiltersOpen ? 'true' : 'false'}
+              className="inline-flex items-center gap-2 h-9 px-3 border rounded-lg text-sm font-medium text-gray-600 transition-colors"
+            >
+              <Filter size={16} className="text-gray-400" />
+              Filters
+              <ChevronDown size={16} className="text-gray-400" data-fin-filters-chevron="" />
+            </button>
+
+            <div
+              id="student-filters"
+              data-fin-filter-panel=""
+              data-open={studentFiltersOpen ? 'true' : 'false'}
+              /* The one thing the stylesheet cannot know: how tall this
+                 particular panel is at this particular width. */
+              style={{ height: studentFiltersOpen ? studentFiltersHeight : 0 }}
+            >
+              {/* Two nested wrappers on purpose: the outer one is measured and
+                  animated, this inner one carries the gap under the button so
+                  that gap collapses along with everything else. */}
+              <div ref={studentFiltersInnerRef} style={{ paddingTop: '0.75rem' }}>
+                <div className="border rounded-lg p-3">
+                  <div className="grid grid-cols-2 lg:grid-cols-5 gap-3" style={{ minWidth: 0 }} data-fin-filters="">
+                    <div>
+                      <Label className="text-xs text-gray-500 mb-1">Class</Label>
+                      <Select value={studentQuery.classFilter} onValueChange={(v: string) => updateStudentFilter({ classFilter: v })}>
+                        <SelectTrigger style={{ borderRadius: 9999 }}><SelectValue placeholder="All Classes" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Classes</SelectItem>
+                          {classOptions.map(name => (
+                            <SelectItem key={name} value={name}>{name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-gray-500 mb-1">Academic Year</Label>
+                      <AcademicYearSelect
+                        value={studentQuery.academicYear}
+                        onChange={(v) => updateStudentFilter({ academicYear: v })}
+                        years={yearStatus?.years ?? academicYearOptions}
+                        includeAll
+                        allLabel="All"
+                        style={{ borderRadius: 9999 }}
+                      />
+                    </div>
+                    <div data-fin-filter="term">
+                      <Label className="text-xs text-gray-500 mb-1">Term</Label>
+                      <Select value={studentQuery.term} onValueChange={(v: string) => updateStudentFilter({ term: v })}>
+                        <SelectTrigger style={{ borderRadius: 9999 }}><SelectValue placeholder="All" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All</SelectItem>
+                          {TERM_OPTIONS.map(t => (
+                            <SelectItem key={t} value={t}>{formatTermLabel(t)}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {/* These two are the one date control on this screen that is
+                        NOT the shared Month | Day | Year group: asked for as a
+                        single field wearing nothing but the calendar at its right
+                        corner, matching the pill selects beside it. DateFilterInput
+                        is that design — see its own file for what the transparent
+                        native input costs, which is why the rest of the app does
+                        not use it. */}
+                    <div>
+                      <Label className="text-xs text-gray-500 mb-1">From Date</Label>
+                      <DateFilterInput
+                        value={studentQuery.dateFrom}
+                        onChange={(v) => updateStudentFilter({ dateFrom: v })}
+                        /* The pill the three selects beside it wear. */
+                        style={{ borderRadius: 9999 }}
+                        /* The real input is invisible, so it cannot be reached by
+                           its visible Label the way a normal field would be. */
+                        aria-label="From date"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-gray-500 mb-1">To Date</Label>
+                      <DateFilterInput
+                        value={studentQuery.dateTo}
+                        onChange={(v) => updateStudentFilter({ dateTo: v })}
+                        style={{ borderRadius: 9999 }}
+                        aria-label="To date"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <div className="p-4 border-b">
           <div className="relative max-w-sm">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
             <Input
@@ -663,24 +772,31 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
           </div>
         )}
 
-        <div className="p-4 border-t flex items-center justify-between">
-          <p className="text-sm text-gray-500">Page {studentQuery.page} of {studentTotalPages}</p>
+        {/* No "Page x of y" line any more, so the arrows are the whole control
+            and keep the right edge the Previous/Next pair used to hold. The
+            label each one has lost is on it as aria-label and title, so the
+            disabled state still says which direction is unavailable. */}
+        <div className="p-4 border-t flex items-center justify-end">
           <div className="flex gap-2">
             <Button
               variant="outline"
-              size="sm"
+              size="icon"
+              aria-label="Previous page"
+              title="Previous page"
               disabled={studentQuery.page <= 1}
               onClick={() => setStudentQuery(q => ({ ...q, page: q.page - 1 }))}
             >
-              Previous
+              <ChevronLeft size={16} />
             </Button>
             <Button
               variant="outline"
-              size="sm"
+              size="icon"
+              aria-label="Next page"
+              title="Next page"
               disabled={studentQuery.page >= studentTotalPages}
               onClick={() => setStudentQuery(q => ({ ...q, page: q.page + 1 }))}
             >
-              Next
+              <ChevronRight size={16} />
             </Button>
           </div>
         </div>
@@ -820,24 +936,30 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
           </div>
         )}
 
-        <div className="p-4 border-t flex items-center justify-between">
-          <p className="text-sm text-gray-500">Page {txQuery.page} of {txTotalPages}</p>
+        {/* Same pager as Student Transactions above: no "Page x of y", the two
+            arrows holding the right edge, and the direction each one means kept
+            on it as aria-label and title. */}
+        <div className="p-4 border-t flex items-center justify-end">
           <div className="flex gap-2">
             <Button
               variant="outline"
-              size="sm"
+              size="icon"
+              aria-label="Previous page"
+              title="Previous page"
               disabled={txQuery.page <= 1}
               onClick={() => setTxQuery(q => ({ ...q, page: q.page - 1 }))}
             >
-              Previous
+              <ChevronLeft size={16} />
             </Button>
             <Button
               variant="outline"
-              size="sm"
+              size="icon"
+              aria-label="Next page"
+              title="Next page"
               disabled={txQuery.page >= txTotalPages}
               onClick={() => setTxQuery(q => ({ ...q, page: q.page + 1 }))}
             >
-              Next
+              <ChevronRight size={16} />
             </Button>
           </div>
         </div>
