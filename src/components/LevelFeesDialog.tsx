@@ -661,15 +661,25 @@ export function LevelFeesDialog({ open, onOpenChange, inWizard = false, onAllLev
           </>
         )}
         {/* Rendered inside this Dialog so it stacks over it rather than replacing
-            it: the level, and the amounts it is read against, stay on screen
-            behind. It is handed EVERY row, Registration included, because the save
-            endpoint replaces the level's structure as a unit — see its own note. */}
+            it: the level and its amounts stay on screen behind. It gets the level
+            LIST as well as the current one, because it picks its own level and
+            loads that level's saved fees itself — asking for the list again there
+            could answer differently mid-session. */}
         <FirstInstallmentDialog
           open={installmentOpen}
           onOpenChange={setInstallmentOpen}
+          levels={levels}
           level={level}
-          rows={rows}
-          onSaved={fees => {
+          onSaved={(savedLevel, fees) => {
+            // ONLY when it saved the level this dialog is showing.
+            //
+            // That dialog can be on a different level by the time it writes, and
+            // these rows are about to be sent to `level` by Save Fees. Taking
+            // another level's fees here would have that save copy them onto this
+            // level — renaming its categories and re-billing every student of it.
+            // The mismatch case needs no re-sync at all: nothing this dialog holds
+            // went stale, because nothing about this level changed.
+            if (savedLevel !== level) return;
             // Re-synced from the server's answer, not from the draft that dialog
             // held. Leaving these rows as they were would have the next Save Fees
             // write their stale nulls over the requirement just set.
