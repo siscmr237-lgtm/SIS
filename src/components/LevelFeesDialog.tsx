@@ -11,6 +11,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { FirstInstallmentDialog, type FeeGroup, type LevelFeeRow } from './FirstInstallmentDialog';
+import { ApplyFeesToClassesDialog } from './ApplyFeesToClassesDialog';
 import { Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -145,6 +146,7 @@ export function LevelFeesDialog({ open, onOpenChange, inWizard = false, onAllLev
   const [zeroNotice, setZeroNotice] = useState<string | null>(null);
   const [rows, setRows] = useState<FeeRow[]>([]);
   const [installmentOpen, setInstallmentOpen] = useState(false);
+  const [applyOpen, setApplyOpen] = useState(false);
   /**
    * Mirrors the `dirty` ref for RENDERING. The ref exists to be read inside a
    * landing fetch without re-running it, which is exactly why it cannot drive the
@@ -308,6 +310,30 @@ export function LevelFeesDialog({ open, onOpenChange, inWizard = false, onAllLev
     }
     setError(null);
     setInstallmentOpen(true);
+  };
+
+  /**
+   * Opens Apply to Other Classes — but not over unsaved edits, for a harder
+   * reason than the First Installment dialog's.
+   *
+   * That dialog copies what the SERVER holds for this level, not the rows on
+   * screen. Run with edits pending it would quietly propagate the previously
+   * saved amounts to five other classes while the admin watched their new ones
+   * sitting in front of them, and the mismatch would not show up until somebody
+   * opened one of those classes. Saving first makes the fees being copied the
+   * fees being looked at.
+   */
+  const openApply = () => {
+    if (unsaved) {
+      setError('Save these fees first. Only saved fees are copied to other classes.');
+      return;
+    }
+    if (!rows.length) {
+      setError('This level has no fees to copy yet.');
+      return;
+    }
+    setError(null);
+    setApplyOpen(true);
   };
 
   /** Clears the detached-students notice, running any walk step it held back. */
@@ -645,15 +671,22 @@ export function LevelFeesDialog({ open, onOpenChange, inWizard = false, onAllLev
             )}
 
             <div
-              className="flex items-center justify-between mt-4"
-              style={{ gap: '0.5rem', flexWrap: 'wrap' }}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                gap: '0.5rem', flexWrap: 'wrap', marginTop: '1rem',
+              }}
             >
-              {/* Left, away from Save, because it does not save this dialog — it
-                  opens the other question. Sitting beside Save is how a button
-                  gets read as a second way to commit the form. */}
-              <Button variant="outline" onClick={openInstallments} disabled={saving}>
-                First Installment
-              </Button>
+              {/* Left, away from Save, because neither of these saves this
+                  dialog — each opens a different question. Sitting beside Save is
+                  how a button gets read as a second way to commit the form. */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <Button variant="outline" onClick={openInstallments} disabled={saving}>
+                  First Installment
+                </Button>
+                <Button variant="outline" onClick={openApply} disabled={saving}>
+                  Apply to Other Classes
+                </Button>
+              </div>
               <Button onClick={save} disabled={saving}>
                 {saving ? 'Saving...' : 'Save Fees'}
               </Button>
@@ -686,6 +719,27 @@ export function LevelFeesDialog({ open, onOpenChange, inWizard = false, onAllLev
             setRows((fees ?? []).map(toRow));
             dirty.current = false;
             setUnsaved(false);
+          }}
+        />
+        {/* Also inside this Dialog, so it stacks over it and the level being
+            copied stays on screen behind. It writes only to OTHER levels, so
+            these rows cannot go stale and there is nothing to re-sync here —
+            which is why it hands back no fees, unlike the dialog above. */}
+        <ApplyFeesToClassesDialog
+          open={applyOpen}
+          onOpenChange={setApplyOpen}
+          sourceLevel={level}
+          levels={levels}
+          onApplied={() => {
+            // The walk's picture of which levels still need fees has moved: the
+            // targets now charge whatever this level does. Re-read it from the
+            // server rather than working it out here, so the dialog and the
+            // setup checklist keep answering with one function.
+            if (!inWizard) return;
+            api
+              .get('/classes/levels/fee-setup')
+              .then((r: any) => setFeeSetup(r as FeeSetup))
+              .catch(() => { /* the next save re-reads it anyway */ });
           }}
         />
       </DialogContent>
