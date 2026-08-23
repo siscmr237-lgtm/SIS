@@ -1,4 +1,4 @@
-import { ArrowLeft, Edit, FileText, MoreHorizontal, Plus } from 'lucide-react';
+import { ArrowLeft, Edit, FileText, MoreHorizontal, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { NavigationPage } from '../App';
@@ -203,6 +203,14 @@ export function StaffProfile({ staff, onNavigate }: StaffProfileProps) {
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const [showActionsMenu, setShowActionsMenu] = useState(false);
+
+  // Deleting this staff member. `deleteError` is rendered inside the confirm
+  // dialog rather than raised as a toast: the failure the user needs to read is
+  // the one that explains why the person is still there, and a toast that has
+  // already faded explains nothing.
+  const [showDelete, setShowDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const actionsMenuRef = useRef<HTMLDivElement>(null);
 
   const today = new Date().toISOString().split('T')[0];
@@ -232,6 +240,42 @@ export function StaffProfile({ staff, onNavigate }: StaffProfileProps) {
     document.addEventListener('mousedown', handle);
     return () => document.removeEventListener('mousedown', handle);
   }, [showActionsMenu]);
+
+  /**
+   * Removes the staff member and everything hanging off them, then leaves.
+   *
+   * DELETE /staff/:code does the work in one transaction — attendance, work
+   * records, subject assignments and every ledger row, including payroll. It
+   * needs to: two of those relations are ON DELETE RESTRICT in the database, so
+   * a plain delete threw a foreign-key error for anyone who had ever been given
+   * a subject, and attendance has no foreign key at all and would simply have
+   * been left behind pointing at a person who no longer exists.
+   *
+   * The teacher login needs no separate step. A teacher account IS the staff row
+   * — passwordHash, isActive and isTeacher are columns on it, and teacher
+   * sign-in looks accounts up there — so deleting the row takes the credentials
+   * with it. See the endpoint's docblock.
+   *
+   * Navigation happens only after the call resolves. Leaving first would take
+   * the user to a list still showing the row and give a failure nowhere to be
+   * reported.
+   */
+  const handleDelete = async () => {
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      await api.delete(`/staff/${staff.code}`);
+      // Work records are deleted alongside the person, so that list is stale too.
+      cache.invalidateOn('staff:write');
+      cache.invalidateOn('work-record:write');
+      setShowDelete(false);
+      onNavigate('staff');
+    } catch (e: any) {
+      setDeleteError(e?.message || 'This staff member could not be deleted.');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const refreshLedger = async () => {
     setLedgerLoading(true);
@@ -794,6 +838,103 @@ export function StaffProfile({ staff, onNavigate }: StaffProfileProps) {
       {activeTab === 'attendance' && (
         <Card className="p-6 text-gray-500">Attendance tracking coming soon.</Card>
       )}
+
+      {/*
+        Danger zone — last thing on the page, on every tab, and fenced off from
+        the actions above it by a rule and a wide margin. Deliberately NOT in the
+        header beside Edit: an irreversible action does not belong one slip away
+        from the button people press most.
+
+        Inline styles because src/index.css is a frozen pre-compiled Tailwind
+        build — a utility class that is not already in it renders as nothing at
+        all, which is how the Add Staff error message came to be invisible.
+      */}
+      <div
+        style={{
+          marginTop: '3rem',
+          paddingTop: '1.5rem',
+          borderTop: '1px solid #e5e7eb',
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: '1rem',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}
+      >
+        <div>
+          <p style={{ fontSize: '0.875rem', fontWeight: 500, color: '#111827' }}>
+            Delete this staff member
+          </p>
+          <p style={{ fontSize: '0.8125rem', color: '#6B7280', marginTop: '0.125rem' }}>
+            Removes {displayInfo.firstName} {displayInfo.lastName} along with their attendance and
+            payroll records. This cannot be undone.
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          onClick={() => {
+            setDeleteError(null);
+            setShowDelete(true);
+          }}
+          style={{ borderColor: '#e0552e', color: '#e0552e' }}
+        >
+          <Trash2 size={14} className="mr-1" />
+          Delete Staff Member
+        </Button>
+      </div>
+
+      <Dialog
+        open={showDelete}
+        onOpenChange={(next) => {
+          // Never while the request is in flight: closing mid-delete would hide
+          // the outcome of something already happening.
+          if (deleting) return;
+          setShowDelete(next);
+          if (!next) setDeleteError(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              Delete {displayInfo.firstName} {displayInfo.lastName}?
+            </DialogTitle>
+            <DialogDescription>
+              This cannot be undone. Their attendance and payroll records will also be removed.
+            </DialogDescription>
+          </DialogHeader>
+
+          {deleteError && (
+            <div
+              role="alert"
+              style={{
+                border: '1px solid #e0552e',
+                borderLeftWidth: 4,
+                borderRadius: 6,
+                background: '#fdf1ed',
+                color: '#8a2c14',
+                padding: '0.625rem 0.75rem',
+                fontSize: '0.875rem',
+                lineHeight: 1.45,
+              }}
+            >
+              {deleteError}
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2">
+            <DialogClose asChild>
+              <Button variant="outline" disabled={deleting}>Cancel</Button>
+            </DialogClose>
+            <Button
+              onClick={handleDelete}
+              disabled={deleting}
+              style={{ background: '#e0552e', color: '#FFFFFF' }}
+            >
+              {deleting ? 'Deleting…' : 'Delete Permanently'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
