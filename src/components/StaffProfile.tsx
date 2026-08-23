@@ -452,7 +452,15 @@ export function StaffProfile({ staff, onNavigate }: StaffProfileProps) {
             initialValues={displayInfo}
             onSubmit={async (payload: StaffFormPayload) => {
               await api.put(`/staff/${staff.code}`, payload);
-              setDisplayInfo(payload);
+              // The API gets the nulls; this local copy holds '' for the two
+              // optional fields, because it only feeds the display and <Field>
+              // already renders an empty value as an em-dash. Widening the state
+              // to string|null would buy nothing and touch every reader of it.
+              setDisplayInfo({
+                ...payload,
+                idNumber: payload.idNumber ?? '',
+                email: payload.email ?? '',
+              });
               cache.invalidateOn('staff:write');
               setShowEdit(false);
             }}

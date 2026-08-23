@@ -228,7 +228,7 @@ export default function SchoolDetailPage() {
                   <div><span style={label}>Phone</span><div style={value}>{a.phoneNumber || "—"}</div></div>
                   <div style={{ gridColumn: "span 2" }}>
                     <span style={label}>Email</span>
-                    {/* Nullable on AdminUser, unlike Staff.email. */}
+                    {/* Nullable, as Staff.email now also is. */}
                     <div style={{ ...value, overflowWrap: "anywhere" }}>{a.email || "—"}</div>
                   </div>
                 </div>

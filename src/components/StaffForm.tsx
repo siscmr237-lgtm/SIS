@@ -26,10 +26,16 @@ export interface StaffFormValues {
 export interface StaffFormPayload {
   firstName: string;
   lastName: string;
-  idNumber: string;
+  /**
+   * NULL when left blank, never ''. Staff.idNumber and Staff.email are unique
+   * per school, and two rows holding the same empty string collide on that
+   * index — so a blank saved as '' would work for the first staff member
+   * without one and then 409 for every one after. NULLs do not collide.
+   */
+  idNumber: string | null;
   role: string;
   phone: string;
-  email: string;
+  email: string | null;
   hireDate: string;
   salary: number;
   isTeacher: boolean;
@@ -101,11 +107,14 @@ export function StaffForm({ mode, open, onOpenChange, initialValues, onSubmit }:
 
   const isTeacher = form.staffType === 'teacher';
 
+  // ID Number, Email and Salary are optional: a school taking on a cook or a
+  // cleaner often has none of the three to hand on the day, and blocking the
+  // record until it does means the staff member does not exist in the system at
+  // all. Name, Role, Phone and Hire Date stay required — phone because it is
+  // how anyone is actually reached, and hire date because payroll counts from it.
   const isValid =
     isCompleteFullName(form.fullName) &&
-    form.idNumber.trim() &&
     form.phone.trim() &&
-    form.email.trim() &&
     form.hireDate &&
     (isTeacher || (form.staffType === 'non-teacher' && form.role.trim()));
 
@@ -117,10 +126,12 @@ export function StaffForm({ mode, open, onOpenChange, initialValues, onSubmit }:
       await onSubmit({
         firstName,
         lastName,
-        idNumber: form.idNumber.trim(),
+        // || null, not the trimmed '' — see StaffFormPayload for why an empty
+        // string cannot be stored in either of these columns more than once.
+        idNumber: form.idNumber.trim() || null,
         role: isTeacher ? 'Teacher' : form.role.trim(),
         phone: form.phone.trim(),
-        email: form.email.trim(),
+        email: form.email.trim() || null,
         hireDate: form.hireDate,
         salary: Number(form.salary) || 0,
         isTeacher,
@@ -153,7 +164,7 @@ export function StaffForm({ mode, open, onOpenChange, initialValues, onSubmit }:
             <Input placeholder="Enter full name" value={form.fullName} onChange={e => setForm(s => ({ ...s, fullName: e.target.value }))} />
           </div>
           <div>
-            <Label>ID Number</Label>
+            <Label>ID Number (optional)</Label>
             <Input placeholder="Enter ID number" value={form.idNumber} onChange={e => setForm(s => ({ ...s, idNumber: e.target.value }))} />
           </div>
           <div>
@@ -182,7 +193,7 @@ export function StaffForm({ mode, open, onOpenChange, initialValues, onSubmit }:
             <PhoneInput value={form.phone} onChange={v => setForm(s => ({ ...s, phone: v }))} />
           </div>
           <div>
-            <Label>Email</Label>
+            <Label>Email (optional)</Label>
             <Input type="email" placeholder="email@school.cm" value={form.email} onChange={e => setForm(s => ({ ...s, email: e.target.value }))} />
           </div>
           <div>
@@ -195,7 +206,7 @@ export function StaffForm({ mode, open, onOpenChange, initialValues, onSubmit }:
             />
           </div>
           <div>
-            <Label>Salary (FCFA)</Label>
+            <Label>Salary (FCFA, optional)</Label>
             <Input type="number" placeholder="150000" value={form.salary} onChange={e => setForm(s => ({ ...s, salary: e.target.value }))} />
           </div>
           {error && <p className="sm:col-span-2 text-sm text-red-600">{error}</p>}
