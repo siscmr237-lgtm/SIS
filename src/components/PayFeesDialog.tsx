@@ -109,6 +109,14 @@ const PAY_FEES_CSS = [
   '  text-transform:uppercase;letter-spacing:.04em;',
   '  padding-top:.85rem;border-bottom:none}',
   '[data-pay-num]{text-align:right;white-space:nowrap}',
+  /* The FEE column gives up horizontal padding to the PAID column.
+     table-layout is auto, so the columns negotiate: FEE is the one that can
+     afford to lose room because its names WRAP ("Parents Teachers Association
+     Fee" is happy on three lines), while the PAID input cannot wrap and has to
+     show a whole amount. At 375px the two were competing and both lost —
+     "Owin..." in an input beside a fee name that had plenty of slack. */
+  '[data-pay-table] th:first-child,',
+  '[data-pay-table] td:first-child{padding-left:.5rem;padding-right:.25rem}',
 ].join('\n');
 
 const GROUPS = ['REGISTRATION', 'OTHER_FEES'] as const;
@@ -236,11 +244,27 @@ export function PayFeesDialog({
                         // Settled and unpayable are different facts and the
                         // placeholder says which; both lock the row, because
                         // neither can legally take money.
+                        //
+                        // The placeholders are as short as they can be because
+                        // this input is the narrowest thing in the dialog and
+                        // an ellipsis is worse than a terser word: "Completed"
+                        // read as "Comp..." and "Owing 70,000" as "Owin...",
+                        // which is the one number somebody needs. The column
+                        // header already says Paid, so the amount can stand on
+                        // its own without repeating "Owing" in front of it.
                         const settled = c.owing <= 0;
                         const locked = settled || !c.payable;
                         return (
                           <tr key={c.key}>
-                            <td className="text-sm" style={{ overflowWrap: 'anywhere' }}>{c.name}</td>
+                            {/* break-word, NOT anywhere. `anywhere` also counts
+                                toward min-content, so the browser was free to
+                                squeeze this column to a single character and
+                                did: at 375px it collapsed to 69px and split
+                                names mid-word — "Registrat/ion Fee",
+                                "Admissio/n Levy". break-word keeps the column
+                                at least as wide as its longest word and only
+                                breaks inside one that genuinely cannot fit. */}
+                            <td className="text-sm" style={{ overflowWrap: 'break-word' }}>{c.name}</td>
                             <td className="text-sm" data-pay-num="">{c.charged.toLocaleString()}</td>
                             <td data-pay-num="">
                               <Input
@@ -251,9 +275,9 @@ export function PayFeesDialog({
                                 onChange={(e) => setAmount(c, e.target.value)}
                                 disabled={locked}
                                 placeholder={
-                                  settled ? 'Completed'
+                                  settled ? 'Paid'
                                     : !c.payable ? 'Unavailable'
-                                    : `Owing ${c.owing.toLocaleString()}`
+                                    : c.owing.toLocaleString()
                                 }
                                 style={{ textAlign: 'right' }}
                               />
@@ -273,10 +297,14 @@ export function PayFeesDialog({
             one method cover every row: this is one person handing over money
             once, not several transactions. */}
         <div style={FOOT}>
-          {/* Side by side, wrapping to their own lines when there is no room —
-              which is what keeps the foot short on a narrow phone. */}
-          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-            <div style={{ flex: '1 1 150px', minWidth: 0 }}>
+          {/* STACKED, not side by side. Sharing the row gave each of these
+              about 163px, which is not enough for either: the label truncated
+              to "Payment Meth..." and the date's three cells were squeezed to
+              roughly 50px each. A full-width field costs one more line of the
+              footer and makes both legible at 375px. flex-wrap would only have
+              helped once they were narrow enough to be unreadable anyway. */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <div style={{ minWidth: 0 }}>
               <Label>Date</Label>
               <ThreePartDateInput
                 value={entryDate}
@@ -284,7 +312,7 @@ export function PayFeesDialog({
                 aria-label="Payment date"
               />
             </div>
-            <div style={{ flex: '1 1 150px', minWidth: 0 }}>
+            <div style={{ minWidth: 0 }}>
               <Label>Payment Method</Label>
               <Select value={paymentMethod} onValueChange={setPaymentMethod}>
                 <SelectTrigger><SelectValue placeholder="Select method" /></SelectTrigger>
