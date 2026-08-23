@@ -1558,10 +1558,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
           {/* Why the first installment is unmet, at the top of the tab where
               the money is. It renders nothing when met, or when the level has
               no rule at all — null is "not configured", not "failed". */}
-          <FirstInstallmentNotice
-            met={(student as any).firstInstallmentMet}
-            shortfalls={(student as any).firstInstallmentShortfalls}
-          />
+          <FirstInstallmentNotice met={(student as any).firstInstallmentMet} />
 
           {/* Settle a whole group in one action — REGISTRATION only. The
               companion "Settle Other Fees" button is gone, so this is no longer
