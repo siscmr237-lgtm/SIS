@@ -2,10 +2,20 @@ export interface Student {
   id: string;
   firstName: string;
   lastName: string;
-  dateOfBirth: string;
+  /**
+   * Optional at enrolment — null when the school had no birth certificate to
+   * hand. Render it through a formatter that shows a missing date as an em
+   * dash rather than assuming a value is there.
+   */
+  dateOfBirth: string | null;
   gender: 'male' | 'female';
   class: string;
-  parentId: number;
+  /**
+   * Null when no guardian is on file — also optional at enrolment. The two
+   * fields below are flattened from the linked Parent server-side and come
+   * back as empty strings in that case, never null.
+   */
+  parentId: number | null;
   parentName: string;
   parentPhone: string;
   address: string;
