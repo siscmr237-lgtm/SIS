@@ -222,8 +222,22 @@ export function PayFeesDialog({
               <table data-pay-table="">
                 <thead>
                   <tr>
+                    {/* No width, so Fee is the column that absorbs slack on a
+                        wide dialog — which is where extra room is actually
+                        useful, since names are the only content here that wants
+                        to be on one line. On a phone it falls back to its
+                        longest word (break-word below) and the Paid input's
+                        minWidth holds the rest. Pinning Fee at 100 instead sent
+                        every spare desktop pixel to Paid: measured a 415px
+                        numeric input on an 836px dialog. */}
                     <th>Fee</th>
-                    <th data-pay-num="">Total</th>
+                    {/* 1% is the shrink-to-fit idiom for an auto-layout table:
+                        an absurdly small width a nowrap column cannot honour, so
+                        it settles at its content and hands the slack on. Without
+                        it, pinning Fee above sent every spare pixel here instead
+                        — measured 560px of Total on a 836px dialog, with the fee
+                        names wrapping at 95px beside it. */}
+                    <th data-pay-num="" style={{ width: '1%' }}>Total</th>
                     <th data-pay-num="" style={{ width: 132 }}>Paid</th>
                   </tr>
                 </thead>
@@ -279,7 +293,15 @@ export function PayFeesDialog({
                                     : !c.payable ? 'Unavailable'
                                     : c.owing.toLocaleString()
                                 }
-                                style={{ textAlign: 'right' }}
+                                // The floor that keeps this readable on a
+                                // phone: a min-width on the control raises the
+                                // cell's min-content, which is what makes the
+                                // COLUMN at least this wide. 92 is the ceiling
+                                // on that floor — it fits '125,000' (about 80px
+                                // of text plus the input's own padding), and 120
+                                // pushed the table's min-content past a 375px
+                                // screen and started it scrolling sideways.
+                                style={{ textAlign: 'right', minWidth: 92 }}
                               />
                             </td>
                           </tr>

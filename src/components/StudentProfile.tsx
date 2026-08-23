@@ -1,4 +1,5 @@
 import { ArrowLeft, Edit, FileText, MoreHorizontal, Plus, Trash2, X } from 'lucide-react';
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { generateFinancialSheet } from '../utils/pdfGenerator';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
@@ -218,23 +219,14 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
   const [reportCardError, setReportCardError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [showActionsMenu, setShowActionsMenu] = useState(false);
-  const actionsMenuRef = useRef<HTMLDivElement>(null);
+  // The finance ⋯ menu keeps no state here: Radix owns open/closed, dismissal
+  // and focus. What used to live here was a boolean plus a document-level
+  // mousedown listener to close on an outside click — see the menu itself for
+  // why that is now Radix's job.
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!showActionsMenu) return;
-    const handle = (e: MouseEvent) => {
-      if (actionsMenuRef.current && !actionsMenuRef.current.contains(e.target as Node)) {
-        setShowActionsMenu(false);
-      }
-    };
-    document.addEventListener('mousedown', handle);
-    return () => document.removeEventListener('mousedown', handle);
-  }, [showActionsMenu]);
 
   /**
    * What this student still owes, per category — the list the Record Payment
@@ -894,33 +886,93 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
             Desktop is untouched: md:hidden keeps this to small screens, and the
             desktop button row still lives in the Finance tab. */}
         {activeTab === 'finance' && (
-          <div className="md:hidden shrink-0 relative" ref={actionsMenuRef}>
-            <Button variant="outline" size="sm" onClick={() => setShowActionsMenu(v => !v)}>
-              <MoreHorizontal size={16} />
-            </Button>
-            {showActionsMenu && (
-              <div className="absolute top-full right-0 mt-1 z-10 bg-white border rounded-md shadow-lg py-1 w-48">
-                <button
-                  className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 disabled:opacity-50"
-                  disabled={!ledgerData}
-                  onClick={() => { handleDownloadStatement(); setShowActionsMenu(false); }}
+          <div className="md:hidden shrink-0">
+            {/* RADIX PRIMITIVES DIRECTLY, not ui/dropdown-menu.tsx. That wrapper
+                leans on utilities the frozen src/index.css does not contain:
+                focus:bg-accent, focus:text-accent-foreground,
+                data-[disabled]:pointer-events-none / :opacity-50 and
+                max-h-(--radix-dropdown-menu-content-available-height) are all
+                absent, so its items would have no highlight, no disabled state
+                and no height cap — and would fail silently, which is the whole
+                hazard of that stylesheet. Checked before writing.
+
+                PORTALLED, which is the reason this replaces a hand-rolled
+                panel rather than just restyling one. The old menu was an
+                absolutely-positioned div inside <main>, and <main> is
+                overflow-y-auto — setting one axis makes the other compute to
+                auto too, so it clipped its own dropdown. A portal puts the menu
+                on document.body, outside every ancestor that scrolls or hides
+                overflow. Radix also brings the dismissal the old version
+                hand-rolled with a document mousedown listener: outside click,
+                Escape, focus return, and touch behaviour that a mousedown
+                listener does not reliably get on a phone.
+
+                zIndex 70 clears everything this app stacks — mobile header 30,
+                sidebar overlay 64, drawer 65, support button 60 — matching
+                ThreePartDateInput's portalled list. */}
+            <DropdownMenu.Root>
+              <DropdownMenu.Trigger asChild>
+                <Button variant="outline" size="sm" aria-label="Finance actions">
+                  <MoreHorizontal size={16} />
+                </Button>
+              </DropdownMenu.Trigger>
+              <DropdownMenu.Portal>
+                <DropdownMenu.Content
+                  align="end"
+                  sideOffset={6}
+                  collisionPadding={12}
+                  style={{
+                    minWidth: 208,
+                    padding: 4,
+                    borderRadius: 8,
+                    border: '1px solid #E5E7EB',
+                    background: '#FFFFFF',
+                    boxShadow: '0 10px 28px rgba(15,35,69,.18)',
+                    zIndex: 70,
+                  }}
                 >
-                  Download Financial Sheet
-                </button>
-                <button
-                  className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
-                  onClick={() => { setShowFeeOverride(true); setShowActionsMenu(false); }}
-                >
-                  Edit Fees
-                </button>
-                <button
-                  className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
-                  onClick={() => { openPaymentDialog(); setShowActionsMenu(false); }}
-                >
-                  Pay Fees
-                </button>
-              </div>
-            )}
+                  {/* One scoped <style>, because a highlight is a STATE and no
+                      style attribute can express [data-highlighted] or
+                      [data-disabled]. Radix stamps both on the item itself, so
+                      this is two rules rather than any layout. Same arrangement
+                      as [data-profile-fields] further down this file. */}
+                  <style>{`
+                    [data-sis-finance-item] {
+                      display: block; width: 100%; text-align: left;
+                      padding: 8px 12px; border-radius: 6px;
+                      font-size: .875rem; color: #111827;
+                      cursor: pointer; user-select: none; outline: none;
+                    }
+                    [data-sis-finance-item][data-highlighted] { background: #F3F4F6; }
+                    [data-sis-finance-item][data-disabled] {
+                      color: #9CA3AF; cursor: not-allowed;
+                    }
+                  `}</style>
+                  <DropdownMenu.Item
+                    data-sis-finance-item=""
+                    disabled={!ledgerData}
+                    onSelect={() => { void handleDownloadStatement(); }}
+                  >
+                    Download Financial Sheet
+                  </DropdownMenu.Item>
+                  <DropdownMenu.Item
+                    data-sis-finance-item=""
+                    onSelect={() => setShowFeeOverride(true)}
+                  >
+                    Edit Fees
+                  </DropdownMenu.Item>
+                  {/* The same handler the desktop row calls, so the two cannot
+                      drift: it resets the form, opens the dialog and re-reads
+                      what is owed. */}
+                  <DropdownMenu.Item
+                    data-sis-finance-item=""
+                    onSelect={() => { void openPaymentDialog(); }}
+                  >
+                    Pay Fees
+                  </DropdownMenu.Item>
+                </DropdownMenu.Content>
+              </DropdownMenu.Portal>
+            </DropdownMenu.Root>
           </div>
         )}
       </div>
