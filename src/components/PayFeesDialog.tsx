@@ -117,6 +117,17 @@ const PAY_FEES_CSS = [
      "Owin..." in an input beside a fee name that had plenty of slack. */
   '[data-pay-table] th:first-child,',
   '[data-pay-table] td:first-child{padding-left:.5rem;padding-right:.25rem}',
+  /* Floors under the three date cells, SCOPED to this dialog.
+     ThreePartDateInput makes its cells flex:1 1 0 with min-width:0 so the same
+     control can sit in a finance filter column a third this wide; a floor in the
+     component itself would make its box — which is overflow:hidden — clip the
+     year there, and a clipped year is worse than an ellipsis. Measured inside
+     this dialog the cells already come out 90-102px holding 22-28px of text, so
+     this changes nothing at 375-412px. It is a guard against a narrower dialog,
+     not a fix for today. */
+  '[data-pay-date] .sis-tpd-cell:nth-child(1){min-width:60px}',
+  '[data-pay-date] .sis-tpd-cell:nth-child(2){min-width:44px}',
+  '[data-pay-date] .sis-tpd-cell:nth-child(3){min-width:56px}',
 ].join('\n');
 
 const GROUPS = ['REGISTRATION', 'OTHER_FEES'] as const;
@@ -198,13 +209,19 @@ export function PayFeesDialog({
             and none of it is what sizes the dialog. */}
         <style>{PAY_FEES_CSS}</style>
 
+        {/* LEFT-ALIGNED and short. DialogHeader carries shadcn's
+            "text-center sm:text-left", so on a phone — the one width where space
+            is actually scarce — it was centring a 146-character paragraph across
+            four lines. An inline textAlign beats the class, and the sentence now
+            says the only thing somebody opening this needs to be told: put
+            numbers in. What it used to explain (each row becomes its own tagged
+            payment, all of them or none) is true, but it describes the mechanism
+            rather than the task, and it spent about 60px of the table's room
+            saying so. */}
         <div style={HEAD}>
-          <DialogHeader>
+          <DialogHeader style={{ textAlign: 'left' }}>
             <DialogTitle>Pay Fees</DialogTitle>
-            <DialogDescription>
-              Enter what was received against each fee. Every row with an amount becomes its
-              own payment, tagged to that fee — recorded together, or not at all.
-            </DialogDescription>
+            <DialogDescription>Enter amounts received for each fee.</DialogDescription>
           </DialogHeader>
         </div>
 
@@ -326,7 +343,7 @@ export function PayFeesDialog({
               footer and makes both legible at 375px. flex-wrap would only have
               helped once they were narrow enough to be unreadable anyway. */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            <div style={{ minWidth: 0 }}>
+            <div style={{ minWidth: 0 }} data-pay-date="">
               <Label>Date</Label>
               <ThreePartDateInput
                 value={entryDate}
