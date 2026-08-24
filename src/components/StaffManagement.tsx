@@ -121,7 +121,6 @@ export function StaffManagement({ onNavigate, onViewStaff }: StaffManagementProp
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Staff ID</TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Phone</TableHead>
@@ -132,7 +131,6 @@ export function StaffManagement({ onNavigate, onViewStaff }: StaffManagementProp
               <TableBody>
                 {filteredStaff.map((member) => (
                   <TableRow key={member.id}>
-                    <TableCell>{member.code}</TableCell>
                     <TableCell>
                       <button
                         onClick={() => onViewStaff?.(member)}

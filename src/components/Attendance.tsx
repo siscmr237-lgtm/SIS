@@ -133,7 +133,6 @@ export function Attendance() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Staff ID</TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Status</TableHead>
@@ -148,7 +147,6 @@ export function Attendance() {
 
                   return (
                     <TableRow key={staff.id}>
-                      <TableCell>{staff.code}</TableCell>
                       <TableCell>{staff.firstName} {staff.lastName}</TableCell>
                       <TableCell>{staff.role}</TableCell>
                       <TableCell>{getStatusBadge(status)}</TableCell>

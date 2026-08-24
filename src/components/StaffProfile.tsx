@@ -448,7 +448,7 @@ export function StaffProfile({ staff, onNavigate }: StaffProfileProps) {
           {displayInfo.firstName} {displayInfo.lastName}
           <StaffChargeDot outstanding={ledgerData?.outstandingCharges ?? (staff as any).outstandingCharges} />
         </h1>
-        <p className="text-gray-500 mt-1">{staff.code} · {displayInfo.isTeacher ? 'Teacher' : displayInfo.role}</p>
+        <p className="text-gray-500 mt-1">{displayInfo.isTeacher ? 'Teacher' : displayInfo.role}</p>
       </div>
 
       <div className="flex gap-1 border-b mb-6">
@@ -477,7 +477,6 @@ export function StaffProfile({ staff, onNavigate }: StaffProfileProps) {
             </Button>
           </div>
           <dl className="grid grid-cols-2 gap-4">
-            <Field label="Staff ID" value={staff.code} />
             <Field label="ID Number" value={displayInfo.idNumber} />
             <Field label="Role" value={displayInfo.isTeacher ? 'Teacher' : displayInfo.role} />
             <Field label="First Name" value={displayInfo.firstName} />

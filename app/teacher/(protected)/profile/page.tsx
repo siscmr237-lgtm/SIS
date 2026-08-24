@@ -143,7 +143,6 @@ export default function TeacherProfilePage() {
           <Card className="p-6">
             <h2 className="text-base font-medium mb-5">Staff Information</h2>
             <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field label="Staff ID" value={me?.code} />
               <Field label="Role" value={me?.isTeacher ? "Teacher" : me?.role} />
               <Field label="First Name" value={me?.firstName} />
               <Field label="Last Name" value={me?.lastName} />

@@ -593,8 +593,10 @@ export async function generateStaffFinancialSheet(
   doc.text('Staff Information', 20, 62);
   doc.setFontSize(10);
   doc.text(`Name: ${staff.firstName} ${staff.lastName}`, 20, 70);
-  doc.text(`Staff ID: ${staff.code}`, 20, 77);
-  doc.text(`Role: ${staff.isTeacher ? 'Teacher' : staff.role}`, 20, 84);
+  // Role moves up into the row the staff code used to occupy. These y values are
+  // absolute millimetres, so deleting a line without closing the gap would leave
+  // a blank band above the table rather than a tighter block.
+  doc.text(`Role: ${staff.isTeacher ? 'Teacher' : staff.role}`, 20, 77);
 
   const { entries, totalCharged, totalPaid, balance } = ledgerData;
 
