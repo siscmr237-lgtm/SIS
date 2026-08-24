@@ -1697,7 +1697,22 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                           <th className="px-4 py-3 font-medium">Description</th>
                           <th className="px-4 py-3 font-medium text-right">Amount</th>
                           <th className="px-4 py-3 font-medium">Payment Method</th>
-                          <th className="px-4 py-3 font-medium">
+                          {/* `relative` is load-bearing, not decoration. The span below is the
+                              sr-only pattern — `position: absolute`, 1x1, clipped — and an
+                              absolutely positioned box is only clipped by an ancestor's
+                              `overflow` when that ancestor is in its CONTAINING BLOCK chain.
+                              With no positioned ancestor the containing block was the initial
+                              one — the document — so the span was laid out at this header's
+                              static position, out at the far right of a table wider than the
+                              screen, while escaping overflow-x-auto here, overflow-y-auto on
+                              <main> and overflow-hidden on the h-screen shell alike. That grew
+                              the DOCUMENT past 100% width, and the root horizontal scrollbar it
+                              earned then ate ~15px of viewport height that h-screen's 100vh does
+                              not know about, so the page overflowed vertically as well — which
+                              is why the symptom only showed on screens too narrow for the table.
+                              Positioning the cell makes the cell the containing block, so the
+                              scroller clips the span like any other descendant. */}
+                          <th className="px-4 py-3 font-medium relative">
                             <span style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)', whiteSpace: 'nowrap' }}>
                               Actions
                             </span>
@@ -1829,17 +1844,29 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                         >
                           {c.charged.toLocaleString()} FCFA
                         </span>
-                        {/* Settled categories are greyed rather than hidden.
-                            A category that vanished once paid would be
-                            indistinguishable from one that never applied. */}
+                        {/* Settled categories stay listed rather than being
+                            hidden — one that vanished once paid would be
+                            indistinguishable from one that never applied — and
+                            they say "Paid" rather than showing a red 0. Three
+                            states have to be told apart here:
+                              owing > 0     outstanding, red, the figure itself
+                              charged > 0   billed and fully settled -> "Paid"
+                              charged == 0  never billed, so nothing to settle
+                            Reading a red "0 FCFA" against a fee somebody has
+                            finished paying is what made a settled account look
+                            like an unpaid one. */}
                         <span
                           className="text-sm font-medium"
                           style={{
                             width: 130, textAlign: 'right', whiteSpace: 'nowrap',
-                            color: c.owing > 0 ? '#dc2626' : '#9CA3AF',
+                            color: c.owing > 0 ? '#dc2626' : c.charged > 0 ? '#05603d' : '#9CA3AF',
                           }}
                         >
-                          {c.owing.toLocaleString()} FCFA
+                          {c.owing > 0
+                            ? `${c.owing.toLocaleString()} FCFA`
+                            : c.charged > 0
+                              ? 'Paid'
+                              : '0 FCFA'}
                         </span>
                       </div>
                         )),
@@ -1858,15 +1885,29 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                       >
                         {owingCategories.reduce((n, c) => n + c.charged, 0).toLocaleString()} FCFA
                       </span>
-                      <span
-                        className="text-sm font-medium"
-                        style={{
-                          width: 130, textAlign: 'right', whiteSpace: 'nowrap',
-                          color: '#dc2626',
-                        }}
-                      >
-                        {owingCategories.reduce((n, c) => n + c.owing, 0).toLocaleString()} FCFA
-                      </span>
+                      {/* The total follows the same rule as the rows above it.
+                          A student who owes nothing used to get a red 0 here,
+                          which read as a problem rather than as a cleared
+                          account. */}
+                      {(() => {
+                        const totalOwing = owingCategories.reduce((n, c) => n + c.owing, 0);
+                        const totalCharged = owingCategories.reduce((n, c) => n + c.charged, 0);
+                        return (
+                          <span
+                            className="text-sm font-medium"
+                            style={{
+                              width: 130, textAlign: 'right', whiteSpace: 'nowrap',
+                              color: totalOwing > 0 ? '#dc2626' : totalCharged > 0 ? '#05603d' : '#9CA3AF',
+                            }}
+                          >
+                            {totalOwing > 0
+                              ? `${totalOwing.toLocaleString()} FCFA`
+                              : totalCharged > 0
+                                ? 'Paid'
+                                : '0 FCFA'}
+                          </span>
+                        );
+                      })()}
                     </div>
                   </>
                 )}
