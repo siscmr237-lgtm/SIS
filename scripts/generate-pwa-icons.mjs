@@ -232,8 +232,21 @@ const sourceIsTransparent = field.alpha === 0;
  */
 const markPng = await sharp(SOURCE).trim({ threshold: 10 }).png().toBuffer();
 
-/** Computed once, and only when a target actually asks to be lifted. */
-const liftedMark = TARGETS.some((t) => t.lift) ? await liftMarkOffItsField(markPng, field) : null;
+/**
+ * Computed once, and only when a target actually asks to be lifted AND there is
+ * something to lift.
+ *
+ * A transparent source needs none of it: the mark already has real alpha and
+ * composites onto navy correctly as it stands. Skipping is not just an
+ * optimisation there -- liftMarkOffItsField solves for coverage against the
+ * field colour, and on a transparent source that "colour" is whatever RGB
+ * happens to sit under a fully transparent pixel, which is not a colour anyone
+ * blended against. It would return noise.
+ */
+const liftedMark =
+  TARGETS.some((t) => t.lift) && !sourceIsTransparent
+    ? await liftMarkOffItsField(markPng, field)
+    : null;
 
 for (const target of TARGETS) {
   const { file, size, apple, lift, opaque, scale = MARK_SCALE } = target;
@@ -243,7 +256,7 @@ for (const target of TARGETS) {
   // `fit: inside` rather than `contain`: the mark is not square, and contain
   // would pad it back out to a square before the composite below centres it,
   // which is the same padding twice.
-  const mark = await sharp(lift ? liftedMark : markPng)
+  const mark = await sharp(lift && liftedMark ? liftedMark : markPng)
     .resize(box, box, { fit: 'inside' })
     .png()
     .toBuffer();
