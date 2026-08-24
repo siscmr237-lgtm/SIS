@@ -66,8 +66,19 @@ export function SchoolSettings() {
   type BasicForm = {
     name: string; logo: string; academicYear: string;
     currentTerm: string; motto: string; abbreviation: string;
+    /**
+     * 'MALE' | 'FEMALE' | '' — the ProprietorGender enum, with '' standing for
+     * not-yet-chosen.
+     *
+     * A plain string rather than a nullable union so it behaves like every
+     * sibling field above it: `dirtyFields` compares each key against the
+     * baseline with !==, and a null would make "cleared it" and "never set it"
+     * compare equal to two different things depending on which side was which.
+     * The server turns '' back into NULL — see PUT /settings.
+     */
+    proprietorGender: string;
   };
-  const EMPTY_FORM: BasicForm = { name: '', logo: '', academicYear: '', currentTerm: '', motto: '', abbreviation: '' };
+  const EMPTY_FORM: BasicForm = { name: '', logo: '', academicYear: '', currentTerm: '', motto: '', abbreviation: '', proprietorGender: '' };
   const [formData, setFormData] = useState<BasicForm>(EMPTY_FORM);
   const [baseline, setBaseline] = useState<BasicForm>(EMPTY_FORM);
 
@@ -107,6 +118,9 @@ export function SchoolSettings() {
       currentTerm: detected.currentTerm,
       motto: settingsData.motto || '',
       abbreviation: settingsData.abbreviation || '',
+      // NULL from the server means nobody has chosen yet, which is the select's
+      // placeholder state rather than a value.
+      proprietorGender: settingsData.proprietorGender || '',
     };
     setFormData(next);
     setBaseline(next);
@@ -135,6 +149,9 @@ export function SchoolSettings() {
       logo: formData.logo,
       motto: formData.motto,
       abbreviation: formData.abbreviation,
+      // '' when nobody has chosen, which PUT /settings normalises back to NULL:
+      // the Postgres enum has no member for '' and would refuse the write.
+      proprietorGender: formData.proprietorGender,
     };
     if (termFieldsDirty) {
       payload.academicYear = formData.academicYear;
@@ -390,6 +407,41 @@ export function SchoolSettings() {
                 <p className="text-xs text-gray-500 break-all">{settings.logo}</p>
               )}
             </div>
+          </div>
+
+          {/* LAST in the grid on purpose, so it pairs with the logo on the
+              closing row. Dropping it in higher up would have split Academic
+              Year from Current Term, and those two belong side by side — they
+              are read together and a manual edit to either switches auto-detect
+              off for both.
+
+              Every class here is one a sibling field above already uses, since
+              src/index.css is a frozen Tailwind build and a class that is not
+              already in it does nothing at all. */}
+          <div>
+            <Label>Proprietor&apos;s Gender <span className="text-gray-400 font-normal text-xs">(optional)</span></Label>
+            <div className="mt-2">
+              <Select
+                value={formData.proprietorGender}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, proprietorGender: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Not set" />
+                </SelectTrigger>
+                <SelectContent>
+                  {/* Two options, and only two. The values are the
+                      ProprietorGender enum members exactly as Postgres stores
+                      them — not the labels — because PUT /settings writes them
+                      straight to the column. */}
+                  <SelectItem value="FEMALE">Female</SelectItem>
+                  <SelectItem value="MALE">Male</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              Sets how letters are signed: Female signs &ldquo;Mme&rdquo;, Male signs &ldquo;Sir&rdquo;, each followed by the
+              proprietor&apos;s initials. Left unset, letters are signed with the initials alone.
+            </p>
           </div>
         </div>
       </Card>

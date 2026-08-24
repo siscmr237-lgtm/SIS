@@ -1054,3 +1054,349 @@ export function generateReportCard(
 
   doc.save(`Report_Card_${report.studentName}_${report.term}.pdf`);
 }
+
+/* ────────────────────────────── FEE DRIVE NOTICES ──────────────────────────────
+ *
+ * One letter per student, TWO LETTERS TO A SHEET of A4, so a school chasing two
+ * hundred balances prints a hundred pages instead of two hundred and cuts them
+ * apart down the middle.
+ *
+ * WHY THIS IS DRAWN HERE AND NOT ON THE SERVER. Every PDF this app produces is
+ * produced by this file, and a Fee Drive notice has to carry the same letterhead
+ * as the rest of them — the same band, the same logo placement, the same way a
+ * school with no motto gets a tight header rather than a gap. The backend has no
+ * PDF library of any kind (jspdf and jspdf-autotable are frontend dependencies),
+ * so drawing it there would mean adding one and reimplementing the letterhead a
+ * second time, where it would immediately start drifting from this one. The
+ * DATA is server-side, which is the part that matters: GET /ledger/fee-drive
+ * decides who is on the list, what they owe, what period it is and how the
+ * proprietor signs. Nothing below computes any of that — it only lays it out.
+ */
+
+/** Half of A4 portrait. The whole layout below is written relative to this. */
+const HALF_PAGE_H = 148.5;
+const PAGE_W = 210;
+
+/** One letter's worth of content. Everything here comes from the server. */
+export interface FeeDriveLetter {
+  firstName: string;
+  lastName: string;
+  class: string | null;
+  balance: number;
+}
+
+export interface FeeDriveContext {
+  school: { name: string; motto?: string | null; logo?: string | null };
+  academicYear: string;
+  term: string;
+  /** Already assembled by the server — "Mme MN", "Sir PT", or "" if unknown. */
+  proprietorSignature: string;
+}
+
+/** A run of text that shares one style, for drawRichParagraph below. */
+interface TextRun {
+  text: string;
+  bold?: boolean;
+  /** RGB. Defaults to near-black. */
+  color?: [number, number, number];
+}
+
+/**
+ * A wrapped paragraph whose styling changes MID-SENTENCE.
+ *
+ * doc.splitTextToSize + doc.text cannot do this: they take one string in one
+ * style, and the outstanding amount has to be bold and red inside a sentence
+ * that is neither. So the paragraph is laid out a word at a time — measure,
+ * place, advance, wrap at the margin — which is also the only way the line
+ * containing the amount wraps correctly, since a bold word is wider than the
+ * same word in regular and measuring it as regular would overrun the margin.
+ *
+ * Splitting on /(\s+)/ with a capture group keeps the separators, so a run that
+ * ends mid-sentence does not lose the space before the next one, and an explicit
+ * "\n\n" between runs still forces a paragraph break.
+ *
+ * Returns the y of the last baseline drawn, so the caller can carry on beneath
+ * a block whose height it did not have to predict.
+ */
+function drawRichParagraph(
+  doc: jsPDF,
+  runs: TextRun[],
+  x: number,
+  y: number,
+  maxWidth: number,
+  lineHeight: number,
+): number {
+  let cursorX = x;
+  let cursorY = y;
+
+  const newline = () => {
+    cursorX = x;
+    cursorY += lineHeight;
+  };
+
+  for (const run of runs) {
+    doc.setFont('helvetica', run.bold ? 'bold' : 'normal');
+    const [r, g, b] = run.color ?? [17, 24, 39];
+    doc.setTextColor(r, g, b);
+
+    // Blank lines are structure, not text: a run of two or more newlines is a
+    // paragraph break and must not be measured or drawn as a word.
+    const pieces = run.text.split(/(\n{2,}|\s+)/);
+    for (const piece of pieces) {
+      if (!piece) continue;
+      if (/^\n{2,}$/.test(piece)) {
+        newline();
+        newline();
+        continue;
+      }
+      if (/^\s+$/.test(piece)) {
+        // A space only counts if something is already on this line — a line
+        // must not begin with the space that followed the word that wrapped.
+        if (cursorX > x) cursorX += doc.getTextWidth(' ');
+        continue;
+      }
+      const w = doc.getTextWidth(piece);
+      if (cursorX > x && cursorX + w > x + maxWidth) newline();
+      doc.text(piece, cursorX, cursorY);
+      cursorX += w;
+    }
+  }
+
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(17, 24, 39);
+  return cursorY;
+}
+
+/**
+ * The letterhead band, at `top` — the top of whichever half of the sheet this
+ * letter occupies.
+ *
+ * Deliberately the same composition as generateFinancialSheet's: the same blue
+ * band, the logo left and vertically centred in it, and the school name, motto
+ * and period stacked down the middle. It is SHORTER, because it has to be — that
+ * one is 52mm on a 297mm page, and 52mm out of 148.5mm would leave no room for
+ * a letter underneath. The cursor still moves only for lines that actually
+ * render, so a school with no motto gets a tight block rather than a gap where
+ * the motto would have been.
+ */
+function drawLetterhead(
+  doc: jsPDF,
+  ctx: FeeDriveContext,
+  logoDataUrl: string | null,
+  top: number,
+): void {
+  const BAND_H = 33;
+
+  doc.setFillColor(37, 99, 235);
+  doc.rect(0, top, PAGE_W, BAND_H, 'F');
+
+  if (logoDataUrl) {
+    try {
+      const fmt = logoDataUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG';
+      const size = 21;
+      doc.addImage(logoDataUrl, fmt, 9, top + (BAND_H - size) / 2, size, size);
+    } catch {
+      // A logo that jsPDF will not decode must not cost the school its letters.
+    }
+  }
+
+  doc.setTextColor(255, 255, 255);
+
+  let headY = top + 10;
+  doc.setFontSize(13);
+  doc.setFont('helvetica', 'bold');
+  doc.text(ctx.school.name, 105, headY, { align: 'center' });
+  doc.setFont('helvetica', 'normal');
+
+  const motto = ctx.school.motto?.trim();
+  if (motto) {
+    headY += 5;
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'italic');
+    doc.text(motto, 105, headY, { align: 'center' });
+    doc.setFont('helvetica', 'normal');
+  }
+
+  // Year and term on one line. Both are live values from the server; the term
+  // goes through formatTermLabel so it reads the way it reads everywhere else
+  // in the app rather than as a raw column value.
+  headY += 5;
+  doc.setFontSize(7.5);
+  doc.text(
+    `Academic Year: ${ctx.academicYear}  |  ${formatTermLabel(ctx.term)}`,
+    105,
+    headY,
+    { align: 'center' },
+  );
+
+  doc.setFontSize(10.5);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Fee Drive Notice', 105, top + BAND_H - 5, { align: 'center' });
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(17, 24, 39);
+}
+
+/**
+ * One student's letter, filling the half-sheet whose top edge is at `top`.
+ *
+ * The signature is pinned to the BOTTOM of the half-page rather than flowing
+ * after the body, so both letters on a sheet sign off at the same height and the
+ * page reads as two identical notices instead of two paragraphs of different
+ * lengths. The body cannot collide with it: at this size the longest name and
+ * class this app permits still leaves the paragraph well clear.
+ */
+function drawFeeDriveLetter(
+  doc: jsPDF,
+  ctx: FeeDriveContext,
+  letter: FeeDriveLetter,
+  logoDataUrl: string | null,
+  top: number,
+): void {
+  drawLetterhead(doc, ctx, logoDataUrl, top);
+
+  const LEFT = 20;
+  const CONTENT_W = PAGE_W - LEFT * 2;
+  const fullName = `${letter.firstName} ${letter.lastName}`.trim();
+  /**
+   * A PLAIN HYPHEN, not the em dash this app uses for a missing value
+   * everywhere on screen.
+   *
+   * jsPDF's default helvetica is WinAnsi-encoded and silently DROPS U+2014: the
+   * content stream comes out as "(Class:  end)" with the character simply gone,
+   * while getTextWidth still reports 5.6mm for it. So an em dash here would not
+   * render as a dash — it would render as a gap of blank paper that pushes the
+   * rest of the line along, which on a letter to a parent reads as a mistake
+   * rather than as "not recorded".
+   *
+   * Defensive rather than expected: Student.class is NOT NULL in the schema, so
+   * a letter with no class should be unreachable. It is written this way so that
+   * if one ever does arrive the line says something.
+   */
+  const className = letter.class ?? '-';
+
+  // Name and class on ONE line, as specified. Fixed x for the class so the two
+  // letters on a sheet line up with each other whatever the names happen to be.
+  doc.setFontSize(9.5);
+  doc.setFont('helvetica', 'bold');
+  doc.text(`Student: ${fullName}`, LEFT, top + 43);
+  doc.text(`Class: ${className}`, 140, top + 43);
+  doc.setFont('helvetica', 'normal');
+
+  /**
+   * 9.5pt on a 5mm line — the same size the rest of this file sets body text at.
+   *
+   * There is room to spare, and it was worth measuring rather than assuming: the
+   * body has to fit between the student line and the signature rule pinned 16mm
+   * off the foot of the half page. Read back off the generated content stream, a
+   * typical letter's last baseline lands at 93mm against a rule at 132.5mm —
+   * 39.5mm clear — and a deliberately absurd 100-character name in a
+   * 40-character class reaches only 98mm, still 34.5mm clear. The paragraph
+   * would have to grow by roughly seven more wrapped lines before the signature
+   * was in any danger.
+   */
+  doc.setFontSize(9.5);
+  const amount = `${letter.balance.toLocaleString()}`;
+  drawRichParagraph(
+    doc,
+    [
+      { text: 'Dear Parent/Guardian,\n\n' },
+      { text: `We wish to bring to your attention that ${fullName} of ${className} currently has an outstanding school fee balance of ` },
+      // The one thing on the page that has to be impossible to miss.
+      { text: amount, bold: true, color: [220, 38, 38] },
+      { text: ' FCFA.\n\n' },
+      { text: "We kindly ask that this amount be settled as soon as possible to ensure your child's continued attendance and smooth experience at school.\n\n" },
+      { text: 'Thank you for your prompt attention to this matter.' },
+    ],
+    LEFT,
+    top + 53,
+    CONTENT_W,
+    5,
+  );
+
+  // Signature block, pinned to the foot of the half-page. Empty when the
+  // proprietor's name is unknown — a rule with nothing under it says less than
+  // no rule at all.
+  if (ctx.proprietorSignature) {
+    const sigY = top + HALF_PAGE_H - 16;
+    doc.setDrawColor(156, 163, 175);
+    doc.setLineWidth(0.2);
+    doc.line(LEFT, sigY, LEFT + 45, sigY);
+    doc.setFontSize(9.5);
+    doc.setFont('helvetica', 'bold');
+    doc.text(ctx.proprietorSignature, LEFT, sigY + 5);
+    doc.setFont('helvetica', 'normal');
+  }
+}
+
+/**
+ * The dashed line the sheet gets cut along. Drawn once per page, and only on a
+ * page that actually carries two letters — a cut line under a blank bottom half
+ * invites somebody to cut a letter's foot off.
+ */
+function drawCutLine(doc: jsPDF): void {
+  doc.setDrawColor(203, 213, 225);
+  doc.setLineWidth(0.2);
+  try {
+    doc.setLineDashPattern([2, 2], 0);
+  } catch {
+    // Older jsPDF builds name this differently; a solid rule is a fine
+    // fallback and the line is guidance, not content.
+  }
+  doc.line(8, HALF_PAGE_H, PAGE_W - 8, HALF_PAGE_H);
+  try {
+    doc.setLineDashPattern([], 0);
+  } catch {}
+}
+
+/**
+ * Every letter in the drive, two to a sheet, top half then bottom half then
+ * over the page. An odd final student leaves the bottom half of the last sheet
+ * blank, which is what makes the stack safe to guillotine in one pass.
+ *
+ * `letters` arrives in the order the server sorted it — class, then name — and
+ * is NOT re-sorted here, so the stack of paper comes out in the same order as
+ * the table the user was looking at when they pressed the button.
+ *
+ * The logo is fetched ONCE for the whole run rather than per letter: it is the
+ * same image on all of them, and re-fetching it two hundred times would make a
+ * large drive slow for no reason.
+ */
+export async function generateFeeDriveNotices(
+  ctx: FeeDriveContext,
+  letters: FeeDriveLetter[],
+): Promise<void> {
+  const doc = new jsPDF();
+  const logoDataUrl = ctx.school.logo ? await getLogoDataUrl(ctx.school.logo) : null;
+
+  letters.forEach((letter, i) => {
+    const isTop = i % 2 === 0;
+    // jsPDF opens with one page already, so a new sheet is needed before every
+    // top-half letter EXCEPT the first.
+    if (isTop && i > 0) doc.addPage();
+    drawFeeDriveLetter(doc, ctx, letter, logoDataUrl, isTop ? 0 : HALF_PAGE_H);
+    // Drawn when the bottom letter lands, so it is never drawn under a blank
+    // half.
+    if (!isTop) drawCutLine(doc);
+  });
+
+  deliverPdf(doc, 'Fee_Drive_Notices.pdf');
+}
+
+/**
+ * One student's notice, alone on the top half of a sheet with the bottom half
+ * left blank — the same letter the batch produces, printed one at a time from
+ * the student's own Finance tab.
+ *
+ * Shares drawFeeDriveLetter with the batch rather than reproducing it, so the
+ * two can never say different things to the same parent.
+ */
+export async function generateFeeDriveNotice(
+  ctx: FeeDriveContext,
+  letter: FeeDriveLetter,
+): Promise<void> {
+  const doc = new jsPDF();
+  const logoDataUrl = ctx.school.logo ? await getLogoDataUrl(ctx.school.logo) : null;
+  drawFeeDriveLetter(doc, ctx, letter, logoDataUrl, 0);
+  const name = pdfNamePart(`${letter.firstName} ${letter.lastName}`);
+  deliverPdf(doc, `Fee_Drive_Notice_${name}.pdf`);
+}

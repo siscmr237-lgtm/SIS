@@ -1,7 +1,7 @@
-import { ArrowLeft, Edit, FileText, MoreHorizontal, Plus, Trash2, X } from 'lucide-react';
+import { ArrowLeft, Edit, FileText, Megaphone, MoreHorizontal, Plus, Trash2, X } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import * as Popover from '@radix-ui/react-popover';
-import { generateFinancialSheet } from '../utils/pdfGenerator';
+import { generateFeeDriveNotice, generateFinancialSheet } from '../utils/pdfGenerator';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { api } from '../lib/api';
@@ -732,6 +732,54 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
     await generateFinancialSheet(student, ledgerData, schoolInfo);
   };
 
+  /**
+   * This student's Fee Drive letter — the same letter the Fee Drive page would
+   * print for them, alone on the top half of a sheet.
+   *
+   * EVERY VALUE COMES FROM GET /ledger/fee-drive, not from localStorage and not
+   * from `ledgerData` already loaded on this screen. That endpoint is what the
+   * batch letters are drawn from, so asking it for one student is what guarantees
+   * the two say the same thing: the same balance, the same academic year and
+   * term, and the same signature. Reading the school out of localStorage — which
+   * handleDownloadStatement above does — would take a copy written at login, so a
+   * session left open across a term change would print last term on the letter;
+   * and the proprietor's name is not in that copy at all.
+   */
+  const [feeDriveBusy, setFeeDriveBusy] = useState(false);
+  const handleDownloadFeeDriveLetter = async () => {
+    if (feeDriveBusy) return;
+    setFeeDriveBusy(true);
+    try {
+      const res = await api.get(`/ledger/fee-drive?student=${encodeURIComponent(student.id)}`);
+      const row = res?.students?.[0];
+      // The endpoint only ever returns students who owe something. An empty list
+      // means the balance was cleared while this page was open, which is good
+      // news and not an error — so it is said plainly rather than thrown.
+      if (!row) {
+        toast.info('This student has no outstanding balance to write about.');
+        return;
+      }
+      await generateFeeDriveNotice(
+        {
+          school: { name: res.school.name, motto: res.school.motto, logo: res.school.logo },
+          academicYear: res.academicYear,
+          term: res.term,
+          proprietorSignature: res.proprietor.signature,
+        },
+        {
+          firstName: row.firstName,
+          lastName: row.lastName,
+          class: row.class,
+          balance: row.balance,
+        },
+      );
+    } catch (e: any) {
+      toast.error(e?.message || 'The fee drive letter could not be generated.');
+    } finally {
+      setFeeDriveBusy(false);
+    }
+  };
+
   return (
     <div className="p-4 md:p-8">
       <button
@@ -1078,6 +1126,18 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                   >
                     Download Financial Sheet
                   </DropdownMenu.Item>
+                  {/* Same balance gate as the desktop row, so the two menus
+                      offer the same actions rather than one hiding a button the
+                      other shows. */}
+                  {(ledgerData?.balance ?? 0) > 0 && (
+                    <DropdownMenu.Item
+                      data-sis-finance-item=""
+                      disabled={feeDriveBusy}
+                      onSelect={() => { void handleDownloadFeeDriveLetter(); }}
+                    >
+                      Fee Drive Letter
+                    </DropdownMenu.Item>
+                  )}
                   <DropdownMenu.Item
                     data-sis-finance-item=""
                     onSelect={() => setShowFeeOverride(true)}
@@ -1714,6 +1774,16 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
               <FileText size={16} className="mr-1" />
               Financial Sheet
             </Button>
+            {/* Only while there is actually a balance to write about. An action
+                that is always present but sometimes produces a letter saying
+                nothing is worse than one that is absent — the same reasoning as
+                Settle Registration above. */}
+            {(ledgerData?.balance ?? 0) > 0 && (
+              <Button variant="outline" onClick={handleDownloadFeeDriveLetter} disabled={feeDriveBusy}>
+                <Megaphone size={16} className="mr-1" />
+                {feeDriveBusy ? 'Preparing…' : 'Fee Drive Letter'}
+              </Button>
+            )}
             <Button variant="outline" onClick={() => setShowFeeOverride(true)}>
               Edit This Student&apos;s Fees
             </Button>

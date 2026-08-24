@@ -11,6 +11,7 @@ import { StaffProfile } from './components/StaffProfile';
 import { Staff } from './types';
 import { FinanceOverview } from './components/FinanceOverview';
 import { ExpensesManagement } from './components/ExpensesManagement';
+import { FeeDrive } from './components/FeeDrive';
 import { ReportCards } from './components/ReportCards';
 import { Attendance } from './components/Attendance';
 import { Timetable } from './components/Timetable';
@@ -29,6 +30,7 @@ export type NavigationPage =
   | 'staff-profile'
   | 'finance'
   | 'expenses'
+  | 'fee-drive'
   | 'report-cards'
   | 'attendance'
   | 'timetable'
@@ -84,6 +86,19 @@ export default function App() {
         return <FinanceOverview onNavigate={navigate} onViewStudent={viewStudent} />;
       case 'expenses':
         return <ExpensesManagement />;
+      case 'fee-drive':
+        // onViewStudent goes back to the students list rather than straight to a
+        // profile: this legacy Vite entry keeps the selected student in state and
+        // has no way to turn a student CODE into the full Student record that
+        // StudentProfile expects without a fetch. The Next route at
+        // app/school/(app)/finance/fee-drive does open the profile directly,
+        // because there the profile page loads the student from the URL itself.
+        return (
+          <FeeDrive
+            onBack={() => navigate('finance')}
+            onViewStudent={() => navigate('students')}
+          />
+        );
       case 'report-cards':
         return <ReportCards onNavigate={navigate} />;
       case 'tests-exams':

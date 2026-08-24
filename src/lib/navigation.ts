@@ -10,6 +10,9 @@ const PAGE_PATHS: Partial<Record<NavigationPage, string>> = {
   staff: '/school/staff',
   finance: '/school/finance',
   expenses: '/school/expenses',
+  // Nested under finance because that is the only way in: the Fee Drive button
+  // lives on the Finance page and there is no sidebar entry for it.
+  'fee-drive': '/school/finance/fee-drive',
   'report-cards': '/school/report-cards',
   attendance: '/school/attendance',
   timetable: '/school/timetable',
