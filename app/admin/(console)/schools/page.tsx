@@ -18,6 +18,7 @@ import { RegistrationStatusBadge } from "@/components/platform/RegistrationStatu
 interface SchoolRow {
   id: number;
   name: string;
+  abbreviation: string;
   registrationStatus: string;
   signedUpAt: string | null;
   studentCount: number;
@@ -90,8 +91,17 @@ export default function SchoolsPage() {
             <tbody>
               {rows.map((s) => (
                 <tr key={s.id}>
-                  <td style={{ ...td, whiteSpace: "normal" }}>
-                    <Link href={`/admin/schools/${s.id}`} style={link}>{s.name}</Link>
+                  {/* The abbreviation, not the full name. A name long enough to
+                      wrap to two lines set the row height for every other
+                      column and, on a phone, pushed Status off to the right of
+                      a horizontal scroll — the one thing this list exists to
+                      show. Six letters do not. The full name is still here as
+                      the hover title, and is the heading of the page the link
+                      leads to, so nothing is lost, only moved one step away. */}
+                  <td style={td}>
+                    <Link href={`/admin/schools/${s.id}`} style={link} title={s.name}>
+                      {s.abbreviation}
+                    </Link>
                   </td>
                   <td style={td}>
                     <RegistrationStatusBadge status={s.registrationStatus} />

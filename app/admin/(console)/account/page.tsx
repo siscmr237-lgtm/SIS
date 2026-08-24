@@ -49,7 +49,7 @@ export default function AccountPage() {
 
   return (
     <div style={{ maxWidth: 480 }}>
-      <h1 style={{ fontSize: "1.25rem", fontWeight: 600, color: "#0F172A", margin: "0 0 18px" }}>My Account</h1>
+      <h1 style={{ fontSize: "1.25rem", fontWeight: 600, color: "#0F172A", margin: "0 0 18px" }}>Settings</h1>
 
       {me && (
         <div style={card}>
