@@ -1,5 +1,6 @@
 import { ArrowLeft, Edit, FileText, MoreHorizontal, Plus, Trash2, X } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
+import * as Popover from '@radix-ui/react-popover';
 import { generateFinancialSheet } from '../utils/pdfGenerator';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
@@ -475,6 +476,17 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
     }, delay);
   };
 
+  /**
+   * Radix drives the popover too — the badge's own click, a click anywhere
+   * outside, Escape — and every one of those has to cancel a close already in
+   * flight. Without this the 400ms timer a hover left behind fires after a
+   * deliberate reopen and shuts it again a moment later.
+   */
+  const setFeeInfoOpenNow = (next: boolean) => {
+    clearFeeInfoTimer();
+    setFeeInfoOpen(next);
+  };
+
   // Surfaces the custom-fee explanation once per page load, then gets out of the
   // way. It replaced a permanent banner: the fact matters when you arrive at the
   // page, not on every subsequent glance, and it stays reachable by hovering the
@@ -799,6 +811,34 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
           width: max-content;
           min-width: 100%;
         }
+
+        /* The "Custom fees" bubble.
+        
+           KEYFRAMES, NOT THE TRANSITION THIS REPLACES. Radix unmounts the
+           content when it closes and holds a closing element in the DOM only
+           until its animationend fires, so a transition would be discarded the
+           instant state flipped and the bubble would vanish rather than fade.
+           Keyframes cannot be written in a style attribute, and src/index.css
+           is a frozen build, so they live here. Same approach, same timings as
+           StudentFeeStatusPopover on the line above. */
+        @keyframes sis-custom-fees-in {
+          from { opacity: 0; transform: scale(0.96); }
+          to   { opacity: 1; transform: scale(1); }
+        }
+        @keyframes sis-custom-fees-out {
+          from { opacity: 1; transform: scale(1); }
+          to   { opacity: 0; transform: scale(0.96); }
+        }
+        [data-custom-fees-popover][data-state="open"] {
+          animation: sis-custom-fees-in 150ms cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        [data-custom-fees-popover][data-state="closed"] {
+          animation: sis-custom-fees-out 150ms ease-in;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          [data-custom-fees-popover][data-state="open"],
+          [data-custom-fees-popover][data-state="closed"] { animation-duration: 1ms; }
+        }
       `}</style>
 
       {/* Name on the left, the mobile ⋯ menu right-aligned on the same line.
@@ -823,79 +863,136 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
             because the tab bar is not sticky, so the name is necessarily on
             screen at the moment a tab is clicked. */}
         <h1 className="text-3xl">{displayInfo.firstName} {displayInfo.lastName}<StudentFeeStatusPopover status={feeStatus} autoShowWhen={activeTab === 'finance'} /><ZeroMarkDot hasZero={hasZeroMark} /></h1>
-        <p className="text-gray-500 mt-1">
-          {student.id} · {displayInfo.class}
-          {feesOverridden && (
-            <>
-              {' · '}
-              {/* The explanation lives here now rather than in a permanent banner
-                  on the Finance tab. It shows itself once on load, fades, and
-                  comes back on hover — everything is a <span> because this sits
-                  inside a <p>, where a <div> would be invalid. */}
-              <span
-                style={{ position: 'relative', display: 'inline-block' }}
-                onMouseEnter={openFeeInfo}
-                onMouseLeave={() => closeFeeInfoSoon()}
-              >
-                <span
-                  role="button"
-                  tabIndex={0}
-                  aria-describedby="custom-fees-info"
-                  onFocus={openFeeInfo}
-                  // Deferred, so tabbing (or clicking) into the popover's button
-                  // does not close the popover out from under the click.
-                  onBlur={() => closeFeeInfoSoon()}
-                  onClick={() => (feeInfoOpen ? closeFeeInfoSoon(0) : openFeeInfo())}
-                  style={{
-                    color: '#5B21B6', backgroundColor: '#F5F3FF',
-                    border: '1px solid #C4B5FD', borderRadius: 999,
-                    padding: '1px 8px', fontSize: '0.75rem', fontWeight: 500,
-                    cursor: 'help',
-                  }}
-                >
-                  Custom fees
-                </span>
-                <span
-                  id="custom-fees-info"
-                  role="tooltip"
-                  // Entering the popover cancels the close the gap-crossing
-                  // started; leaving it starts a fresh one.
-                  onMouseEnter={openFeeInfo}
-                  onMouseLeave={() => closeFeeInfoSoon()}
-                  style={{
-                    position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 30,
-                    display: 'block', width: 300, padding: '0.7rem 0.8rem',
-                    borderRadius: 8, border: '1px solid #C4B5FD',
-                    backgroundColor: '#F5F3FF', color: '#5B21B6',
-                    fontSize: '0.8125rem', lineHeight: 1.45, fontWeight: 400,
-                    boxShadow: '0 6px 18px rgba(0,0,0,0.10)',
-                    // Fades rather than unmounting, so the auto-show on load and
-                    // the hover use one code path and neither jumps the layout.
-                    opacity: feeInfoOpen ? 1 : 0,
-                    visibility: feeInfoOpen ? 'visible' : 'hidden',
-                    transition: 'opacity 200ms ease, visibility 200ms ease',
-                    pointerEvents: feeInfoOpen ? 'auto' : 'none',
-                    textAlign: 'left',
-                    whiteSpace: 'normal',
-                  }}
-                >
-                  <strong>Custom fee structure.</strong>{' '}
-                  {displayInfo.firstName} is billed from their own fees, not the standard{' '}
-                  {(student as any).classLevel || displayInfo.class} fees, and class-level fee
-                  changes do not apply to them automatically.{' '}
+        {/* Popover.Root renders no DOM of its own — it is a context provider —
+            so wrapping the paragraph in it costs nothing structurally, and it is
+            what lets the bubble live OUTSIDE the <p>. Two reasons it has to:
+            Popover.Content is a <div>, which is invalid inside a <p>, and DOM
+            order immediately after the badge is what keeps "Review or remove"
+            the next tab stop. */}
+        <Popover.Root open={feeInfoOpen} onOpenChange={setFeeInfoOpenNow}>
+          <p className="text-gray-500 mt-1">
+            {student.id} · {displayInfo.class}
+            {feesOverridden && (
+              <>
+                {' · '}
+                {/* The explanation lives here rather than in a permanent banner on
+                    the Finance tab. It shows itself once on load, fades, and comes
+                    back on hover.
+
+                    IT USED TO BE A HAND-ROLLED ABSOLUTE BOX, and that is what made
+                    the page wider than the screen. A 300px bubble anchored at the
+                    badge, kept mounted and merely visibility:hidden between
+                    showings — and a hidden box still generates a box, and a
+                    generated box still counts toward scrollable overflow. <main>
+                    is a scroll container in both axes, so the CLOSED bubble pushed
+                    its scrollWidth past the viewport at every width measured —
+                    27px over at 504, 171px over at 360 — and the whole content
+                    area panned sideways.
+
+                    Radix positions with strategy:"fixed", so the bubble's
+                    containing block is the viewport: it cannot contribute to any
+                    ancestor's scroll width, and no ancestor's overflow clips it.
+                    It is also only in the DOM while open. Not portalled — it needs
+                    a portal for neither of those, and staying in place is what
+                    preserves the tab order. */}
+                <Popover.Trigger asChild>
                   <button
                     type="button"
-                    onClick={editFeeStructure}
-                    className="hover:underline"
-                    style={{ color: '#5B21B6', fontWeight: 600, textDecoration: 'underline' }}
+                    // Hover opens it on a real pointer, and deliberately NOT on
+                    // touch: a tap fires a synthetic mouseenter first, which would
+                    // open the bubble a moment before the tap's own click toggled
+                    // it shut again — so the badge would do nothing at all on a
+                    // phone. That is what it does today, via the old wrapper's
+                    // onMouseEnter, and pointerType is what fixes it.
+                    onPointerEnter={(e) => { if (e.pointerType !== 'touch') openFeeInfo(); }}
+                    onPointerLeave={(e) => { if (e.pointerType !== 'touch') closeFeeInfoSoon(); }}
+                    // Keyboard focus reveals it; a tap's focus must not, for the
+                    // same toggle-cancels-itself reason as above. :focus-visible is
+                    // exactly that distinction, already computed by the browser.
+                    onFocus={(e) => { if (e.currentTarget.matches(':focus-visible')) openFeeInfo(); }}
+                    // Deferred, so tabbing into the bubble's own button does not
+                    // close it out from under the focus that is arriving.
+                    onBlur={() => closeFeeInfoSoon()}
+                    style={{
+                      // A real <button> now rather than a role="button" span, so
+                      // Radix has something focusable and keyboard-operable to
+                      // anchor to, and so Enter and Space work without being
+                      // reimplemented. Stripped back first, then the badge is
+                      // drawn exactly as it was.
+                      appearance: 'none',
+                      margin: 0,
+                      fontFamily: 'inherit',
+                      lineHeight: 'inherit',
+                      color: '#5B21B6', backgroundColor: '#F5F3FF',
+                      border: '1px solid #C4B5FD', borderRadius: 999,
+                      padding: '1px 8px', fontSize: '0.75rem', fontWeight: 500,
+                      cursor: 'help',
+                    }}
                   >
-                    Review or remove
+                    Custom fees
                   </button>
-                </span>
-              </span>
-            </>
+                </Popover.Trigger>
+              </>
+            )}
+          </p>
+          {feesOverridden && (
+            <Popover.Content
+              data-custom-fees-popover=""
+              side="bottom"
+              align="start"
+              sideOffset={6}
+              // Never within 16px of a screen edge, and it flips above the badge
+              // by itself when the badge is near the bottom of the viewport.
+              collisionPadding={16}
+              onPointerEnter={(e) => { if (e.pointerType !== 'touch') openFeeInfo(); }}
+              onPointerLeave={(e) => { if (e.pointerType !== 'touch') closeFeeInfoSoon(); }}
+              // Focus arriving anywhere inside cancels the close the badge's blur
+              // started; focus leaving the bubble starts a fresh one.
+              onFocusCapture={openFeeInfo}
+              onBlurCapture={() => closeFeeInfoSoon()}
+              // An explanation, not a task: opening it must not pull the caret out
+              // of whatever the admin was doing — least of all on load, where this
+              // opens by itself.
+              onOpenAutoFocus={(e) => e.preventDefault()}
+              onCloseAutoFocus={(e) => e.preventDefault()}
+              style={{
+                // Was a flat 300px. Sized to its own words now, and capped so it
+                // keeps a 16px gutter either side of the narrowest screen instead
+                // of being most of the width of a phone regardless of the sentence.
+                width: 'max-content',
+                maxWidth: 'min(300px, calc(100vw - 32px))',
+                padding: '0.7rem 0.8rem',
+                borderRadius: 8, border: '1px solid #C4B5FD',
+                backgroundColor: '#F5F3FF', color: '#5B21B6',
+                fontSize: '0.8125rem', lineHeight: 1.45, fontWeight: 400,
+                boxShadow: '0 6px 18px rgba(0,0,0,0.10)',
+                textAlign: 'left',
+                // Grows out of whichever corner the badge ended up on, including
+                // after a collision flip.
+                transformOrigin: 'var(--radix-popover-content-transform-origin)',
+                // Was 30, which tied the mobile header and sat under the sidebar
+                // (50) and the support button (60). Radix copies this onto the
+                // fixed wrapper it positions, so setting it here is enough.
+                zIndex: 70,
+              }}
+            >
+              <strong>Custom fee structure.</strong>{' '}
+              {displayInfo.firstName} is billed from their own fees, not the standard{' '}
+              {(student as any).classLevel || displayInfo.class} fees, and class-level fee
+              changes do not apply to them automatically.{' '}
+              <button
+                type="button"
+                // Closed explicitly, because this opens a dialog. At z-index 70 the
+                // bubble would otherwise float on top of the dialog it just opened.
+                onClick={() => { setFeeInfoOpenNow(false); editFeeStructure(); }}
+                className="hover:underline"
+                style={{ color: '#5B21B6', fontWeight: 600, textDecoration: 'underline' }}
+              >
+                Review or remove
+              </button>
+            </Popover.Content>
           )}
-        </p>
+        </Popover.Root>
         </div>
 
         {/* The mobile action menu, moved up here from inside the Finance tab
