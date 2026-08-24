@@ -23,11 +23,22 @@ interface FinanceOverviewProps {
   onViewStudent: (student: Student, tab?: string) => void;
 }
 
-interface StudentRow {
+/**
+ * One row of the Student Transactions table — a single ledger entry against a
+ * single student, not that student's rollup. `student` is the whole record
+ * because the Student cell links through to the profile, and that screen reads
+ * the student it is handed rather than refetching it.
+ */
+interface StudentTransactionRow {
+  id: string;
+  type: 'CHARGE' | 'PAYMENT';
   student: Student;
-  totalCharged: number;
-  totalPaid: number;
-  balance: number;
+  studentClass: string | null;
+  category: string | null;
+  description: string;
+  amount: number;
+  entryDate: string;
+  paymentMethod: string | null;
 }
 
 type Bucket = 'fees' | 'payroll' | 'others';
@@ -134,7 +145,7 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
   const [studentQuery, setStudentQuery] = useState<StudentQuery>({
     page: 1, search: '', classFilter: 'all', dateFrom: '', dateTo: '', academicYear: 'all', term: 'all',
   });
-  const [studentRows, setStudentRows] = useState<StudentRow[]>([]);
+  const [studentTxRows, setStudentTxRows] = useState<StudentTransactionRow[]>([]);
   const [studentLoading, setStudentLoading] = useState(true);
   const [studentTotalPages, setStudentTotalPages] = useState(1);
   // The filters start collapsed behind their own button. The height the panel
@@ -209,11 +220,11 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
       if (query.dateTo) params.set('dateTo', query.dateTo);
       if (query.academicYear !== 'all') params.set('academicYear', query.academicYear);
       if (query.term !== 'all') params.set('term', query.term);
-      const data = await api.get(`/ledger/student-summary?${params.toString()}`);
-      setStudentRows(data?.rows || []);
+      const data = await api.get(`/ledger/student-transactions?${params.toString()}`);
+      setStudentTxRows(data?.rows || []);
       setStudentTotalPages(data?.totalPages || 1);
     } catch {
-      setStudentRows([]);
+      setStudentTxRows([]);
       setStudentTotalPages(1);
     } finally {
       setStudentLoading(false);
@@ -733,40 +744,58 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
                 <tr className="border-b text-left text-xs text-gray-500 uppercase tracking-wide">
                   <th className="px-4 py-3 font-medium">Student</th>
                   <th className="px-4 py-3 font-medium">Class</th>
-                  <th className="px-4 py-3 font-medium text-right">Charged</th>
-                  <th className="px-4 py-3 font-medium text-right">Paid</th>
-                  <th className="px-4 py-3 font-medium text-right">Balance</th>
+                  <th className="px-4 py-3 font-medium">Category</th>
+                  <th className="px-4 py-3 font-medium text-right">Amount</th>
+                  <th className="px-4 py-3 font-medium">Payment Method</th>
                 </tr>
               </thead>
               <tbody>
-                {studentRows.length === 0 ? (
+                {studentTxRows.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="px-4 py-6 text-center text-gray-500">
-                      No students found.
+                      No transactions found.
                     </td>
                   </tr>
-                ) : studentRows.map(({ student, totalCharged, totalPaid, balance }) => (
-                  <tr
-                    key={student.id}
-                    className={`border-b last:border-0 hover:bg-gray-50 ${balance > 0 ? 'bg-red-50/40' : ''}`}
-                  >
-                    <td className="px-4 py-3">
-                      <button
-                        onClick={() => onViewStudent(student)}
-                        className="text-blue-600 hover:underline font-medium text-left"
+                ) : studentTxRows.map((t) => {
+                  // There is no Type column, so the direction of the money has
+                  // to live in the Amount cell — otherwise a charge and a
+                  // payment for the same figure read identically. Same
+                  // convention as School Transactions below: inbound money is
+                  // green and signed, everything else is plain.
+                  const kind = TX_TYPES[t.type] ?? TX_TYPES.CHARGE;
+                  return (
+                    <tr key={t.id} className="border-b last:border-0 hover:bg-gray-50">
+                      <td className="px-4 py-3">
+                        <button
+                          onClick={() => onViewStudent(t.student)}
+                          className="text-blue-600 hover:underline font-medium text-left"
+                        >
+                          {t.student.firstName} {t.student.lastName}
+                        </button>
+                        <PaymentStatusDot status={paymentStatuses.get(String(t.student.id))} /><ZeroMarkDot hasZero={zeroMarks.has(String(t.student.id))} />
+                      </td>
+                      <td className="px-4 py-3 text-gray-600">{t.studentClass ?? t.student.class}</td>
+                      {/* The fee this row is for, resolved server-side, where a
+                          hand-raised charge already falls back to its own name.
+                          What reaches the second fallback here is therefore an
+                          untagged PAYMENT — money recorded before payments named
+                          the fee they settle — whose description is the only
+                          label it has. */}
+                      <td className="px-4 py-3 text-gray-600">{t.category ?? t.description ?? '—'}</td>
+                      <td
+                        className="px-4 py-3 text-right font-medium whitespace-nowrap"
+                        style={{ color: kind.inbound ? '#059669' : '#111827' }}
                       >
-                        {student.firstName} {student.lastName}
-                      </button>
-                      <PaymentStatusDot status={paymentStatuses.get(String(student.id))} /><ZeroMarkDot hasZero={zeroMarks.has(String(student.id))} />
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">{student.class}</td>
-                    <td className="px-4 py-3 text-right text-gray-700">{totalCharged.toLocaleString()} FCFA</td>
-                    <td className="px-4 py-3 text-right text-green-600">{totalPaid.toLocaleString()} FCFA</td>
-                    <td className={`px-4 py-3 text-right font-medium ${balance > 0 ? 'text-red-600' : 'text-gray-900'}`}>
-                      {balance.toLocaleString()} FCFA
-                    </td>
-                  </tr>
-                ))}
+                        {kind.inbound ? '+' : ''}{t.amount.toLocaleString()} FCFA
+                      </td>
+                      {/* Optional on the row, so the dash is ordinary rather
+                          than a data error: a charge is usually raised without
+                          one, and a payment taken before the field was asked
+                          for has none either. */}
+                      <td className="px-4 py-3 text-gray-600">{t.paymentMethod ?? '—'}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
