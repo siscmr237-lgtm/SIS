@@ -44,10 +44,14 @@ function Shell({ children }: { children: React.ReactNode }) {
             padding: "3.5rem",
           }}
         >
+          {/* A transparent-background PNG, so it carries no frame of its own --
+              the panel's gradient behind it shows straight through. The width is
+              capped rather than filled so the mark keeps roughly the footprint
+              the illustration had, and no card changes height. */}
           <img
-            src="/illustration.svg"
-            alt=""
-            style={{ width: "100%", maxWidth: 340, height: "auto" }}
+            src="/images/lewa-logo.png"
+            alt="Lewa"
+            style={{ width: "100%", maxWidth: 260, height: "auto" }}
           />
         </div>
         <div className="flex-1 bg-white flex flex-col justify-center p-6 md:p-8">{children}</div>

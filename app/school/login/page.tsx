@@ -119,7 +119,7 @@ export default function LoginPage() {
         className="w-full rounded-2xl shadow-lg overflow-hidden flex flex-col md:flex-row"
         style={{ maxWidth: 900 }}
       >
-        {/* Left: illustration */}
+        {/* Left: the Lewa logo */}
         <div
           className="hidden md:flex flex-col items-center justify-center"
           style={{
@@ -129,10 +129,14 @@ export default function LoginPage() {
             padding: "3.5rem",
           }}
         >
+          {/* A transparent-background PNG, so it carries no frame of its own --
+              the panel's gradient behind it shows straight through. The width is
+              capped rather than filled so the mark keeps roughly the footprint
+              the illustration had, and no card changes height. */}
           <img
-            src="/illustration.svg"
-            alt=""
-            style={{ width: "100%", maxWidth: 340, height: "auto" }}
+            src="/images/lewa-logo.png"
+            alt="Lewa"
+            style={{ width: "100%", maxWidth: 260, height: "auto" }}
           />
         </div>
 
