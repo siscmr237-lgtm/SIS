@@ -44,6 +44,22 @@ const nextConfig = {
     remotePatterns: [{ protocol: 'http', hostname: '**' }, { protocol: 'https', hostname: '**' }],
   },
   /**
+   * The web app manifest under its more familiar name.
+   *
+   * app/manifest.ts is served by Next at /manifest.webmanifest, and that name is
+   * not configurable — it is derived from the filename. Browsers do not care,
+   * because the <link rel="manifest"> Next injects points at the real path. But
+   * /manifest.json is what people, docs and audit tools reach for, and a 404
+   * there reads as "this app has no manifest".
+   *
+   * A rewrite rather than a second copy of the file: one source of truth, served
+   * under two names. And a rewrite rather than a redirect, so what arrives at
+   * /manifest.json is the manifest itself and not a hop.
+   */
+  async rewrites() {
+    return [{ source: '/manifest.json', destination: '/manifest.webmanifest' }];
+  },
+  /**
    * `permanent: false` (307) throughout, deliberately. A 308 is cached by the
    * browser indefinitely, so if any of these paths ever has to mean something
    * again we could not take it back from anyone who had visited it once.

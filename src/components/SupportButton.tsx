@@ -37,8 +37,15 @@ const ROUTES_WITH_THEIR_OWN_SUPPORT = ["/school/verify-email"];
  * our own support line, so on those pages it would be us offering to help
  * ourselves. Excluded here, at the source, because the button is rendered from
  * the root layout and so reaches every route including the console's own shell.
+ *
+ * /offline is the service worker's fallback page, shown to a device with no
+ * connection. Everything this button does needs JavaScript that cannot load
+ * there, so leaving it in would put a dead button on the one screen whose whole
+ * message is that nothing can be reached right now. The phone number it would
+ * have offered is on every other screen, which is where someone will be when
+ * they have signal again.
  */
-const ROUTES_WITHOUT_SUPPORT = ["/admin"];
+const ROUTES_WITHOUT_SUPPORT = ["/admin", "/offline"];
 
 /**
  * Matches the route itself and anything nested under it, but never a route that
@@ -148,7 +155,13 @@ export function SupportButton() {
   return (
     // A layout-neutral wrapper: it has no size of its own, and exists only so a
     // single ref covers both fixed children for the click-outside check.
-    <div ref={containerRef}>
+    //
+    // `data-support-button` is a deliberate hook for other code to hide this,
+    // and app/offline/page.tsx is the one caller -- see the note there for why
+    // the route list above cannot cover its case. Hiding the wrapper takes the
+    // panel with the trigger, which is why the attribute is here and not on the
+    // button itself.
+    <div ref={containerRef} data-support-button>
       {open && (
         <div
           role="dialog"
