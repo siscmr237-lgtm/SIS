@@ -91,6 +91,11 @@ const BUCKETS: { id: Bucket; label: string }[] = [
 ];
 
 const TERM_OPTIONS = ['Term 1', 'Term 2', 'Term 3'];
+// A page size per table, because the two no longer want the same one. Student
+// Transactions is a transaction log read a screenful at a time, and its rows
+// repeat a student, so ten keeps a page short enough to take in at once. School
+// Transactions is unchanged.
+const STUDENT_PAGE_SIZE = 10;
 const PAGE_SIZE = 25;
 
 /**
@@ -213,7 +218,7 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
     try {
       const params = new URLSearchParams();
       params.set('page', String(query.page));
-      params.set('pageSize', String(PAGE_SIZE));
+      params.set('pageSize', String(STUDENT_PAGE_SIZE));
       if (query.search) params.set('q', query.search);
       if (query.classFilter !== 'all') params.set('class', query.classFilter);
       if (query.dateFrom) params.set('dateFrom', query.dateFrom);
