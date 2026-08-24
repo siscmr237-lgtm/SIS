@@ -34,24 +34,35 @@ function Shell({ children }: { children: React.ReactNode }) {
         className="w-full rounded-2xl shadow-lg overflow-hidden flex flex-col md:flex-row"
         style={{ maxWidth: 900 }}
       >
+        {/* Left: the Lewa logo. The art arrives on its own opaque #EFF8FF
+            field with a wide margin baked in, so it goes in as the panel's
+            background rather than as an <img>: reaching every edge is the
+            only way an opaque image meets this panel without showing a seam,
+            and it lets the baked-in margin do the centring instead of
+            padding. The colour underneath is the image's own field colour, so
+            a failed load and a fractional rounding gap both land on the same
+            blue -- and it replaces a gradient an opaque image would have
+            covered anyway.
+
+            Sized to 150% of the panel width rather than `cover`. That baked-in
+            margin leaves cover showing a mark of only about 140px, and since
+            cover keys off whichever axis is larger it grows on the taller
+            cards -- the same logo at a different size on each of the seven
+            pages. A width percentage keys off one axis, so every page matches,
+            and the crop can only ever take empty field. backgroundSize rather
+            than object-fit because an inline style has nowhere to fall back
+            to. */}
         <div
-          className="hidden md:flex flex-col items-center justify-center"
+          className="hidden md:flex"
           style={{
             width: "55%",
-            background: "linear-gradient(145deg,#EBF4FF 0%,#F0F9FF 50%,#F8FAFC 100%)",
-            padding: "3.5rem",
+            backgroundColor: "#EFF8FF",
+            backgroundImage: "url('/images/lewa-logo.png')",
+            backgroundSize: "150%",
+            backgroundPosition: "center",
+            backgroundRepeat: "no-repeat",
           }}
-        >
-          {/* A transparent-background PNG, so it carries no frame of its own --
-              the panel's gradient behind it shows straight through. The width is
-              capped rather than filled so the mark keeps roughly the footprint
-              the illustration had, and no card changes height. */}
-          <img
-            src="/images/lewa-logo.png"
-            alt="Lewa"
-            style={{ width: "100%", maxWidth: 260, height: "auto" }}
-          />
-        </div>
+        />
         <div className="flex-1 bg-white flex flex-col justify-center p-6 md:p-8">
           {children}
         </div>
