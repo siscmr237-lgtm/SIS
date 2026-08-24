@@ -3,6 +3,7 @@ import autoTable from 'jspdf-autotable';
 import { Expense, Student, Staff, ReportCard, WorkRecord, TimetableEntry, AttendanceRecord, TestExamBreakdownSubject } from '../types';
 import { BASE_URL } from '../lib/api';
 import { formatTermLabel } from './academicTerm';
+import { dateOnly } from './dateOnly';
 
 const SCHOOL_INFO = {
   name: 'École Primaire et Maternelle',
@@ -33,7 +34,7 @@ export function generateExpenseInvoice(expense: Expense) {
   // Invoice details
   doc.setFontSize(10);
   doc.text(`Invoice No: ${expense.invoiceNumber}`, 20, 65);
-  doc.text(`Date: ${expense.date}`, 20, 72);
+  doc.text(`Date: ${dateOnly(expense.date)}`, 20, 72);
   doc.text(`Payment Method: ${expense.paymentMethod}`, 20, 79);
   
   // Expense details

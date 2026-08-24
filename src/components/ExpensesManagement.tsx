@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -11,6 +11,22 @@ import { FileText, Plus, Search } from 'lucide-react';
 import { generateExpenseInvoice } from '../utils/pdfGenerator';
 import { api } from '@/lib/api';
 import { useCachedResource, useSisCache } from '@/lib/SisCache';
+import { dateOnly } from '../utils/dateOnly';
+
+/**
+ * Today as 'YYYY-MM-DD', read off the local calendar rather than the ISO
+ * string.
+ *
+ * new Date().toISOString().split('T')[0] is the older idiom in this codebase and
+ * it is wrong for the hour either side of midnight: a school an hour ahead of
+ * UTC recording at 00:30 would be offered yesterday as the default. The three
+ * local parts give the date the person is actually having.
+ */
+function todayIso(): string {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+}
 
 export function ExpensesManagement() {
   const cache = useSisCache();
@@ -20,13 +36,42 @@ export function ExpensesManagement() {
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({
     date: '',
-    invoiceNumber: '',
     category: '',
     description: '',
     amount: '',
     payee: '',
     paymentMethod: '',
   });
+  /**
+   * The invoice number this expense is about to be given — shown, never typed.
+   *
+   * It is fetched rather than worked out from `expenses` below, because that
+   * list is the FILTERED one: the API applies the search box and the category
+   * filter, so the highest number can easily be missing from it and the preview
+   * would run backwards over numbers already issued. Empty until it arrives.
+   */
+  const [nextInvoice, setNextInvoice] = useState('');
+
+  /**
+   * Opening the dialog is what fills it in: today in the date field, and the
+   * next number from the server in the invoice field.
+   *
+   * On open rather than in the useState initialiser above, because that
+   * initialiser also runs during the server render — a date computed there can
+   * disagree with the one the browser computes and take the hydration with it.
+   * Reopening resets the date to today, which is the point of a default.
+   */
+  useEffect(() => {
+    if (!openAdd) return;
+    setForm(s => ({ ...s, date: todayIso() }));
+
+    let cancelled = false;
+    setNextInvoice('');
+    api.get('/expenses/next-invoice')
+      .then((r: any) => { if (!cancelled) setNextInvoice(r?.invoiceNumber ?? ''); })
+      .catch(() => { /* the field shows its loading text; POST assigns anyway */ });
+    return () => { cancelled = true; };
+  }, [openAdd]);
 
   const categories = ['Utilities', 'Supplies', 'Maintenance', 'Salaries', 'Transportation', 'Damage', 'Other'];
 
@@ -83,8 +128,20 @@ export function ExpensesManagement() {
                   <ThreePartDateInput value={form.date} onChange={v=>setForm(s=>({...s, date:v ?? ''}))} aria-label="Expense date" />
                 </div>
                 <div>
-                  <Label>Invoice Number</Label>
-                  <Input placeholder="INV-2024-XX-XXX" value={form.invoiceNumber} onChange={e=>setForm(s=>({...s, invoiceNumber:e.target.value}))} />
+                  {/* The hint rides on the label rather than sitting under the field,
+                      because this dialog has no scrolling child: every row added to it
+                      pushes Record Expense towards the bottom of a short viewport. */}
+                  <Label>Invoice Number <span className="text-xs text-gray-500">(automatic)</span></Label>
+                  {/* readOnly, not disabled: the number still has to be readable and
+                      copyable, and a disabled field reads as "not applicable here"
+                      rather than "filled in for you". */}
+                  <Input
+                    readOnly
+                    value={nextInvoice}
+                    placeholder="Assigning..."
+                    className="bg-gray-50 text-gray-600"
+                    aria-label="Invoice number, assigned automatically"
+                  />
                 </div>
               </div>
               <div>
@@ -146,7 +203,9 @@ export function ExpensesManagement() {
                       amount: Number(form.amount)||0,
                       payee: form.payee,
                       paymentMethod: form.paymentMethod,
-                      invoiceNumber: form.invoiceNumber,
+                      // No invoiceNumber: the server owns the series and assigns the
+                      // real number here. Sending the preview back would turn a race
+                      // with another clerk into a 409 this dialog swallows silently.
                     });
                     // This is the invalidation the old expense form never did.
                     // Nothing financial is cached any more, so it clears no
@@ -155,7 +214,7 @@ export function ExpensesManagement() {
                     cache.invalidateOn('expense:write');
                     await refreshExpenses();
                     setOpenAdd(false);
-                    setForm({ date:'', invoiceNumber:'', category:'', description:'', amount:'', payee:'', paymentMethod:'' });
+                    setForm({ date:'', category:'', description:'', amount:'', payee:'', paymentMethod:'' });
                   } catch {
                   } finally {
                     setSubmitting(false);
@@ -216,7 +275,7 @@ export function ExpensesManagement() {
           <TableBody>
             {filteredExpenses.map((expense) => (
               <TableRow key={expense.id}>
-                <TableCell>{expense.date}</TableCell>
+                <TableCell>{dateOnly(expense.date)}</TableCell>
                 <TableCell>{expense.invoiceNumber}</TableCell>
                 <TableCell>{expense.category}</TableCell>
                 <TableCell>{expense.description}</TableCell>
