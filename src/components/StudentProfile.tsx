@@ -773,6 +773,32 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
           [data-profile-fields] { column-gap: 3rem; }
           [data-contact-grid] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         }
+
+        /* The tab strip. Four tabs need 378px to sit on one line; a 360px
+           phone gives them 328 after the page padding, so they used to wrap to
+           two lines and then, below ~375px, overflow <main> — which is a
+           scroll container in BOTH axes (overflow-y: auto forces overflow-x
+           from visible to auto), so the whole content area panned sideways.
+           Now only the strip scrolls.
+
+           The scrollbar is hidden rather than left visible: on the phones
+           where this triggers it is an overlay scrollbar nobody sees anyway,
+           while on a narrow desktop window a permanent 15px classic track
+           under a four-item tab bar reads as broken chrome. The tab clipped
+           at the right edge is the affordance. */
+        [data-student-tabs] {
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+        }
+        [data-student-tabs]::-webkit-scrollbar { display: none; }
+        /* max-content, so the underline rule runs the full scrolled width
+           instead of stopping at the visible edge; min-width keeps it
+           spanning the strip when the tabs already fit. Written here because
+           src/index.css is a frozen build with no w-max or min-w-full in it. */
+        [data-student-tabs-row] {
+          width: max-content;
+          min-width: 100%;
+        }
       `}</style>
 
       {/* Name on the left, the mobile ⋯ menu right-aligned on the same line.
@@ -988,20 +1014,27 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
         onViewMarks={() => setActiveTab('marks')}
       />
 
-      <div className="flex gap-1 border-b mb-6">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
-              activeTab === tab.id
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
+      {/* Scrolls itself rather than pushing the page wide — see
+          [data-student-tabs] in the stylesheet above for why. shrink-0 and
+          whitespace-nowrap are what make it a scroller instead of a wrapper:
+          without them the buttons shrink to min-content and "General Info"
+          breaks across two lines before the strip ever overflows. */}
+      <div data-student-tabs="" className="overflow-x-auto mb-6">
+        <div data-student-tabs-row="" className="flex gap-1 border-b">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px shrink-0 whitespace-nowrap transition-colors ${
+                activeTab === tab.id
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {activeTab === 'general' && (
