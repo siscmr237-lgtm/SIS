@@ -1,4 +1,4 @@
-import { AlertTriangle, ChevronDown, ChevronLeft, ChevronRight, Filter, Info, Receipt, Search, Trash2 } from 'lucide-react';
+import { AlertTriangle, ChevronDown, ChevronLeft, ChevronRight, Filter, Info, Megaphone, Receipt, Search, Trash2 } from 'lucide-react';
 import { AcademicYearSelect, useAcademicYear } from '@/lib/academicYear';
 import { PaymentStatusDot, useStudentPaymentStatuses } from './PaymentStatus';
 import { ZeroMarkDot, useStudentsWithZeroMarks } from './MarkStatus';
@@ -131,6 +131,25 @@ function formatDate(value: string | undefined) {
   } catch {
     return value;
   }
+}
+
+/**
+ * dd/mm/yyyy, read off the UTC parts rather than the viewer's local ones.
+ *
+ * A ledger entryDate is a DATE, not a moment: every writer builds it from a
+ * date-only field, so it arrives as midnight UTC. Handing that to
+ * toLocaleDateString — which is what the rest of the app does — reads it in the
+ * viewer's zone, and anywhere behind UTC midnight rolls back to the previous
+ * day, so a payment taken on the 21st displays as the 20th. Formatting the UTC
+ * parts gives the date that was actually recorded, wherever it is being read.
+ */
+function formatDateNumeric(value: string | undefined) {
+  if (!value) return '—';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  const dd = String(d.getUTCDate()).padStart(2, '0');
+  const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+  return `${dd}/${mm}/${d.getUTCFullYear()}`;
 }
 
 export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewProps) {
@@ -441,6 +460,10 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
             <Receipt size={20} className="mr-2" />
             Expenses
           </Button>
+          <Button variant="outline" onClick={() => onNavigate('fee-drive')}>
+            <Megaphone size={20} className="mr-2" />
+            Fee Drive
+          </Button>
         </div>
       </div>
 
@@ -747,6 +770,7 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
             <table className="w-full text-sm" data-fin-table="">
               <thead>
                 <tr className="border-b text-left text-xs text-gray-500 uppercase tracking-wide">
+                  <th className="px-4 py-3 font-medium">Date</th>
                   <th className="px-4 py-3 font-medium">Student</th>
                   <th className="px-4 py-3 font-medium">Class</th>
                   <th className="px-4 py-3 font-medium">Category</th>
@@ -757,7 +781,7 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
               <tbody>
                 {studentTxRows.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-4 py-6 text-center text-gray-500">
+                    <td colSpan={6} className="px-4 py-6 text-center text-gray-500">
                       No transactions found.
                     </td>
                   </tr>
@@ -770,6 +794,10 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
                   const kind = TX_TYPES[t.type] ?? TX_TYPES.CHARGE;
                   return (
                     <tr key={t.id} className="border-b last:border-0 hover:bg-gray-50">
+                      {/* The date the transaction was recorded for — the same
+                          field the list is ordered by, so the column the eye
+                          runs down is the one that explains the order. */}
+                      <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{formatDateNumeric(t.entryDate)}</td>
                       <td className="px-4 py-3">
                         <button
                           onClick={() => onViewStudent(t.student)}
