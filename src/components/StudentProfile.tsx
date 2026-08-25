@@ -1,4 +1,4 @@
-import { ArrowLeft, Edit, FileText, Megaphone, MoreHorizontal, Plus, Trash2, X } from 'lucide-react';
+import { ArrowLeft, Edit, FileText, Megaphone, MessageCircle, MoreHorizontal, Plus, Trash2, X } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import * as Popover from '@radix-ui/react-popover';
 import { generateFeeDriveNotice, generateFinancialSheet } from '../utils/pdfGenerator';
@@ -222,6 +222,32 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  /**
+   * The WhatsApp message that has been ASKED for but not yet sent, or null.
+   *
+   * One piece of state for both messages, and one dialog rendered from it, so
+   * the reminder and the receipt cannot drift apart in how they confirm, how
+   * they report a failure or what they do while in flight. The variant carries
+   * the only thing that differs: a receipt names the amount just recorded.
+   *
+   * Nothing here is sent without passing through this state first. Both flows
+   * reach a parent's phone with a figure from the ledger on it and neither can
+   * be undone, so the confirmation step is not a courtesy.
+   */
+  const [waAction, setWaAction] = useState<{ kind: 'reminder' } | { kind: 'receipt'; amount: number } | null>(null);
+  const [waBusy, setWaBusy] = useState(false);
+  const [waError, setWaError] = useState<string | null>(null);
+  /** The text the server actually sent, shown back verbatim once it has. */
+  const [waSent, setWaSent] = useState<string | null>(null);
+  /**
+   * Defers the post-payment receipt prompt. See scheduleReceiptPrompt below for
+   * why the delay exists; the ref is here so an unmount can cancel it.
+   */
+  const waPromptTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (waPromptTimer.current) clearTimeout(waPromptTimer.current);
+  }, []);
 
   /**
    * What this student still owes, per category — the list the Record Payment
@@ -626,8 +652,12 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
       cache.invalidateOn('ledger:write');
       setShowPayment(false);
       const recorded = res?.recorded ?? entries.length;
+      // The server's figure, not the dialog's: it caps each row against what is
+      // actually owed, so the total banked can be less than the total typed — and
+      // this number is about to be read out to a parent as money received.
+      const paidTotal: number = res?.total ?? total;
       toast.success(
-        `${recorded} payment${recorded === 1 ? '' : 's'} recorded — ${(res?.total ?? total).toLocaleString()} FCFA`,
+        `${recorded} payment${recorded === 1 ? '' : 's'} recorded — ${paidTotal.toLocaleString()} FCFA`,
       );
       // BOTH, and loadOwing is the one that used to be missing here. This dialog
       // caps against owingCategories, so leaving them stale after a payment left
@@ -635,10 +665,114 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
       // Settle Registration button showing for a group that no longer owed
       // anything, since that button reads the same list.
       await Promise.all([refreshLedger(), loadOwing()]);
+      // Offered, never automatic. The money is recorded either way; whether the
+      // family gets a message about it is the school's call, and some payments
+      // are handed over in person with a paper receipt already given.
+      if (canWhatsApp) scheduleReceiptPrompt(paidTotal);
     } catch (e: any) {
       setSubmitError(e.message || 'Failed to record payment');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  /**
+   * WHETHER THIS STUDENT CAN BE MESSAGED AT ALL.
+   *
+   * Read from displayInfo rather than the `student` prop, and that is the whole
+   * reason this is derived on every render instead of held in state: editing the
+   * guardian on the General tab writes to displayInfo, so a number added while
+   * this page is open makes the buttons appear without a reload — and a number
+   * removed makes them go away, which matters more.
+   *
+   * No phone means no buttons ANYWHERE, rather than a disabled button or a
+   * dialog that fails on submit: the server refuses the send in that case, and
+   * an action offered only to be refused is worse than one that is absent.
+   */
+  const waParentPhone = String(displayInfo.parentPhone ?? '').trim();
+  const waParentName = String(displayInfo.parentName ?? '').trim();
+  const canWhatsApp = waParentPhone.length > 0;
+  /**
+   * The reminder additionally needs something to remind them ABOUT. Same gate
+   * as the Fee Drive Letter beside it, for the same reason written out there,
+   * and the server refuses a zero-or-credit balance anyway.
+   */
+  const canSendReminder = canWhatsApp && (ledgerData?.balance ?? 0) > 0;
+  /** How the confirmation and the sent notice refer to the recipient. */
+  const waRecipientLabel = waParentName || "this student's guardian";
+
+  const openWhatsAppReminder = () => {
+    setWaError(null);
+    setWaSent(null);
+    setWaAction({ kind: 'reminder' });
+  };
+
+  const closeWhatsApp = () => {
+    setWaAction(null);
+    setWaError(null);
+    setWaSent(null);
+  };
+
+  /**
+   * Ask about the receipt only AFTER the Pay Fees dialog has finished closing.
+   *
+   * The delay is not cosmetic. DialogOverlay carries
+   * `data-[state=closed]:animate-out`, which src/index.css resolves to a real
+   * 0.15s `exit` animation (see the rule near index.css:1787), and Radix keeps a
+   * closing dialog MOUNTED until that animation ends. Opening this one in the
+   * same tick therefore puts two modal layers up at once, and the payment
+   * dialog's teardown then runs last — undoing the scroll lock and the
+   * `pointer-events: none` bookkeeping that the surviving dialog still needs.
+   * The symptom is a dialog nobody can click, on the screen where money was
+   * just recorded.
+   *
+   * 250ms clears the 150ms animation with room to spare. The handle is kept on
+   * a ref so leaving the page mid-wait cancels it instead of setting state on an
+   * unmounted component.
+   */
+  const scheduleReceiptPrompt = (amount: number) => {
+    if (waPromptTimer.current) clearTimeout(waPromptTimer.current);
+    waPromptTimer.current = setTimeout(() => {
+      waPromptTimer.current = null;
+      setWaError(null);
+      setWaSent(null);
+      setWaAction({ kind: 'receipt', amount });
+    }, 250);
+  };
+
+  /**
+   * Send whichever message was confirmed.
+   *
+   * The amount is the only figure this sends; every other number in the message
+   * — the balance especially — is computed by the server from the ledger. That
+   * is deliberate: this tab holds a balance that was correct when it loaded, and
+   * quoting a stale one to a parent is exactly the failure worth avoiding.
+   *
+   * On success the dialog STAYS OPEN and shows the text that went out, because
+   * "what did we actually say to them?" is the question anyone asks next, and a
+   * toast is gone before it can be read.
+   */
+  const sendWhatsApp = async () => {
+    if (!waAction) return;
+    setWaBusy(true);
+    setWaError(null);
+    try {
+      const res: any =
+        waAction.kind === 'reminder'
+          ? await api.post('/whatsapp/fee-reminder', { studentId: student.id })
+          : await api.post('/whatsapp/payment-confirmation', {
+              studentId: student.id,
+              amount: waAction.amount,
+            });
+      setWaSent(String(res?.message ?? ''));
+      toast.success('WhatsApp message sent');
+    } catch (e: any) {
+      // The server's own wording, which names the actual problem — an
+      // unreachable number, a guardian with no phone, a provider refusal. A
+      // generic "failed to send" would throw away the only useful part.
+      setWaError(e?.message || 'The WhatsApp message could not be sent.');
+    } finally {
+      setWaBusy(false);
     }
   };
 
@@ -1130,6 +1264,17 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                       onSelect={() => { void handleDownloadFeeDriveLetter(); }}
                     >
                       Fee Drive Letter
+                    </DropdownMenu.Item>
+                  )}
+                  {/* Same two gates as the desktop button — a balance to chase and
+                      a number to chase it on — so this menu and that row offer the
+                      same actions rather than one hiding what the other shows. */}
+                  {canSendReminder && (
+                    <DropdownMenu.Item
+                      data-sis-finance-item=""
+                      onSelect={() => openWhatsAppReminder()}
+                    >
+                      Send Fee Reminder
                     </DropdownMenu.Item>
                   )}
                   <DropdownMenu.Item
@@ -1778,6 +1923,15 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                 {feeDriveBusy ? 'Preparing…' : 'Fee Drive Letter'}
               </Button>
             )}
+            {/* Two gates, both necessary: a balance worth a reminder, and a
+                guardian number to send it to. Absent rather than disabled when
+                either is missing — see canWhatsApp. */}
+            {canSendReminder && (
+              <Button variant="outline" onClick={openWhatsAppReminder}>
+                <MessageCircle size={16} className="mr-1" />
+                Send Fee Reminder
+              </Button>
+            )}
             <Button variant="outline" onClick={() => setShowFeeOverride(true)}>
               Edit This Student&apos;s Fees
             </Button>
@@ -2331,6 +2485,94 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
             methods={PAYMENT_METHODS}
             onSubmit={handlePaymentSubmit}
           />
+
+          {/* WhatsApp — confirmation, progress, result and failure, in one place.
+
+              ONE dialog for both messages rather than two nearly-identical ones.
+              The reminder and the receipt ask the same question about the same
+              recipient and can fail in exactly the same ways, so sharing the
+              body is what stops the two drifting; only the wording and the
+              button labels switch on the variant.
+
+              It does NOT close on success. The requirement is to show the text
+              that was sent, and a message to a parent about money is worth
+              reading back — a toast is gone in four seconds and cannot hold two
+              lines of prose. The toast still fires as the at-a-glance signal,
+              matching every other write on this tab. */}
+          <Dialog
+            open={waAction !== null}
+            onOpenChange={(open) => {
+              // Not while a send is in flight: the request cannot be recalled, and
+              // dismissing its dialog would leave nobody looking at the outcome.
+              if (!open && !waBusy) closeWhatsApp();
+            }}
+          >
+            <DialogContent style={{ maxWidth: 'min(448px, calc(100vw - 2rem))', overflowY: 'auto' }}>
+              <DialogHeader>
+                <DialogTitle>
+                  {waSent
+                    ? 'WhatsApp message sent'
+                    : waAction?.kind === 'receipt'
+                      ? 'Send payment receipt via WhatsApp?'
+                      : 'Send fee reminder?'}
+                </DialogTitle>
+                <DialogDescription>
+                  {waSent
+                    ? `Sent to ${waRecipientLabel} at ${waParentPhone}. This is exactly what was delivered:`
+                    : waAction?.kind === 'receipt'
+                      ? `Send a WhatsApp receipt for the ${waAction.amount.toLocaleString()} FCFA just recorded to ${waRecipientLabel} at ${waParentPhone}?`
+                      : `Send a WhatsApp fee reminder to ${waRecipientLabel} at ${waParentPhone}?`}
+                </DialogDescription>
+              </DialogHeader>
+
+              {/* The sent text, verbatim. Its own scroll rather than the dialog's,
+                  so a long school name cannot push the Done button off a phone
+                  screen — the same head/body/foot arrangement DialogContent is
+                  built for. pre-wrap because the server composes one paragraph and
+                  the wrapping should be the reader's, not ours. */}
+              {waSent && (
+                <div
+                  style={{
+                    border: '1px solid #E5E7EB',
+                    borderRadius: 8,
+                    background: '#F9FAFB',
+                    padding: '0.75rem',
+                    fontSize: '0.8125rem',
+                    lineHeight: 1.55,
+                    color: '#111827',
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
+                    maxHeight: '10rem',
+                    overflowY: 'auto',
+                  }}
+                >
+                  {waSent}
+                </div>
+              )}
+
+              {/* Burnt orange, matching the entry-delete dialog above rather than
+                  the Tailwind red used elsewhere in this file: index.css is frozen,
+                  and an inline colour cannot silently resolve to nothing. */}
+              {waError && <p className="text-sm" style={{ color: '#e0552e' }}>{waError}</p>}
+
+              <div className="flex justify-end gap-2">
+                {waSent ? (
+                  <Button onClick={closeWhatsApp}>Done</Button>
+                ) : (
+                  <>
+                    <Button variant="outline" onClick={closeWhatsApp} disabled={waBusy}>
+                      {waAction?.kind === 'receipt' ? 'No' : 'Cancel'}
+                    </Button>
+                    <Button onClick={sendWhatsApp} disabled={waBusy}>
+                      {waBusy
+                        ? 'Sending…'
+                        : waAction?.kind === 'receipt' ? 'Yes, send receipt' : 'Send'}
+                    </Button>
+                  </>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       )}
 
