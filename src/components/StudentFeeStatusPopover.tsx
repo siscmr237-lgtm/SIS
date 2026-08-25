@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import * as Popover from '@radix-ui/react-popover';
-import { PAYMENT_STATUS_COLORS, normalisePaymentStatus, type PaymentStatus } from './PaymentStatus';
+import { PAYMENT_STATUS_COLORS, PAYMENT_STATUS_DOT_COLORS, normalisePaymentStatus, type PaymentStatus } from './PaymentStatus';
 import { FEE_NOTICES } from './StudentFlagNotices';
 
 /**
@@ -198,6 +198,9 @@ export function StudentFeeStatusPopover({ status, autoShowWhen = false }: Props)
 
   const notice = NOTICES[s];
   const color = PAYMENT_STATUS_COLORS[s];
+  // The dot alone takes the lighter 'Owing' gold; the border, heading and arrow
+  // below stay the readable hue. See PAYMENT_STATUS_DOT_COLORS.
+  const dotColor = PAYMENT_STATUS_DOT_COLORS[s];
 
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
@@ -226,7 +229,7 @@ export function StudentFeeStatusPopover({ status, autoShowWhen = false }: Props)
             width: DOT_SIZE,
             height: DOT_SIZE,
             borderRadius: '50%',
-            backgroundColor: color,
+            backgroundColor: dotColor,
             marginLeft: 4,
             verticalAlign: 'super',
             flexShrink: 0,

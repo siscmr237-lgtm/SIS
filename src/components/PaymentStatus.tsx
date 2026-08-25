@@ -29,6 +29,25 @@ export const PAYMENT_STATUS_COLORS: Record<PaymentStatus, string> = {
   Overpaid: '#8C52FF',
 };
 
+/**
+ * The same statuses, as a DOT draws them.
+ *
+ * 'Owing' — paid something, but not all of it — is the palette's Gold here
+ * rather than the Burnt Orange the word uses. Beside 'No Payment' the two reds
+ * read as one state at 7px, which is the one distinction the dot exists to make;
+ * gold separates them at a glance, and a part-payment being the milder thing is
+ * what the lighter colour says.
+ *
+ * Dot-only on purpose. The word in the Fees column, the popover's heading and
+ * the fee banner's title are TEXT, and gold on white is barely legible — those
+ * keep the darker hue. This is the ONE difference between the two maps, and it
+ * is about rendering, never about which status a student is in.
+ */
+export const PAYMENT_STATUS_DOT_COLORS: Record<PaymentStatus, string> = {
+  ...PAYMENT_STATUS_COLORS,
+  Owing: '#E6C482',
+};
+
 const KNOWN: PaymentStatus[] = ['No Payment', 'Owing', 'Completed', 'Overpaid'];
 
 /**
@@ -65,7 +84,7 @@ export function PaymentStatusDot({ status }: { status: unknown }) {
         width: 7,
         height: 7,
         borderRadius: '50%',
-        backgroundColor: PAYMENT_STATUS_COLORS[s],
+        backgroundColor: PAYMENT_STATUS_DOT_COLORS[s],
         marginLeft: 4,
         verticalAlign: 'super',
         flexShrink: 0,
