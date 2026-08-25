@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { DateFilterInput } from './DateFilterInput';
 import { ThreePartDateInput } from './ThreePartDateInput';
 import { statValueFontSize } from '../utils/statFigure';
+import { PAYMENT_METHODS } from '../utils/paymentMethods';
 
 interface FinanceOverviewProps {
   onNavigate: (page: NavigationPage) => void;
@@ -1189,10 +1190,9 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
                   <Select value={damageForm.paymentMethod} onValueChange={v => setDamageForm(f => ({ ...f, paymentMethod: v }))}>
                     <SelectTrigger><SelectValue placeholder="Select method" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Cash">Cash</SelectItem>
-                      <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
-                      <SelectItem value="Mobile Money">Mobile Money</SelectItem>
-                      <SelectItem value="Cheque">Cheque</SelectItem>
+                      {PAYMENT_METHODS.map(m => (
+                        <SelectItem key={m} value={m}>{m}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>

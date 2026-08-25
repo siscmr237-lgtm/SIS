@@ -3,7 +3,7 @@ import autoTable from 'jspdf-autotable';
 import { Expense, Student, Staff, ReportCard, WorkRecord, TimetableEntry, AttendanceRecord, TestExamBreakdownSubject } from '../types';
 import { BASE_URL } from '../lib/api';
 import { formatTermLabel } from './academicTerm';
-import { dateOnly } from './dateOnly';
+import { dateOnly, todayIso } from './dateOnly';
 
 const SCHOOL_INFO = {
   name: 'École Primaire et Maternelle',
@@ -1400,4 +1400,177 @@ export async function generateFeeDriveNotice(
   drawFeeDriveLetter(doc, ctx, letter, logoDataUrl, 0);
   const name = pdfNamePart(`${letter.firstName} ${letter.lastName}`);
   deliverPdf(doc, `Fee_Drive_Notice_${name}.pdf`);
+}
+
+/**
+ * Which slice of the expense book a records sheet covers, as the user set it.
+ *
+ * Every field is optional and an absent one means "no bound" — the sheet prints
+ * the applied ones under the title so a page handed to somebody else still says
+ * what it is and, more importantly, what it is NOT. A total on an unlabelled
+ * extract is the kind of number that gets read as the whole year's spend.
+ */
+export interface ExpenseRecordsFilters {
+  from?: string;
+  to?: string;
+  minAmount?: number | null;
+  maxAmount?: number | null;
+  category?: string;
+  search?: string;
+}
+
+/**
+ * The expense book as a table — Date, Invoice, Category, Description, Payee,
+ * Amount, Payment Method — over whatever range the download dialog was set to.
+ *
+ * LANDSCAPE, because seven columns is what was asked for and one of them is a
+ * free-text description. In portrait the 180mm of content width leaves the
+ * description about 45mm, which wraps a one-line note into four and turns a
+ * fifty-row month into a document nobody reads. Landscape gives 269mm and lets
+ * the description have 75 of it on its own.
+ *
+ * THE TOTAL IS OF WHAT IS PRINTED, not of the whole book. It is drawn as the
+ * table's foot so it repeats on every page and can never be read as a running
+ * subtotal of the page it happens to land on.
+ */
+export async function generateExpenseRecords(
+  expenses: Expense[],
+  filters: ExpenseRecordsFilters = {},
+  schoolInfo?: { name: string; logo?: string; motto?: string; academicYear?: string },
+) {
+  const doc = new jsPDF({ orientation: 'landscape' });
+  const PAGE_W = 297;
+  const PAGE_H = 210;
+  const HEADER_H = 40;
+  const MARGIN = 14;
+
+  doc.setFillColor(37, 99, 235);
+  doc.rect(0, 0, PAGE_W, HEADER_H, 'F');
+
+  if (schoolInfo?.logo) {
+    const dataUrl = await getLogoDataUrl(schoolInfo.logo);
+    if (dataUrl) {
+      try {
+        const fmt = dataUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG';
+        const size = 26;
+        doc.addImage(dataUrl, fmt, 8, (HEADER_H - size) / 2, size, size);
+      } catch {}
+    }
+  }
+
+  // Same stacking rule the financial sheet uses: the cursor only moves for a
+  // line that actually renders, so a school with no motto gets a tight block
+  // rather than a gap where the motto would have been.
+  doc.setTextColor(255, 255, 255);
+  let headY = 14;
+
+  doc.setFontSize(17);
+  doc.setFont('helvetica', 'bold');
+  doc.text(schoolInfo?.name ?? SCHOOL_INFO.name, PAGE_W / 2, headY, { align: 'center' });
+  doc.setFont('helvetica', 'normal');
+
+  const motto = schoolInfo?.motto?.trim();
+  if (motto) {
+    headY += 6;
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'italic');
+    doc.text(motto, PAGE_W / 2, headY, { align: 'center' });
+    doc.setFont('helvetica', 'normal');
+  }
+
+  if (schoolInfo?.academicYear) {
+    headY += 6;
+    doc.setFontSize(9);
+    doc.text(`Academic Year: ${schoolInfo.academicYear}`, PAGE_W / 2, headY, { align: 'center' });
+  }
+
+  doc.setFontSize(13);
+  doc.text('Expense Records', PAGE_W / 2, HEADER_H - 6, { align: 'center' });
+
+  // The applied filters, in words. Built from the ones that are actually set,
+  // so an unfiltered download says "All records" rather than printing four
+  // empty bounds.
+  const parts: string[] = [];
+  if (filters.from && filters.to) {
+    parts.push(filters.from === filters.to ? `Date: ${filters.from}` : `Date: ${filters.from} to ${filters.to}`);
+  } else if (filters.from) {
+    parts.push(`Date: from ${filters.from}`);
+  } else if (filters.to) {
+    parts.push(`Date: up to ${filters.to}`);
+  }
+  const min = filters.minAmount ?? null;
+  const max = filters.maxAmount ?? null;
+  if (min != null && max != null) parts.push(`Amount: ${min.toLocaleString()} to ${max.toLocaleString()} FCFA`);
+  else if (min != null) parts.push(`Amount: at least ${min.toLocaleString()} FCFA`);
+  else if (max != null) parts.push(`Amount: up to ${max.toLocaleString()} FCFA`);
+  if (filters.category && filters.category !== 'all') parts.push(`Category: ${filters.category}`);
+  if (filters.search?.trim()) parts.push(`Search: "${filters.search.trim()}"`);
+
+  doc.setTextColor(0, 0, 0);
+  doc.setFontSize(9);
+  doc.text(parts.length ? parts.join('   ·   ') : 'All records', MARGIN, HEADER_H + 8);
+  doc.setTextColor(120, 120, 120);
+  doc.text(
+    `${expenses.length} record${expenses.length === 1 ? '' : 's'}  ·  Generated ${todayIso()}`,
+    PAGE_W - MARGIN, HEADER_H + 8, { align: 'right' },
+  );
+  doc.setTextColor(0, 0, 0);
+
+  const total = expenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+
+  if (expenses.length === 0) {
+    doc.setFontSize(11);
+    doc.setTextColor(150, 150, 150);
+    doc.text('No expenses match these filters.', PAGE_W / 2, HEADER_H + 30, { align: 'center' });
+    doc.setTextColor(0, 0, 0);
+  } else {
+    autoTable(doc, {
+      startY: HEADER_H + 14,
+      head: [['Date', 'Invoice No.', 'Category', 'Description', 'Payee', 'Amount (FCFA)', 'Payment Method']],
+      body: expenses.map((e) => [
+        dateOnly(e.date),
+        e.invoiceNumber ?? '—',
+        e.category ?? '—',
+        e.description ?? '',
+        e.payee ?? '—',
+        (Number(e.amount) || 0).toLocaleString(),
+        e.paymentMethod || '—',
+      ]),
+      foot: [['', '', '', '', 'Total', `${total.toLocaleString()} FCFA`, '']],
+      theme: 'striped',
+      headStyles: { fillColor: [37, 99, 235] },
+      // Grey rather than the header blue: it is a total derived from the rows
+      // above, not a second heading competing with the first.
+      footStyles: { fillColor: [107, 114, 128], textColor: 255, halign: 'right' },
+      styles: { fontSize: 8, cellPadding: 2, overflow: 'linebreak' },
+      margin: { left: MARGIN, right: MARGIN, bottom: 16 },
+      // 269mm of content width, spent where the text actually is. Description
+      // takes the largest share because it is the one column with no bound on
+      // its length; Amount is right-aligned so the figures line up on the unit.
+      columnStyles: {
+        0: { cellWidth: 24 },
+        1: { cellWidth: 32 },
+        2: { cellWidth: 28 },
+        3: { cellWidth: 75 },
+        4: { cellWidth: 45 },
+        5: { cellWidth: 30, halign: 'right' },
+        6: { cellWidth: 35 },
+      },
+      // Page numbers, drawn per page rather than once at the end, because a
+      // records sheet is the kind of document that gets printed and stapled.
+      didDrawPage: () => {
+        const page = doc.getNumberOfPages();
+        doc.setFontSize(8);
+        doc.setTextColor(120, 120, 120);
+        doc.text(`Page ${page}`, PAGE_W - MARGIN, PAGE_H - 8, { align: 'right' });
+        doc.setTextColor(0, 0, 0);
+      },
+    });
+  }
+
+  doc.setFontSize(8);
+  doc.setTextColor(120, 120, 120);
+  doc.text('This is a computer-generated expense record.', MARGIN, PAGE_H - 8);
+
+  deliverPdf(doc, `Expense_Records_${todayIso()}.pdf`);
 }

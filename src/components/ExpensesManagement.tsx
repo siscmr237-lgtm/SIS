@@ -7,26 +7,12 @@ import { Label } from './ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogClose } from './ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
-import { FileText, Plus, Search } from 'lucide-react';
-import { generateExpenseInvoice } from '../utils/pdfGenerator';
+import { Download, FileText, Plus, Search } from 'lucide-react';
+import { generateExpenseInvoice, generateExpenseRecords } from '../utils/pdfGenerator';
 import { api } from '@/lib/api';
 import { useCachedResource, useSisCache } from '@/lib/SisCache';
-import { dateOnly } from '../utils/dateOnly';
-
-/**
- * Today as 'YYYY-MM-DD', read off the local calendar rather than the ISO
- * string.
- *
- * new Date().toISOString().split('T')[0] is the older idiom in this codebase and
- * it is wrong for the hour either side of midnight: a school an hour ahead of
- * UTC recording at 00:30 would be offered yesterday as the default. The three
- * local parts give the date the person is actually having.
- */
-function todayIso(): string {
-  const d = new Date();
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
-}
+import { dateOnly, todayIso } from '../utils/dateOnly';
+import { PAYMENT_METHODS } from '../utils/paymentMethods';
 
 export function ExpensesManagement() {
   const cache = useSisCache();
@@ -34,6 +20,15 @@ export function ExpensesManagement() {
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [openAdd, setOpenAdd] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [openDownload, setOpenDownload] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  /**
+   * The download dialog''s own filters, kept apart from the page''s search and
+   * category boxes because they narrow a sheet rather than the screen. All four
+   * are strings, including the two amounts: an empty box has to mean "no bound"
+   * and 0 is a real bound somebody might type.
+   */
+  const [downloadFilters, setDownloadFilters] = useState({ from: '', to: '', min: '', max: '' });
   const [form, setForm] = useState({
     date: '',
     category: '',
@@ -101,6 +96,95 @@ export function ExpensesManagement() {
 
   const totalExpenses = expenses.reduce((sum, expense) => sum + (Number(expense.amount) || 0), 0);
 
+  /**
+   * The download dialog's bounds as numbers, or null for "no bound".
+   *
+   * NaN is folded into null on purpose. A half-typed '-' or '1e' in a number
+   * input reads as NaN, and every comparison against NaN is false, so leaving it
+   * in would silently drop every row from the sheet while the box still looked
+   * like it held a filter.
+   */
+  const parseBound = (raw: string): number | null => {
+    if (!raw.trim()) return null;
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : null;
+  };
+  const minAmount = parseBound(downloadFilters.min);
+  const maxAmount = parseBound(downloadFilters.max);
+
+  /**
+   * What the sheet will actually contain: what the page is already showing,
+   * narrowed by the dialog's date range and amount range.
+   *
+   * IT STARTS FROM filteredExpenses, NOT FROM THE WHOLE BOOK. The search box and
+   * the category filter are part of what the user is looking at when they press
+   * Download, so a sheet that quietly ignored them would not be the records on
+   * screen. Both are named in the dialog and printed on the sheet, so an extract
+   * never leaves here without saying what it left out.
+   *
+   * Dates compare as 'YYYY-MM-DD' strings rather than as Dates: that ordering is
+   * already correct for this format and it avoids parsing a date-only value into
+   * the viewer's timezone, which is what moves a record a day either way.
+   */
+  const downloadRows = filteredExpenses.filter(expense => {
+    const day = dateOnly(expense.date);
+    if (downloadFilters.from && day < downloadFilters.from) return false;
+    if (downloadFilters.to && day > downloadFilters.to) return false;
+    const amount = Number(expense.amount) || 0;
+    if (minAmount != null && amount < minAmount) return false;
+    if (maxAmount != null && amount > maxAmount) return false;
+    return true;
+  });
+  const downloadTotal = downloadRows.reduce((sum, expense) => sum + (Number(expense.amount) || 0), 0);
+
+  // Told rather than silently returning nothing: an inverted range is a typo, and
+  // an empty sheet is an ambiguous way to report one.
+  const rangeError =
+    downloadFilters.from && downloadFilters.to && downloadFilters.from > downloadFilters.to
+      ? 'The From date is after the To date.'
+      : minAmount != null && maxAmount != null && minAmount > maxAmount
+        ? 'The minimum amount is above the maximum.'
+        : '';
+
+  // The span the recorded amounts actually cover, so the two boxes below are
+  // typed against real figures instead of guessed at.
+  const amounts = filteredExpenses.map(e => Number(e.amount) || 0);
+  const lowestAmount = amounts.length ? Math.min(...amounts) : 0;
+  const highestAmount = amounts.length ? Math.max(...amounts) : 0;
+
+  const clearDownloadFilters = () => setDownloadFilters({ from: '', to: '', min: '', max: '' });
+
+  const handleDownloadRecords = async () => {
+    if (downloading || rangeError) return;
+    setDownloading(true);
+    try {
+      // Same source the financial sheets read the letterhead from.
+      let schoolInfo: { name: string; logo?: string; motto?: string; academicYear?: string } | undefined;
+      try {
+        const userStr = window.localStorage.getItem('user');
+        if (userStr) {
+          const user = JSON.parse(userStr);
+          if (user?.School?.[0]) schoolInfo = user.School[0];
+        }
+      } catch {}
+      await generateExpenseRecords(
+        downloadRows,
+        {
+          from: downloadFilters.from || undefined,
+          to: downloadFilters.to || undefined,
+          minAmount,
+          maxAmount,
+          category: filterCategory,
+          search: searchTerm,
+        },
+        schoolInfo,
+      );
+      setOpenDownload(false);
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   return (
     <div className="p-4 md:p-8">
       <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-8">
@@ -109,6 +193,114 @@ export function ExpensesManagement() {
           <p className="text-gray-600">Track and manage school expenses</p>
         </div>
         <div className="flex gap-2">
+        {/* Download first, Add Expense last: the primary action keeps the end of
+            the row, and the two read left to right as read-then-write. */}
+        <Dialog open={openDownload} onOpenChange={setOpenDownload}>
+          <DialogTrigger asChild>
+            <Button variant="outline" className="flex items-center gap-2">
+              <Download size={20} />
+              Download Records
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Download Expense Records</DialogTitle>
+              <DialogDescription>
+                A landscape PDF of the expense table. Narrow it by date and by amount, or leave the
+                boxes empty to take everything currently listed.
+              </DialogDescription>
+            </DialogHeader>
+            {/* The one scrolling child: DialogContent is a capped flex column, so
+                without this the summary and the buttons below are what a short
+                viewport pushes off the bottom. */}
+            <div className="grid gap-4 py-4" style={{ flex: '1 1 0', minHeight: 0, overflowY: 'auto' }}>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>From</Label>
+                  <ThreePartDateInput
+                    value={downloadFilters.from}
+                    onChange={v => setDownloadFilters(f => ({ ...f, from: v ?? '' }))}
+                    aria-label="Records from date"
+                  />
+                </div>
+                <div>
+                  <Label>To</Label>
+                  <ThreePartDateInput
+                    value={downloadFilters.to}
+                    onChange={v => setDownloadFilters(f => ({ ...f, to: v ?? '' }))}
+                    aria-label="Records to date"
+                  />
+                </div>
+              </div>
+              <div>
+                <Label>Amount (FCFA)</Label>
+                <div className="grid grid-cols-2 gap-4">
+                  <Input
+                    type="number"
+                    min="0"
+                    placeholder="Minimum"
+                    value={downloadFilters.min}
+                    onChange={e => setDownloadFilters(f => ({ ...f, min: e.target.value }))}
+                    aria-label="Minimum amount"
+                  />
+                  <Input
+                    type="number"
+                    min="0"
+                    placeholder="Maximum"
+                    value={downloadFilters.max}
+                    onChange={e => setDownloadFilters(f => ({ ...f, max: e.target.value }))}
+                    aria-label="Maximum amount"
+                  />
+                </div>
+                <p className="text-xs text-gray-500" style={{ marginTop: 4 }}>
+                  {filteredExpenses.length
+                    ? `Recorded amounts run from ${lowestAmount.toLocaleString()} to ${highestAmount.toLocaleString()} FCFA. Either box may be left empty.`
+                    : 'Either box may be left empty.'}
+                </p>
+              </div>
+
+              {/* What is about to be printed, counted before the button is pressed —
+                  including the page filters, which narrow the sheet just as much as
+                  the two above and are the easy ones to forget are still on. */}
+              <div className="text-sm text-gray-600" style={{ borderTop: '1px solid #E5E7EB', paddingTop: '0.75rem' }}>
+                <p>
+                  <strong>{downloadRows.length}</strong> of {filteredExpenses.length} record{filteredExpenses.length === 1 ? '' : 's'}
+                  {' '}·{' '}Total <strong>{downloadTotal.toLocaleString()}</strong> FCFA
+                </p>
+                {(searchTerm || filterCategory !== 'all') && (
+                  <p className="text-xs text-gray-500" style={{ marginTop: 2 }}>
+                    The page filters apply too —
+                    {filterCategory !== 'all' ? ` category "${filterCategory}"` : ''}
+                    {filterCategory !== 'all' && searchTerm ? ',' : ''}
+                    {searchTerm ? ` search "${searchTerm}"` : ''}.
+                  </p>
+                )}
+              </div>
+
+              {rangeError && <p className="text-sm text-red-600">{rangeError}</p>}
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={clearDownloadFilters}
+                disabled={downloading || !(downloadFilters.from || downloadFilters.to || downloadFilters.min || downloadFilters.max)}
+              >
+                Clear
+              </Button>
+              <DialogClose asChild>
+                <Button variant="outline" disabled={downloading}>Cancel</Button>
+              </DialogClose>
+              <Button
+                onClick={handleDownloadRecords}
+                disabled={downloading || !!rangeError || downloadRows.length === 0}
+                className="flex items-center gap-2"
+              >
+                <Download size={16} />
+                {downloading ? 'Preparing...' : 'Download PDF'}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
         <Dialog open={openAdd} onOpenChange={setOpenAdd}>
           <DialogTrigger asChild>
             <Button className="flex items-center gap-2">
@@ -173,10 +365,9 @@ export function ExpensesManagement() {
                       <SelectValue placeholder="Select method" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="cash">Cash</SelectItem>
-                      <SelectItem value="bank">Bank Transfer</SelectItem>
-                      <SelectItem value="mobile">Mobile Money</SelectItem>
-                      <SelectItem value="check">Check</SelectItem>
+                      {PAYMENT_METHODS.map(m => (
+                        <SelectItem key={m} value={m}>{m}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>

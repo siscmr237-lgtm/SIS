@@ -9,6 +9,7 @@ import {
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { ThreePartDateInput } from './ThreePartDateInput';
+import { PAYMENT_METHODS } from '../utils/paymentMethods';
 
 /**
  * Settle every outstanding category in one fee group, in one action.
@@ -37,8 +38,6 @@ const GROUP_LABEL: Record<FeeGroup, string> = {
   REGISTRATION: 'Registration',
   OTHER_FEES: 'Other Fees',
 };
-
-const PAYMENT_METHODS = ['Cash', 'Mobile Money', 'Bank Transfer', 'Cheque'];
 
 interface Plan {
   group: FeeGroup;

@@ -40,6 +40,7 @@ import {
 import { ParentTypeahead, ParentMatch } from './ParentTypeahead';
 import { buildParentPayload, ParentBaseline } from '../utils/parentPayload';
 import { isCompleteFullName, joinFullName, splitFullName } from '../utils/fullName';
+import { PAYMENT_METHODS } from '../utils/paymentMethods';
 
 interface LedgerEntry {
   id: string;
@@ -91,13 +92,6 @@ interface StudentProfileProps {
 }
 
 type Tab = 'general' | 'finance' | 'marks' | 'attendance';
-
-/**
- * The two ways this school actually receives money. Deliberately short: the
- * Pay Fees dialog offers exactly these, and a method nobody uses is a wrong
- * answer somebody can pick by accident.
- */
-const PAYMENT_METHODS = ['Cash', 'Mobile Money'];
 
 const VALID_TABS: Tab[] = ['general', 'finance', 'marks', 'attendance'];
 

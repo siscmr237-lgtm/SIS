@@ -16,3 +16,18 @@ export function dateOnly(value: string | null | undefined): string {
   if (!value) return '';
   return String(value).split('T')[0];
 }
+
+/**
+ * Today as 'YYYY-MM-DD', read off the local calendar rather than the ISO
+ * string.
+ *
+ * new Date().toISOString().split('T')[0] is the older idiom in this codebase and
+ * it is wrong for the hour either side of midnight: a school an hour ahead of
+ * UTC recording at 00:30 would be offered yesterday as the default. The three
+ * local parts give the date the person is actually having.
+ */
+export function todayIso(): string {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+}

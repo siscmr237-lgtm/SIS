@@ -148,7 +148,7 @@ export function PayFeesDialog({
   loading: boolean;
   submitting: boolean;
   error: string | null;
-  methods: string[];
+  methods: readonly string[];
   onSubmit: (submission: PayFeesSubmission) => void;
 }) {
   /**

@@ -13,6 +13,7 @@ import {
 } from './ui/dialog';
 import { Input } from './ui/input';
 import { ThreePartDateInput } from './ThreePartDateInput';
+import { PAYMENT_METHODS } from '../utils/paymentMethods';
 import { Label } from './ui/label';
 import {
   Select,
@@ -86,8 +87,6 @@ interface RecordPayrollDialogProps {
   onRecorded?: () => void | Promise<void>;
 }
 
-const FALLBACK_METHODS = ['Cash', 'Mobile Money'];
-
 function money(n: number) {
   return `${n.toLocaleString()} FCFA`;
 }
@@ -151,7 +150,9 @@ export function RecordPayrollDialog({
   }, [open, staffCode]);
 
   const charges = data?.charges ?? [];
-  const methods = data?.paymentMethods?.length ? data.paymentMethods : FALLBACK_METHODS;
+  // The server owns this list (PAYROLL_METHODS); the shared constant is what
+  // shows while the fetch is in flight or if it fails.
+  const methods = data?.paymentMethods?.length ? data.paymentMethods : PAYMENT_METHODS;
 
   // The net, and every figure it is built from. Mirrors computeNetPay() in
   // sis-backend/src/utils/staffPayroll.js.
