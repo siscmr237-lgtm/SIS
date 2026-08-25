@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { LogOut, Menu, School, Settings, Users, X } from "lucide-react";
+import { LayoutDashboard, LogOut, Menu, School, Settings, Users, X } from "lucide-react";
 import { MOBILE_DRAWER_CSS } from "@/components/mobileDrawerCss";
 import {
   clearPlatformSession,
@@ -160,6 +160,10 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
   // The icons ride along here but only the drawer draws them — the desktop
   // header nav is a row of text links and stays one.
   const nav = [
+    // First, and the console's landing page — see app/admin/page.tsx. It is
+    // the only entry here that shows the platform as a whole rather than one
+    // school or one account.
+    { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/admin/schools", label: "Schools", icon: School },
     ...(me.role === "FOUNDER" ? [{ href: "/admin/administrators", label: "Administrators", icon: Users }] : []),
     // The route stays /admin/account; this is only what the team reads.
