@@ -12,7 +12,7 @@ import { generateExpenseInvoice, generateExpenseRecords } from '../utils/pdfGene
 import { api } from '@/lib/api';
 import { useCachedResource, useSisCache } from '@/lib/SisCache';
 import { dateOnly, todayIso } from '../utils/dateOnly';
-import { PAYMENT_METHODS } from '../utils/paymentMethods';
+import { PAYMENT_METHODS, formatPaymentMethod } from '../utils/paymentMethods';
 
 export function ExpensesManagement() {
   const cache = useSisCache();
@@ -502,7 +502,7 @@ export function ExpensesManagement() {
                 <TableCell>{expense.description}</TableCell>
                 <TableCell>{expense.payee}</TableCell>
                 <TableCell>{expense.amount.toLocaleString()}</TableCell>
-                <TableCell className="capitalize">{expense.paymentMethod}</TableCell>
+                <TableCell>{formatPaymentMethod(expense.paymentMethod)}</TableCell>
                 <TableCell>
                   <Button
                     variant="outline"

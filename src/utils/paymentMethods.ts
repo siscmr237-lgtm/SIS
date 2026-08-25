@@ -20,3 +20,37 @@
 export const PAYMENT_METHODS = ['Cash', 'Mobile Money'] as const;
 
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
+
+/**
+ * A stored payment method as it should be READ.
+ *
+ * WHY THIS EXISTS. The Add Expense dialog used to save a short code rather than
+ * the label — 'cash', 'bank', 'mobile', 'check' — so every expense recorded
+ * before that was fixed still holds one. The expense table hid it behind a
+ * `capitalize` class, which turned 'mobile' into "Mobile" and quietly dropped
+ * the "Money"; the PDF had no such class and printed the bare code. Both were
+ * reading a code as if it were a label.
+ *
+ * IT EXPANDS, IT DOES NOT REWRITE. 'bank' becomes "Bank Transfer" even though
+ * Bank Transfer is no longer offered, because an expense genuinely settled by
+ * transfer in 2025 was settled by transfer — narrowing the dropdown changes what
+ * can be recorded from now on, not what already happened. Restating history to
+ * match the current options would put a number against a method nobody used.
+ *
+ * Anything unrecognised passes through untouched, which is what makes this safe
+ * to run over a value that is already a label: 'Mobile Money' in, 'Mobile Money'
+ * out. Empty and null give the em dash the tables already use for "not recorded".
+ */
+const LEGACY_CODES: Record<string, string> = {
+  cash: 'Cash',
+  mobile: 'Mobile Money',
+  bank: 'Bank Transfer',
+  check: 'Check',
+  cheque: 'Cheque',
+};
+
+export function formatPaymentMethod(value: string | null | undefined): string {
+  const raw = (value ?? '').trim();
+  if (!raw) return '—';
+  return LEGACY_CODES[raw.toLowerCase()] ?? raw;
+}

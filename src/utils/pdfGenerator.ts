@@ -4,6 +4,7 @@ import { Expense, Student, Staff, ReportCard, WorkRecord, TimetableEntry, Attend
 import { BASE_URL } from '../lib/api';
 import { formatTermLabel } from './academicTerm';
 import { dateOnly, todayIso } from './dateOnly';
+import { formatPaymentMethod } from './paymentMethods';
 
 const SCHOOL_INFO = {
   name: 'École Primaire et Maternelle',
@@ -35,7 +36,7 @@ export function generateExpenseInvoice(expense: Expense) {
   doc.setFontSize(10);
   doc.text(`Invoice No: ${expense.invoiceNumber}`, 20, 65);
   doc.text(`Date: ${dateOnly(expense.date)}`, 20, 72);
-  doc.text(`Payment Method: ${expense.paymentMethod}`, 20, 79);
+  doc.text(`Payment Method: ${formatPaymentMethod(expense.paymentMethod)}`, 20, 79);
   
   // Expense details
   autoTable(doc, {
@@ -1534,7 +1535,7 @@ export async function generateExpenseRecords(
         e.description ?? '',
         e.payee ?? '—',
         (Number(e.amount) || 0).toLocaleString(),
-        e.paymentMethod || '—',
+        formatPaymentMethod(e.paymentMethod),
       ]),
       foot: [['', '', '', '', 'Total', `${total.toLocaleString()} FCFA`, '']],
       theme: 'striped',
