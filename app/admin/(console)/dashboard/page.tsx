@@ -266,12 +266,40 @@ export default function DashboardPage() {
   const [data, setData] = useState<Analytics | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  /**
+   * THIS PAGE ASKS FOR ONE THING, AND IT IS NOT SCHOOL DATA.
+   *
+   * GET /platform/analytics is a platform endpoint returning platform-wide
+   * aggregates. So if it comes back refused on the grounds of school data,
+   * that refusal cannot be about what this page requested — it means the
+   * request fell past /platform on the server and was answered by the school
+   * API's guard on its way down, which in turn means this build of the console
+   * is newer than the API it is talking to and the endpoint is not deployed
+   * yet. (The API now stops that fall itself and returns NO_SUCH_ENDPOINT — see
+   * the terminator at the foot of routes/platform.js — but an older API that
+   * predates the fix is exactly the case this arm is here for, and it is the
+   * only one that can still produce the old message.)
+   *
+   * Passing that message straight through sent the reader to look at roles and
+   * permissions, which is the one place the fault was not. It is translated
+   * into what it actually means.
+   */
   const load = useCallback(() => {
     setError(null);
     platformApi
       .get("/platform/analytics")
       .then(setData)
-      .catch((e) => setError(e?.message || "Could not load the dashboard."));
+      .catch((e) => {
+        const stale =
+          e?.code === "NO_SUCH_ENDPOINT" ||
+          e?.status === 404 ||
+          (e?.status === 403 && /school data/i.test(String(e?.message ?? "")));
+        setError(
+          stale
+            ? "The dashboard is not available on the server yet. This page is newer than the API it is talking to — once the backend finishes deploying, it will load."
+            : e?.message || "Could not load the dashboard.",
+        );
+      });
   }, []);
 
   useEffect(load, [load]);
