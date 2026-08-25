@@ -1,4 +1,4 @@
-import { AlertTriangle, ChevronDown, ChevronLeft, ChevronRight, Filter, Info, Megaphone, Receipt, Search, Trash2 } from 'lucide-react';
+import { AlertTriangle, ChevronDown, ChevronLeft, ChevronRight, Download, Filter, Info, Megaphone, Receipt, Search, Trash2 } from 'lucide-react';
 import { AcademicYearSelect, useAcademicYear } from '@/lib/academicYear';
 import { PaymentStatusDot, useStudentPaymentStatuses } from './PaymentStatus';
 import { ZeroMarkDot, useStudentsWithZeroMarks } from './MarkStatus';
@@ -18,6 +18,7 @@ import { DateFilterInput } from './DateFilterInput';
 import { ThreePartDateInput } from './ThreePartDateInput';
 import { statValueFontSize } from '../utils/statFigure';
 import { PAYMENT_METHODS } from '../utils/paymentMethods';
+import { generateTransactionInvoice } from '../utils/pdfGenerator';
 
 interface FinanceOverviewProps {
   onNavigate: (page: NavigationPage) => void;
@@ -42,11 +43,17 @@ interface StudentTransactionRow {
   paymentMethod: string | null;
 }
 
-type Bucket = 'fees' | 'payroll' | 'others';
-
+/**
+ * One row of the School Transactions table — the school's own OUTGOINGS, which
+ * is payroll and expenses and nothing else.
+ *
+ * Student fees are not here at all: they are money coming in, they are
+ * per-student, and the Student Transactions table directly above is already
+ * their log. That is why there is no student party type and no fee-structure
+ * flag on this shape — neither can occur in a row this table can hold.
+ */
 interface Transaction {
   id: string;
-  bucket: Bucket;
   type: 'CHARGE' | 'PAYMENT' | 'EXPENSE' | 'PAYROLL' | 'STAFF_PAYMENT' | 'STAFF_CHARGE';
   category: string | null;
   description: string;
@@ -54,9 +61,8 @@ interface Transaction {
   amount: number;
   entryDate: string;
   paymentMethod: string | null;
-  partyType?: 'student' | 'staff' | 'vendor' | null;
+  partyType?: 'staff' | 'vendor' | null;
   partyCode?: string | null;
-  partyClass?: string | null;
   note?: string | null;
   payrollMonth?: string | null;
   payrollBonus?: number | null;
@@ -64,10 +70,6 @@ interface Transaction {
   term?: string | null;
   settlesCode?: string | null;
   settlesDescription?: string | null;
-  // True for the charges billed from a class level's fee structure. They are
-  // owned by syncLevelFeeCharges, so deleting one is undone the next time that
-  // level's fees are saved — the confirmation says so rather than pretending.
-  isFeeStructureCharge?: boolean;
 }
 
 interface StudentQuery {
@@ -82,22 +84,14 @@ interface StudentQuery {
 
 interface TransactionQuery {
   page: number;
-  bucket: Bucket;
 }
 
-const BUCKETS: { id: Bucket; label: string }[] = [
-  { id: 'fees', label: 'Fees' },
-  { id: 'payroll', label: 'Payroll' },
-  { id: 'others', label: 'Others' },
-];
-
 const TERM_OPTIONS = ['Term 1', 'Term 2', 'Term 3'];
-// A page size per table, because the two no longer want the same one. Student
-// Transactions is a transaction log read a screenful at a time, and its rows
-// repeat a student, so ten keeps a page short enough to take in at once. School
-// Transactions is unchanged.
+// Ten rows a page, in both tables. Each is a transaction log read a screenful
+// at a time, and ten is short enough to take in at once — the two arrows under
+// the table are how the rest is reached.
 const STUDENT_PAGE_SIZE = 10;
-const PAGE_SIZE = 25;
+const PAGE_SIZE = 10;
 
 /**
  * How each transaction type reads, and which way the money went.
@@ -190,8 +184,8 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
   const classOptions = (classList ?? []).map((c: any) => c.name);
   const [academicYearOptions, setAcademicYearOptions] = useState<string[]>([]);
 
-  // --- School Transactions table: filter, pagination, data ---
-  const [txQuery, setTxQuery] = useState<TransactionQuery>({ page: 1, bucket: 'fees' });
+  // --- School Transactions table: pagination, data ---
+  const [txQuery, setTxQuery] = useState<TransactionQuery>({ page: 1 });
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [transactionsLoading, setTransactionsLoading] = useState(true);
   const [txTotalPages, setTxTotalPages] = useState(1);
@@ -202,6 +196,10 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
   const [txDeleteError, setTxDeleteError] = useState<string | null>(null);
   /** The row whose Details panel is open. Whole row, so the panel needs no refetch. */
   const [txDetail, setTxDetail] = useState<Transaction | null>(null);
+  // Building the invoice can await the school's logo, so the button says so
+  // rather than appearing to have done nothing for a moment.
+  const [invoiceBusy, setInvoiceBusy] = useState(false);
+  const [invoiceError, setInvoiceError] = useState<string | null>(null);
 
   const today = new Date().toISOString().split('T')[0];
   const [openDamage, setOpenDamage] = useState(false);
@@ -262,7 +260,6 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
       const params = new URLSearchParams();
       params.set('page', String(query.page));
       params.set('pageSize', String(PAGE_SIZE));
-      params.set('bucket', query.bucket);
       const data = await api.get(`/ledger/transactions?${params.toString()}`);
       setTransactions(data?.transactions || []);
       setTxTotalPages(data?.totalPages || 1);
@@ -329,7 +326,7 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [defaultsReady, studentQuery]);
 
-  // Re-fetch the School Transactions page whenever its page or bucket filter changes.
+  // Re-fetch the School Transactions page whenever the page changes.
   useEffect(() => {
     fetchTransactionsPage(txQuery);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -399,16 +396,44 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
    * Where a transaction's record actually lives.
    *
    * No screen in this app addresses a single ledger entry, so the closest real
-   * destination is the party's own Finance tab — which is where that entry is
-   * listed. ?tab= is the existing deep-link both profiles already read.
-   * Navigating to an invented per-entry URL would only 404.
+   * destination is the party's own finances — which is where that entry is
+   * listed. Navigating to an invented per-entry URL would only 404.
+   *
+   * Only staff have such a screen. The other party this table can carry is a
+   * vendor on an expense row, and a vendor is a name on an Expense, not a record
+   * with a page of its own — those rows offer the expense book instead, in the
+   * Details panel below.
    */
   const openParty = (t: Transaction) => {
     if (!t.partyCode) return;
-    if (t.partyType === 'student') {
-      onViewStudent({ id: t.partyCode } as Student, 'finance');
-    } else if (t.partyType === 'staff') {
-      onNavigate('staff');
+    if (t.partyType === 'staff') onNavigate('staff');
+  };
+
+  /**
+   * The invoice for one transaction, built in the browser from the row already
+   * on screen — so it costs no request and is ready as soon as it is asked for.
+   *
+   * The letterhead comes off the signed-in user, which is where every other
+   * generator in this app reads it from. A school that has never set one still
+   * gets a valid sheet, just under the app's default heading.
+   */
+  const downloadInvoice = async (t: Transaction) => {
+    setInvoiceBusy(true);
+    setInvoiceError(null);
+    try {
+      let schoolInfo: { name: string; logo?: string; motto?: string; academicYear?: string } | undefined;
+      try {
+        const userStr = window.localStorage.getItem('user');
+        if (userStr) {
+          const user = JSON.parse(userStr);
+          if (user?.School?.[0]) schoolInfo = user.School[0];
+        }
+      } catch {}
+      await generateTransactionInvoice(t, schoolInfo);
+    } catch (e: any) {
+      setInvoiceError(e?.message || 'Could not build the invoice.');
+    } finally {
+      setInvoiceBusy(false);
     }
   };
 
@@ -866,23 +891,15 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
       </Card>
 
       <Card>
-        <div className="p-4 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        {/* The Fees / Payroll / Others tabs that used to sit here are gone with
+            the fees. What is left is one chronological list of the school's
+            outgoings, so there is no longer a choice to offer — the line under
+            the heading says what the list is instead. */}
+        <div className="p-4 border-b">
           <h2 className="text-base font-medium">School Transactions</h2>
-          <div className="flex gap-2">
-            {BUCKETS.map(b => (
-              <button
-                key={b.id}
-                onClick={() => setTxQuery({ page: 1, bucket: b.id })}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  txQuery.bucket === b.id
-                    ? 'bg-blue-900 text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                {b.label}
-              </button>
-            ))}
-          </div>
+          <p className="text-sm text-gray-500" style={{ marginTop: 2 }}>
+            Payroll and expenses, newest first
+          </p>
         </div>
 
         {transactionsLoading ? (
@@ -902,7 +919,6 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
               <thead>
                 <tr className="border-b text-left text-xs text-gray-500 uppercase tracking-wide">
                   <th className="px-4 py-3 font-medium">Date</th>
-                  <th className="px-4 py-3 font-medium">Category</th>
                   <th className="px-4 py-3 font-medium">Party</th>
                   <th className="px-4 py-3 font-medium">Type</th>
                   <th className="px-4 py-3 font-medium text-right">Amount</th>
@@ -912,8 +928,8 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
               <tbody>
                 {transactions.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-6 text-center text-gray-500">
-                      No {BUCKETS.find(b => b.id === txQuery.bucket)?.label.toLowerCase()} transactions found.
+                    <td colSpan={5} className="px-4 py-6 text-center text-gray-500">
+                      No payroll or expense transactions recorded yet.
                     </td>
                   </tr>
                 ) : transactions.map((t) => {
@@ -921,20 +937,11 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
                   return (
                     <tr key={t.id} className="border-b last:border-0 hover:bg-gray-50">
                       <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{formatDate(t.entryDate)}</td>
-                      <td className="px-4 py-3 text-gray-600">{t.category ?? '—'}</td>
-                      {/* Name and class on ONE line, separated by a middot. The
-                          class used to be a display:block span underneath, which
-                          was the only deliberate two-line cell in either table.
-                          It stays visually secondary — smaller and grey — so the
-                          name is still what the eye lands on. */}
-                      <td className="px-4 py-3 text-gray-900">
-                        {t.partyName ?? '—'}
-                        {t.partyClass && (
-                          <span className="text-xs text-gray-400" style={{ marginLeft: 6 }}>
-                            · {t.partyClass}
-                          </span>
-                        )}
-                      </td>
+                      {/* No class beside the name: the only parties this table
+                          can hold are staff and vendors, and neither has one.
+                          Category has moved into Details along with the other
+                          fields that were widening the table for no gain. */}
+                      <td className="px-4 py-3 text-gray-900">{t.partyName ?? '—'}</td>
                       <td className="px-4 py-3">
                         {/* Inline colours: src/index.css is a pre-compiled
                             Tailwind build, so a utility not already in it
@@ -1032,7 +1039,7 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
           with the row, so opening it costs no request — and the columns can stay
           narrow enough to read on a phone precisely because the long fields live
           in here rather than in the table. */}
-      <Dialog open={txDetail !== null} onOpenChange={(open) => { if (!open) setTxDetail(null); }}>
+      <Dialog open={txDetail !== null} onOpenChange={(open) => { if (!open) { setTxDetail(null); setInvoiceError(null); } }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Transaction details</DialogTitle>
@@ -1042,11 +1049,18 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
           </DialogHeader>
 
           {txDetail && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+            /* The nominated scrolling child: DialogContent is a capped flex
+               column, so exactly one child has to take the overflow or a long
+               panel pushes its own buttons off the bottom of the screen. */
+            <div
+              style={{
+                display: 'flex', flexDirection: 'column', gap: '0.6rem',
+                flex: '1 1 auto', minHeight: 0, overflowY: 'auto',
+              }}
+            >
               {([
                 ['Description', txDetail.description],
                 ['Party', txDetail.partyName],
-                ['Class', txDetail.partyClass],
                 ['Category', txDetail.category],
                 ['Amount', `${txDetail.amount.toLocaleString()} FCFA`],
                 ['Payment method', txDetail.paymentMethod],
@@ -1086,18 +1100,31 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
                 </div>
               )}
 
-              {txDetail.partyType === 'student' || txDetail.partyType === 'staff' ? (
+              {/* Every row in this table is money the school paid out, and
+                  every one of them is something it may have to show on paper —
+                  so the invoice is offered on all of them, not only on the
+                  expenses that happen to carry a supplier's number. The sheet is
+                  built from this row alone, so nothing is fetched to make it. */}
+              <Button
+                style={{ marginTop: '0.35rem' }}
+                disabled={invoiceBusy}
+                onClick={() => downloadInvoice(txDetail)}
+              >
+                <Download size={16} className="mr-2" />
+                {invoiceBusy ? 'Preparing invoice...' : 'Download invoice'}
+              </Button>
+              {invoiceError && <p className="text-sm" style={{ color: '#e0552e' }}>{invoiceError}</p>}
+
+              {txDetail.partyType === 'staff' ? (
                 <Button
                   variant="outline"
-                  style={{ marginTop: '0.35rem' }}
                   onClick={() => { const t = txDetail; setTxDetail(null); openParty(t); }}
                 >
-                  Open {txDetail.partyType === 'student' ? "student's" : "staff member's"} finances
+                  Open staff member&apos;s finances
                 </Button>
               ) : txDetail.type === 'EXPENSE' ? (
                 <Button
                   variant="outline"
-                  style={{ marginTop: '0.35rem' }}
                   onClick={() => { setTxDetail(null); onNavigate('expenses'); }}
                 >
                   Open expenses
@@ -1240,14 +1267,10 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
               )}
             </DialogDescription>
           </DialogHeader>
-          {/* Honest about the one case where "deleted" does not mean gone. */}
-          {txPendingDelete?.isFeeStructureCharge && (
-            <p className="text-sm" style={{ color: '#e0552e' }}>
-              This charge is billed from the class level&apos;s fee structure. Deleting it here
-              un-bills the student for now, but it will be re-created the next time that level&apos;s
-              fees are saved. To stop billing it, change the fee structure instead.
-            </p>
-          )}
+          {/* The fee-structure warning that used to sit here is gone with the
+              fee rows themselves: a charge billed from a class level's fee
+              structure is by definition a student row, and this table no longer
+              holds one. Student Transactions above still warns about them. */}
           {txDeleteError && <p className="text-sm" style={{ color: '#e0552e' }}>{txDeleteError}</p>}
           <div className="flex justify-end gap-2">
             <Button variant="outline" disabled={txDeleting} onClick={() => setTxPendingDelete(null)}>Cancel</Button>

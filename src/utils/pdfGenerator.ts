@@ -1574,3 +1574,193 @@ export async function generateExpenseRecords(
 
   deliverPdf(doc, `Expense_Records_${todayIso()}.pdf`);
 }
+
+/**
+ * One row of the Finance page's School Transactions table, as that table holds
+ * it. Structurally identical to the `Transaction` interface in
+ * FinanceOverview.tsx — restated here so this module stays free of a component
+ * import, the way every other generator in this file is.
+ */
+export interface TransactionInvoice {
+  id: string;
+  type: string;
+  category?: string | null;
+  description: string;
+  partyName?: string | null;
+  partyType?: 'staff' | 'vendor' | null;
+  partyCode?: string | null;
+  amount: number;
+  entryDate: string;
+  paymentMethod?: string | null;
+  note?: string | null;
+  payrollMonth?: string | null;
+  payrollBonus?: number | null;
+  academicYear?: string | null;
+  term?: string | null;
+}
+
+/**
+ * What each kind of transaction is CALLED on paper, and what the other party to
+ * it is called.
+ *
+ * A payroll run and a supplier invoice are not the same document, and printing
+ * one heading over both would be wrong on at least one of them: a vendor sends
+ * the school an invoice, whereas the school issues its own staff a voucher. The
+ * party label moves with it for the same reason — "Payee" reads as the supplier
+ * on an expense, and "Staff member" is what the name means on a payroll line.
+ *
+ * A staff CHARGE runs the other way (money the school is owed, e.g. damage
+ * billed back), so it is a charge note rather than a voucher.
+ */
+const INVOICE_HEADINGS: Record<string, { title: string; party: string }> = {
+  EXPENSE: { title: 'Expense Invoice', party: 'Payee' },
+  PAYROLL: { title: 'Payroll Voucher', party: 'Staff member' },
+  STAFF_PAYMENT: { title: 'Payment Voucher', party: 'Staff member' },
+  STAFF_CHARGE: { title: 'Charge Note', party: 'Staff member' },
+  PAYMENT: { title: 'Payment Voucher', party: 'Party' },
+  CHARGE: { title: 'Charge Note', party: 'Party' },
+};
+
+/**
+ * The invoice for a single School Transactions row — the sheet behind the
+ * Download invoice button in that table's Details panel.
+ *
+ * ONE GENERATOR FOR EVERY ROW TYPE, not one per type, because the sheets differ
+ * only in their heading and in which fields happen to be present. Payroll month
+ * and bonus exist on a payroll line and on nothing else; an academic year and
+ * term exist on a ledger entry and never on a standalone expense. Absent fields
+ * are dropped rather than printed as dashes, exactly as the on-screen Details
+ * panel drops them — a column of em-dashes reads as missing data instead of as
+ * not applicable.
+ *
+ * THE REFERENCE IS THE ROW'S OWN CODE, and it is what makes this sheet worth
+ * keeping: it is the id the record carries in the database, so a printed copy
+ * can be matched back to the entry it came from. An expense that was given an
+ * invoice number when it was recorded prints that too — that is the SUPPLIER's
+ * number, a different thing from the school's own reference, so both appear
+ * rather than one standing in for the other.
+ */
+export async function generateTransactionInvoice(
+  tx: TransactionInvoice,
+  schoolInfo?: { name: string; logo?: string; motto?: string; academicYear?: string },
+) {
+  const doc = new jsPDF();
+  const heading = INVOICE_HEADINGS[tx.type] ?? { title: 'Transaction Record', party: 'Party' };
+  const reference = String(tx.id).replace(/^(ledger|expense)-/, '');
+
+  const HEADER_H = 46;
+
+  doc.setFillColor(37, 99, 235);
+  doc.rect(0, 0, 210, HEADER_H, 'F');
+
+  if (schoolInfo?.logo) {
+    const dataUrl = await getLogoDataUrl(schoolInfo.logo);
+    if (dataUrl) {
+      try {
+        const fmt = dataUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG';
+        const size = 26;
+        doc.addImage(dataUrl, fmt, 9, (HEADER_H - size) / 2, size, size);
+      } catch {
+        // A logo jsPDF will not decode must not cost the school its invoice.
+      }
+    }
+  }
+
+  doc.setTextColor(255, 255, 255);
+
+  // The cursor moves only for lines that actually render, so a school with no
+  // motto gets a tight block rather than a gap where the motto would have been.
+  let headY = 15;
+  doc.setFontSize(17);
+  doc.setFont('helvetica', 'bold');
+  doc.text(schoolInfo?.name ?? SCHOOL_INFO.name, 105, headY, { align: 'center' });
+  doc.setFont('helvetica', 'normal');
+
+  const motto = schoolInfo?.motto?.trim();
+  if (motto) {
+    headY += 6;
+    doc.setFontSize(9.5);
+    doc.setFont('helvetica', 'italic');
+    doc.text(motto, 105, headY, { align: 'center' });
+    doc.setFont('helvetica', 'normal');
+  }
+
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.text(heading.title.toUpperCase(), 105, HEADER_H - 7, { align: 'center' });
+  doc.setFont('helvetica', 'normal');
+
+  // Reference and date, the two things that identify this sheet, on one line
+  // directly under the band and before the detail table.
+  doc.setTextColor(17, 24, 39);
+  doc.setFontSize(10);
+  doc.text(`Reference: ${reference}`, 15, HEADER_H + 12);
+  doc.text(`Date: ${dateOnly(tx.entryDate)}`, 195, HEADER_H + 12, { align: 'right' });
+
+  const rows: Array<[string, string | null | undefined]> = [
+    [heading.party, tx.partyName],
+    ['Description', tx.description],
+    ['Category', tx.category],
+    ['Payment method', tx.paymentMethod],
+    ['Payroll month', tx.payrollMonth],
+    ['Of which bonus', tx.payrollBonus ? `${tx.payrollBonus.toLocaleString()} FCFA` : null],
+    ['Academic year', tx.academicYear],
+    ['Term', tx.term ? formatTermLabel(tx.term) : null],
+    // On an expense row this column carries the supplier's invoice number; on a
+    // ledger entry it is the free-text note. Labelled for whichever it is.
+    [tx.type === 'EXPENSE' ? 'Supplier invoice no.' : 'Note', tx.note],
+  ];
+
+  autoTable(doc, {
+    startY: HEADER_H + 18,
+    head: [['Field', 'Details']],
+    body: rows
+      .filter(([, value]) => value !== null && value !== undefined && value !== '')
+      .map(([label, value]) => [label, String(value)]),
+    theme: 'striped',
+    headStyles: { fillColor: [37, 99, 235] },
+    styles: { fontSize: 9.5 },
+    margin: { left: 15, right: 15 },
+    columnStyles: {
+      0: { cellWidth: 55, fontStyle: 'bold' },
+      1: { cellWidth: 125 },
+    },
+  });
+
+  // The amount gets its own band rather than a row in the table above. It is
+  // the one number anybody checks first, and a striped row of the same weight
+  // as "Category" buried it.
+  const amountY = (doc as any).lastAutoTable.finalY + 10;
+  doc.setFillColor(243, 244, 246);
+  doc.rect(15, amountY, 180, 14, 'F');
+  doc.setTextColor(17, 24, 39);
+  doc.setFontSize(10.5);
+  doc.setFont('helvetica', 'bold');
+  doc.text('AMOUNT', 20, amountY + 9);
+  doc.setFontSize(13);
+  doc.text(`${tx.amount.toLocaleString()} FCFA`, 190, amountY + 9.5, { align: 'right' });
+  doc.setFont('helvetica', 'normal');
+
+  // A signature line, because this is a voucher as often as it is a receipt and
+  // an unsigned payout sheet is not evidence of anything.
+  const signY = amountY + 42;
+  doc.setDrawColor(150, 150, 150);
+  doc.line(20, signY, 85, signY);
+  doc.line(125, signY, 190, signY);
+  doc.setFontSize(8.5);
+  doc.setTextColor(90, 90, 90);
+  doc.text('Received by', 20, signY + 5);
+  doc.text('Authorised by', 125, signY + 5);
+
+  doc.setFontSize(8);
+  doc.setTextColor(120, 120, 120);
+  doc.text(
+    `This is a computer-generated record, issued ${dateOnly(todayIso())}.`,
+    105,
+    signY + 20,
+    { align: 'center' },
+  );
+
+  const who = pdfNamePart(tx.partyName ?? heading.title);
+  deliverPdf(doc, `${pdfNamePart(heading.title)}_${who}_${reference}.pdf`);
+}

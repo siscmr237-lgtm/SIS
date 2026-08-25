@@ -219,7 +219,7 @@ export function SettleGroupDialog({
                 </p>
                 <p className="text-xs" style={{ color: '#92400E', marginTop: 4 }}>
                   Each is recorded separately against its own fee, dated {entryDate}. They appear in
-                  School Transactions like any other payment and can be deleted individually.
+                  Student Transactions like any other payment and can be deleted individually.
                 </p>
               </div>
             )}
