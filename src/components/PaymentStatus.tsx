@@ -32,20 +32,26 @@ export const PAYMENT_STATUS_COLORS: Record<PaymentStatus, string> = {
 /**
  * The same statuses, as a DOT draws them.
  *
- * 'Owing' — paid something, but not all of it — is the palette's Gold here
- * rather than the Burnt Orange the word uses. Beside 'No Payment' the two reds
- * read as one state at 7px, which is the one distinction the dot exists to make;
- * gold separates them at a glance, and a part-payment being the milder thing is
- * what the lighter colour says.
+ * 'Owing' — paid something, but not all of it — is a bright yellow here rather
+ * than the Burnt Orange the word uses. Beside 'No Payment' the two reds read as
+ * one state at 7px, which is the one distinction the dot exists to make; yellow
+ * separates them at a glance, and a part-payment being the milder thing is what
+ * the lighter colour says.
+ *
+ * #FFE600 is OFF the brand palette, asked for by name. The palette's nearest
+ * neighbour is Gold #E6C482, which was tried here first and read as tan rather
+ * than as yellow at this size. Being this light, it carries almost no contrast
+ * against a white row — the title and aria-label are what actually convey the
+ * status to anyone who cannot pick the dot out, and they are on every instance.
  *
  * Dot-only on purpose. The word in the Fees column, the popover's heading and
- * the fee banner's title are TEXT, and gold on white is barely legible — those
+ * the fee banner's title are TEXT, and yellow on white is illegible — those
  * keep the darker hue. This is the ONE difference between the two maps, and it
  * is about rendering, never about which status a student is in.
  */
 export const PAYMENT_STATUS_DOT_COLORS: Record<PaymentStatus, string> = {
   ...PAYMENT_STATUS_COLORS,
-  Owing: '#E6C482',
+  Owing: '#FFE600',
 };
 
 const KNOWN: PaymentStatus[] = ['No Payment', 'Owing', 'Completed', 'Overpaid'];
