@@ -406,7 +406,7 @@ export function StaffForm({ mode, open, onOpenChange, initialValues, onSubmit }:
           </div>
           <div data-field="hireDate">
             <Label>Hire Date</Label>
-            {/* Month | Day | Year, the one date control this app has. */}
+            {/* Day | Month | Year, the one date control this app has. */}
             <div style={fieldErrors.hireDate ? fieldRingStyle : undefined}>
               <ThreePartDateInput
                 value={form.hireDate}

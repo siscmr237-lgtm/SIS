@@ -77,6 +77,7 @@ const ADD_STUDENT_FORM_CSS = `
 import { ParentTypeahead, ParentMatch } from "./ParentTypeahead";
 import { buildParentPayload, ParentBaseline } from "@/utils/parentPayload";
 import { splitFullName } from "@/utils/fullName";
+import { todayIso } from "@/utils/dateOnly";
 import {
   Select,
   SelectContent,
@@ -200,6 +201,26 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
       ),
     );
 
+  /**
+   * Opening the dialog fills the enrolment date with today.
+   *
+   * Here rather than in the useState initialiser above, because that also runs
+   * during the server render — a date computed there can disagree with the one
+   * the browser computes and take the hydration with it. Reopening resets it to
+   * today, which is the point of a default: the save handler clears the field
+   * back to '' and this refills it on the next open. Same arrangement the Add
+   * Expense dialog uses.
+   *
+   * todayIso() rather than an ISO slice, so a school ahead of UTC recording just
+   * after midnight is not offered yesterday. ThreePartDateInput reads
+   * 'YYYY-MM-DD', which is what this returns, so all three dropdowns come up
+   * filled and the admission can be saved without touching them.
+   */
+  useEffect(() => {
+    if (!openAdd) return;
+    setForm((s) => ({ ...s, enrollmentDate: todayIso() }));
+  }, [openAdd]);
+
   // Debounce typing so a request is not issued per keystroke; class filter
   // changes apply immediately.
   useEffect(() => {
@@ -318,7 +339,7 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
               <div>
                 <Label>Enrollment Date</Label>
                 {/* The one date control this app has, shared with the Add New
-                    Staff dialog and every filter. Month | Day | Year rather
+                    Staff dialog and every filter. Day | Month | Year rather
                     than a native date input, which cannot be made to match the
                     selects beside it. See ThreePartDateInput. */}
                 <ThreePartDateInput

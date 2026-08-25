@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import * as Popover from '@radix-ui/react-popover';
 
 /**
- * A date as three dropdowns — Month | Day | Year — inside one bordered box.
+ * A date as three dropdowns — Day | Month | Year — inside one bordered box.
  *
  * WHY NOT A DATE INPUT. Every date in this app used to be a native
  * <input type="date"> — nineteen of them, some bare and some under a
@@ -22,6 +22,18 @@ import * as Popover from '@radix-ui/react-popover';
  * THIS IS THE ONLY DATE CONTROL IN THE APP. Every dialog field and every
  * From/To filter uses it. If a date needs picking somewhere new, use this — do
  * not reach for <input type="date"> again.
+ *
+ * DAY FIRST, THEN MONTH, THEN YEAR — the order this app already writes dates
+ * in everywhere it prints one, and the order the people using it read. The
+ * other date control, DateFilterInput, displays DD/MM/YYYY; this used to sit
+ * beside it asking for the month first, so the same date was entered in one
+ * order and shown back in another. The stored value is untouched by this: the
+ * API format is ISO regardless of which cell is drawn first.
+ *
+ * Picking a day before any month is known is safe by construction, not by
+ * luck — see DAYS_IN_MONTH below, whose index 0 is the widest list. The day
+ * then re-checks itself when the month arrives, which is the clearing rule
+ * described further down.
  *
  * ONE BORDER, THREE CELLS, exactly as PhoneInput is one border around a picker
  * and a field. That is what keeps this the same height, the same radius and the
@@ -356,16 +368,6 @@ export function ThreePartDateInput({
       <style>{DATE_CSS}</style>
 
       <DatePart
-        label="Month"
-        shown={parts.month === null ? null : MONTHS[parts.month - 1]}
-        options={MONTHS.map((m, i) => ({ value: i + 1, label: m }))}
-        selected={parts.month}
-        onSelect={setMonth}
-        disabled={disabled}
-        ariaLabel={ariaLabel ? ariaLabel + ' month' : 'Month'}
-        minListWidth={104}
-      />
-      <DatePart
         label="Day"
         shown={parts.day === null ? null : String(parts.day)}
         options={dayOptions}
@@ -374,6 +376,16 @@ export function ThreePartDateInput({
         disabled={disabled}
         ariaLabel={ariaLabel ? ariaLabel + ' day' : 'Day'}
         minListWidth={84}
+      />
+      <DatePart
+        label="Month"
+        shown={parts.month === null ? null : MONTHS[parts.month - 1]}
+        options={MONTHS.map((m, i) => ({ value: i + 1, label: m }))}
+        selected={parts.month}
+        onSelect={setMonth}
+        disabled={disabled}
+        ariaLabel={ariaLabel ? ariaLabel + ' month' : 'Month'}
+        minListWidth={104}
       />
       <DatePart
         label="Year"

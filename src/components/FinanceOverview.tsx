@@ -736,7 +736,7 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
                       </Select>
                     </div>
                     {/* These two are the one date control on this screen that is
-                        NOT the shared Month | Day | Year group: asked for as a
+                        NOT the shared Day | Month | Year group: asked for as a
                         single field wearing nothing but the calendar at its right
                         corner, matching the pill selects beside it. DateFilterInput
                         is that design — see its own file for what the transparent
