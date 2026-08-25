@@ -202,8 +202,25 @@ export function ExpensesManagement() {
               Download Records
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
+          {/* maxWidth INLINE, not className="max-w-2xl".
+
+              32rem MATCHES ADD EXPENSE, which is the button next door. That dialog
+              says max-w-2xl (42rem), but DialogContent also carries sm:max-w-lg and
+              that rule sits later in src/index.css, so from 640px up the pair really
+              renders at 32rem. Saying 32rem outright is what the two look identical.
+
+              INLINE, because the gutter class DialogContent relies on for phones —
+              max-w-[calc(100%-2rem)] — is not in src/index.css at all: the frozen
+              build never compiled that arbitrary value, so it styles nothing and the
+              dialog would sit edge to edge. min() restores the gutter in one
+              declaration that cannot be dropped. Same fix SettleGroupDialog and
+              ReportCardTermDialog already use. */}
+          <DialogContent style={{ maxWidth: 'min(32rem, calc(100vw - 2rem))' }}>
+            {/* Right padding clears the close button, which DialogContent pins at
+                top-4 right-4. The header centres its text below 640px, so without
+                this the title runs under the X on a narrow phone. Same allowance
+                PayFeesDialog''s HEAD makes. */}
+            <DialogHeader style={{ paddingRight: '1.5rem' }}>
               <DialogTitle>Download Expense Records</DialogTitle>
               <DialogDescription>
                 A landscape PDF of the expense table. Narrow it by date and by amount, or leave the
@@ -212,9 +229,22 @@ export function ExpensesManagement() {
             </DialogHeader>
             {/* The one scrolling child: DialogContent is a capped flex column, so
                 without this the summary and the buttons below are what a short
-                viewport pushes off the bottom. */}
-            <div className="grid gap-4 py-4" style={{ flex: '1 1 0', minHeight: 0, overflowY: 'auto' }}>
-              <div className="grid grid-cols-2 gap-4">
+                viewport pushes off the bottom.
+
+                'auto' BASIS, NOT 0 — the same trap PayFeesDialog's BODY documents.
+                DialogContent has no definite height, only a max-height, so a 0 basis
+                means this middle contributes nothing to the intrinsic height: the box
+                shrink-wraps to header + buttons and every field in here collapses to a
+                bare underline. An 'auto' basis grows to the content and then shrinks
+                under the cap, which is what min-height: 0 is here to permit. */}
+            <div className="grid gap-4 py-4" style={{ flex: '1 1 auto', minHeight: 0, overflowY: 'auto' }}>
+              {/* WRAPS ON ITS OWN, no sm: variant involved — src/index.css is a frozen
+                  pre-compiled build where some responsive variants simply are not there.
+                  auto-fit drops to one column as soon as two 200px tracks stop fitting,
+                  which is what a phone gives this dialog; min(100%, 200px) keeps the
+                  floor from overflowing a viewport narrower than the floor itself.
+                  200 rather than less because each of these is three dropdowns. */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '1rem' }}>
                 <div>
                   <Label>From</Label>
                   <ThreePartDateInput
@@ -234,7 +264,7 @@ export function ExpensesManagement() {
               </div>
               <div>
                 <Label>Amount (FCFA)</Label>
-                <div className="grid grid-cols-2 gap-4">
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 150px), 1fr))', gap: '1rem' }}>
                   <Input
                     type="number"
                     min="0"
@@ -279,7 +309,7 @@ export function ExpensesManagement() {
 
               {rangeError && <p className="text-sm text-red-600">{rangeError}</p>}
             </div>
-            <div className="flex justify-end gap-2">
+            <div className="flex justify-end gap-2" style={{ flexWrap: 'wrap' }}>
               <Button
                 variant="outline"
                 onClick={clearDownloadFilters}
