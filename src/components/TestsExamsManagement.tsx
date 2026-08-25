@@ -357,7 +357,7 @@ export function TestsExamsManagement({ onNavigate }: TestsExamsManagementProps) 
       )}
 
       <Dialog open={openTotals} onOpenChange={open => { setOpenTotals(open); if (!open) { setTotalsTestExam(null); setTotalsRows([]); setTotalsMessage(null); } }}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="overflow-y-auto" style={{ maxWidth: 'min(672px, calc(100vw - 2rem))', maxHeight: '80vh' }}>
           <DialogHeader>
             <DialogTitle>Subject Totals — {totalsTestExam?.name}</DialogTitle>
             <DialogDescription>Set each subject's total marks for this test/exam. Leave blank to skip.</DialogDescription>

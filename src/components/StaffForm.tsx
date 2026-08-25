@@ -315,7 +315,7 @@ export function StaffForm({ mode, open, onOpenChange, initialValues, onSubmit }:
         }
       }}
     >
-      <DialogContent className="max-w-2xl">
+      <DialogContent style={{ maxWidth: 'min(672px, calc(100vw - 2rem))' }}>
         <DialogHeader>
           <DialogTitle>{mode === 'add' ? 'Add New Staff Member' : 'Edit Staff Member'}</DialogTitle>
           <DialogDescription>

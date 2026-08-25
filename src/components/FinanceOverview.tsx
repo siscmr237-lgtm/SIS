@@ -1040,7 +1040,7 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
           narrow enough to read on a phone precisely because the long fields live
           in here rather than in the table. */}
       <Dialog open={txDetail !== null} onOpenChange={(open) => { if (!open) { setTxDetail(null); setInvoiceError(null); } }}>
-        <DialogContent className="max-w-md">
+        <DialogContent style={{ maxWidth: 'min(448px, calc(100vw - 2rem))' }}>
           <DialogHeader>
             <DialogTitle>Transaction details</DialogTitle>
             <DialogDescription>
@@ -1142,7 +1142,7 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
       </Dialog>
 
       <Dialog open={openDamage} onOpenChange={(open) => { setOpenDamage(open); if (!open) { setDamageResult(null); setDamageError(null); } }}>
-        <DialogContent className="max-w-md">
+        <DialogContent style={{ maxWidth: 'min(448px, calc(100vw - 2rem))' }}>
           <DialogHeader>
             <DialogTitle>Record Damage</DialogTitle>
             <DialogDescription>

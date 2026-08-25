@@ -483,7 +483,7 @@ export function SchoolSettings() {
         open={showPasswordDialog}
         onOpenChange={(open) => { setShowPasswordDialog(open); if (!open) resetPasswordDialog(); }}
       >
-        <DialogContent className="max-w-md">
+        <DialogContent style={{ maxWidth: 'min(448px, calc(100vw - 2rem))' }}>
           <DialogHeader>
             <DialogTitle>Change Password</DialogTitle>
             <DialogDescription>

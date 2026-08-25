@@ -174,7 +174,7 @@ export function StaffManagement({ onNavigate, onViewStaff }: StaffManagementProp
                   Add Work Record
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-3xl">
+              <DialogContent style={{ maxWidth: 'min(768px, calc(100vw - 2rem))' }}>
                 <DialogHeader>
                   <DialogTitle>Add Work Record</DialogTitle>
                   <DialogDescription>Record daily lesson plans and teaching activities</DialogDescription>

@@ -700,7 +700,7 @@ export function ClassesManagement({ onNavigate }: ClassesManagementProps) {
         setOpenManage(open);
         if (!open) { setManagingClass(null); setSubjectTeachers([]); setAddTeacherSelections({}); }
       }}>
-        <DialogContent className="max-w-xl">
+        <DialogContent style={{ maxWidth: 'min(576px, calc(100vw - 2rem))' }}>
           <DialogHeader>
             <DialogTitle>Subject Teachers — {managingClass?.name}</DialogTitle>
             <DialogDescription>

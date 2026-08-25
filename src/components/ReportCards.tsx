@@ -193,7 +193,7 @@ export function ReportCards({ onNavigate }: ReportCardsProps) {
             Download all ({filteredStudents.length})
           </Button>
         <Dialog open={openCreate} onOpenChange={setOpenCreate}>
-          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogContent className="overflow-y-auto" style={{ maxWidth: 'min(896px, calc(100vw - 2rem))', maxHeight: '80vh' }}>
             <DialogHeader>
               <DialogTitle>Create Student Report Card</DialogTitle>
               <DialogDescription>Enter student grades and assessment details</DialogDescription>

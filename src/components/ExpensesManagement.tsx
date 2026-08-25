@@ -204,18 +204,25 @@ export function ExpensesManagement() {
           </DialogTrigger>
           {/* maxWidth INLINE, not className="max-w-2xl".
 
-              32rem MATCHES ADD EXPENSE, which is the button next door. That dialog
-              says max-w-2xl (42rem), but DialogContent also carries sm:max-w-lg and
-              that rule sits later in src/index.css, so from 640px up the pair really
-              renders at 32rem. Saying 32rem outright is what the two look identical.
+              className="max-w-2xl" DOES NOT GIVE 42rem HERE, which is why this is
+              inline. DialogContent merges its classes through cn() -> tailwind-merge,
+              and that does two things to a caller''s max-w:
 
-              INLINE, because the gutter class DialogContent relies on for phones —
-              max-w-[calc(100%-2rem)] — is not in src/index.css at all: the frozen
-              build never compiled that arbitrary value, so it styles nothing and the
-              dialog would sit edge to edge. min() restores the gutter in one
-              declaration that cannot be dropped. Same fix SettleGroupDialog and
-              ReportCardTermDialog already use. */}
-          <DialogContent style={{ maxWidth: 'min(32rem, calc(100vw - 2rem))' }}>
+                - it drops the base max-w-[calc(100%-2rem)], the phone gutter, because
+                  a caller max-w-* is the same utility group and wins. The dialog then
+                  sits edge to edge on a phone.
+                - it KEEPS the base sm:max-w-lg, because an sm: variant is a different
+                  group. That rule is inside @media (width >= 40rem) and sits later in
+                  the frozen src/index.css, so from 640px up it beats max-w-2xl and the
+                  dialog renders 32rem, not the 42rem the class asked for.
+
+              sm:max-w-2xl would fix the merge but not this stylesheet: index.css is a
+              pre-compiled build and .sm:max-w-2xl was never compiled into it, so it
+              styles nothing and the gutter class becomes the only cap left — a dialog
+              1rem shy of the whole window. An inline maxWidth beats every class, needs
+              nothing to have been compiled, and states the gutter and the cap in one
+              declaration. It is what 14 dialogs in this repo already do. */}
+          <DialogContent style={{ maxWidth: 'min(42rem, calc(100vw - 2rem))' }}>
             {/* Right padding clears the close button, which DialogContent pins at
                 top-4 right-4. The header centres its text below 640px, so without
                 this the title runs under the X on a narrow phone. Same allowance
@@ -236,7 +243,15 @@ export function ExpensesManagement() {
                 means this middle contributes nothing to the intrinsic height: the box
                 shrink-wraps to header + buttons and every field in here collapses to a
                 bare underline. An 'auto' basis grows to the content and then shrinks
-                under the cap, which is what min-height: 0 is here to permit. */}
+                under the cap, which is what min-height: 0 is here to permit.
+
+                INLINE AND NOT min-h-0 flex-auto overflow-y-auto: of those three,
+                only .overflow-y-auto is in src/index.css. .min-h-0 and .flex-auto
+                were never compiled into this frozen build, so the class version
+                would silently drop BOTH the auto basis and the min-height — and
+                min-height: auto is the one that stops a flex item shrinking below
+                its content, so the dialog would grow past its cap and push the
+                buttons off a short screen instead of scrolling. */}
             <div className="grid gap-4 py-4" style={{ flex: '1 1 auto', minHeight: 0, overflowY: 'auto' }}>
               {/* WRAPS ON ITS OWN, no sm: variant involved — src/index.css is a frozen
                   pre-compiled build where some responsive variants simply are not there.
@@ -338,7 +353,9 @@ export function ExpensesManagement() {
               Add Expense
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          {/* Inline for the reason the download dialog above spells out: max-w-2xl
+              alone renders 32rem from 640px up and loses the phone gutter. */}
+          <DialogContent style={{ maxWidth: 'min(42rem, calc(100vw - 2rem))' }}>
             <DialogHeader>
               <DialogTitle>Record New Expense</DialogTitle>
               <DialogDescription>Enter expense details and payment information</DialogDescription>

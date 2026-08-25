@@ -191,7 +191,7 @@ export function ManageTestsExamsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent style={{ maxWidth: 'min(672px, calc(100vw - 2rem))' }}>
         <DialogHeader>
           <DialogTitle>
             {openExam ? `${openExam.name} — subject totals` : 'Manage Tests & Exams'}
