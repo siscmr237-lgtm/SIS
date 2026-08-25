@@ -15,17 +15,22 @@ import { getPlatformToken } from "@/lib/platformApi";
  *
  * Presence of a token is the whole check here, which is the same thing
  * app/admin/login/page.tsx does before bouncing an already-signed-in visitor to
- * /admin/schools. It deliberately does NOT call /platform/me first: the
- * (console) layout wrapping /admin/schools does exactly that on mount and
+ * /admin/dashboard. It deliberately does NOT call /platform/me first: the
+ * (console) layout wrapping /admin/dashboard does exactly that on mount and
  * clears the session and returns here on failure, so a token that turns out to
  * be stale still ends up at /admin/login — one hop later, with no duplicated
  * round-trip and no second copy of the gate to keep in step.
+ *
+ * THE DESTINATION IS THE DASHBOARD, not the school list it used to be. Landing
+ * on /admin/schools meant the console opened on a work queue; the queue is one
+ * click away and the number of schools waiting is on the dashboard's first
+ * card, but "how is the platform doing" now has somewhere to be answered.
  */
 export default function AdminIndexPage() {
   const router = useRouter();
 
   useEffect(() => {
-    router.replace(getPlatformToken() ? "/admin/schools" : "/admin/login");
+    router.replace(getPlatformToken() ? "/admin/dashboard" : "/admin/login");
   }, [router]);
 
   // The login door's colours rather than the console's: the visitor who
