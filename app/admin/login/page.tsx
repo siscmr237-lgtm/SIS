@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getPlatformToken, platformLogin } from "@/lib/platformApi";
+import { PasswordField } from "@/components/platform/PasswordField";
 
 /**
  * The door. Login and nothing else.
@@ -86,8 +87,7 @@ export default function PlatformLoginPage() {
 
         <label style={{ display: "block", marginBottom: 18 }}>
           <span style={{ fontSize: "0.8125rem", fontWeight: 500, color: "#374151" }}>Password</span>
-          <input
-            type="password"
+          <PasswordField
             autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}

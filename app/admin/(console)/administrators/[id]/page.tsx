@@ -3,6 +3,8 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { platformApi } from "@/lib/platformApi";
+import { PasswordField } from "@/components/platform/PasswordField";
+import { PasswordHints } from "@/components/PasswordHints";
 
 /**
  * One administrator's details, with a password reset.
@@ -143,18 +145,15 @@ export default function AdministratorDetailPage() {
         </h2>
         <label style={{ display: "block" }}>
           <span style={{ fontSize: "0.8125rem", color: "#374151" }}>New password</span>
-          <input
+          <PasswordField
             style={field}
-            type="password"
             autoComplete="new-password"
+            placeholder="Min 5 chars, upper + lower + symbol"
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
             required
           />
-          <span style={{ fontSize: "0.72rem", color: "#94A3B8", display: "block", marginTop: 5, lineHeight: 1.45 }}>
-            At least 12 characters with an uppercase, a lowercase, a digit and a symbol. No runs like "abcd"
-            and nothing containing the name or email.
-          </span>
+          <PasswordHints password={newPassword} />
         </label>
         {pwMessage && (
           <p style={{ fontSize: "0.8125rem", marginTop: 10, marginBottom: 0, lineHeight: 1.4, color: pwMessage.ok ? "#047857" : "#DC2626" }}>

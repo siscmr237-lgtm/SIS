@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { platformApi } from "@/lib/platformApi";
+import { PasswordField } from "./PasswordField";
 
 /**
  * Setting a password on a school account, from the console.
@@ -13,7 +14,9 @@ import { platformApi } from "@/lib/platformApi";
  * There is deliberately no "show current password" anywhere, and no field that
  * could hold one. Passwords are stored as one-way bcrypt hashes; the stored
  * value cannot be turned back into a password, and no response from the API
- * carries it. The only possible operation is replacement.
+ * carries it. The only possible operation is replacement. The eye toggle on the
+ * field below reveals only what has just been typed into it, which is not the
+ * same thing.
  */
 export function PasswordResetControl({
   endpoint,
@@ -83,8 +86,7 @@ export function PasswordResetControl({
               This account cannot sign in yet. Setting a password grants access.
             </p>
           )}
-          <input
-            type="password"
+          <PasswordField
             autoComplete="new-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
