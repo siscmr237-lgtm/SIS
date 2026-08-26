@@ -5,6 +5,8 @@ import { PhoneInput } from "@/components/PhoneInput";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { platformApi } from "@/lib/platformApi";
+import { PasswordField } from "@/components/platform/PasswordField";
+import { PasswordHints } from "@/components/PasswordHints";
 
 /**
  * Founder-only. The menu entry is hidden from a Member, but that is presentation
@@ -157,12 +159,10 @@ export default function AdministratorsPage() {
 
             <label style={{ display: "block", marginBottom: 12 }}>
               <span style={{ fontSize: "0.8125rem", color: "#374151" }}>Password</span>
-              <input style={field} type="password" value={form.password} required autoComplete="new-password"
+              <PasswordField style={field} value={form.password} required autoComplete="new-password"
+                placeholder="Min 5 chars, upper + lower + symbol"
                 onChange={(e) => setForm({ ...form, password: e.target.value })} />
-              <span style={{ fontSize: "0.72rem", color: "#94A3B8", display: "block", marginTop: 5, lineHeight: 1.45 }}>
-                At least 12 characters with an uppercase, a lowercase, a digit and a symbol. No runs like
-                "abcd" and nothing containing the name or email.
-              </span>
+              <PasswordHints password={form.password} />
             </label>
 
             <label style={{ display: "block", marginBottom: 16 }}>

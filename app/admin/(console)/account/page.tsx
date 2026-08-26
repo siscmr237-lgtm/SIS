@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { platformApi, type PlatformUser } from "@/lib/platformApi";
+import { PasswordField } from "@/components/platform/PasswordField";
+import { PasswordHints } from "@/components/PasswordHints";
 
 /**
  * Your own account. Available to EVERY platform user whatever their role — a
@@ -79,18 +81,16 @@ export default function AccountPage() {
 
         <label style={{ display: "block", marginBottom: 12 }}>
           <span style={{ fontSize: "0.8125rem", color: "#374151" }}>Current password</span>
-          <input style={field} type="password" autoComplete="current-password" required
+          <PasswordField style={field} autoComplete="current-password" required
             value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
         </label>
 
         <label style={{ display: "block" }}>
           <span style={{ fontSize: "0.8125rem", color: "#374151" }}>New password</span>
-          <input style={field} type="password" autoComplete="new-password" required
+          <PasswordField style={field} autoComplete="new-password" required
+            placeholder="Min 5 chars, upper + lower + symbol"
             value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
-          <span style={{ fontSize: "0.72rem", color: "#94A3B8", display: "block", marginTop: 5, lineHeight: 1.45 }}>
-            At least 12 characters with an uppercase, a lowercase, a digit and a symbol. No runs like "abcd"
-            and nothing containing your name or email.
-          </span>
+          <PasswordHints password={newPassword} />
         </label>
 
         {message && (
