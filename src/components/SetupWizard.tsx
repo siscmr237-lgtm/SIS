@@ -25,7 +25,7 @@ import { StaffForm, StaffFormPayload } from './StaffForm';
  *
  *   Fees      <LevelFeesDialog>          the same dialog the Classes screen opens
  *   Subjects  <LevelSubjectsDialog>      likewise
- *   Totals    <ManageTestsExamsDialog>   the same dialog Tests & Exams opens
+ *   Totals    <ManageTestsExamsDialog>   the same dialog Sequence Tests & Exams opens
  *   Staff     <StaffForm mode="add">     the same form the Staff screen submits
  *   Students  routes to the Students screen
  *

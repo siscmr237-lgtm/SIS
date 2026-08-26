@@ -19,7 +19,7 @@ import { toast } from 'sonner';
  *             write. Nothing here widens that; the UI only ever offers a subset of
  *             what the server would accept.
  *
- * Selection order: class LEVEL -> [section] -> term -> test/exam -> subject -> roster.
+ * Selection order: class LEVEL -> [section] -> term -> assessment -> subject -> roster.
  *
  * A LEVEL is chosen because that is how people refer to a class, but marks belong
  * to the real enrolled students of ONE section: each section has its own TestExam
@@ -365,7 +365,7 @@ export function EnterMarksFlow({
     if (saving) return;
     setError(null);
     if (totalMarks == null) {
-      setError('This assessment has no total configured for that subject yet — set it under Manage Tests & Exams first.');
+      setError('This assessment has no total configured for that subject yet — set it under Manage Sequence Tests & Exams first.');
       return;
     }
     // One entry per roster row, with its state spelled out. Sending the whole
@@ -477,7 +477,7 @@ export function EnterMarksFlow({
         </div>
 
         <div>
-          <Label>Test / Exam</Label>
+          <Label>Sequence Test / Exam</Label>
           <Select value={testExamId} onValueChange={setTestExamId} disabled={saving || !section}>
             <SelectTrigger>
               <SelectValue placeholder={exams.length ? 'Select assessment' : 'None for this class and term'} />
@@ -533,7 +533,7 @@ export function EnterMarksFlow({
           {!loadingRoster && !selectedSubjectEnterable && (
             <p className="text-sm" style={{ color: '#B45309', marginBottom: '0.5rem' }}>
               This subject has no total set for this assessment, so it is not counted in ranking or
-              scoring and marks cannot be entered. Set one under Manage Tests &amp; Exams.
+              scoring and marks cannot be entered. Set one under Manage Sequence Tests &amp; Exams.
             </p>
           )}
 

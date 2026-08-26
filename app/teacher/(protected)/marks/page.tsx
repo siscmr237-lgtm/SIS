@@ -30,7 +30,7 @@ export default function TeacherMarksPage() {
       <div className="mb-8">
         <h1 className="text-3xl mb-2">Enter Marks</h1>
         <p className="text-gray-600">
-          Choose a class, term, test or exam and subject, then enter each student's score
+          Choose a class, term, sequence test or exam and subject, then enter each student's score
         </p>
       </div>
 
