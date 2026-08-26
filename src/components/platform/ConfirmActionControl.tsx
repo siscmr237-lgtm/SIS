@@ -22,14 +22,17 @@ import { useEffect, useRef, useState } from "react";
  * a school's access and amber for the one that closes it again, so a glance is
  * enough to tell which of the two a page is currently offering.
  *
- * Amber and not red: this is reversible and touches a single status column,
- * so dressing it as a deletion would cry wolf.
+ * Amber and not red for `withdraw`: that one is reversible and touches a single
+ * status column, so dressing it as a deletion would cry wolf. Red is kept for
+ * `destroy`, which is the case that has no way back — see the note on
+ * `typeToConfirm` below, the affordance that comes with it.
  */
-export type ConfirmTone = "grant" | "withdraw";
+export type ConfirmTone = "grant" | "withdraw" | "destroy";
 
 const TONES: Record<ConfirmTone, { base: string; busy: string }> = {
   grant: { base: "#15803D", busy: "#86C79E" },
   withdraw: { base: "#B45309", busy: "#DBB48B" },
+  destroy: { base: "#B91C1C", busy: "#DCA0A0" },
 };
 
 export function ConfirmActionControl({
@@ -40,6 +43,7 @@ export function ConfirmActionControl({
   confirmLabel,
   busyLabel,
   errorFallback,
+  typeToConfirm,
   onConfirm,
 }: {
   /** The trigger's text. */
@@ -53,32 +57,58 @@ export function ConfirmActionControl({
   busyLabel: string;
   /** Shown when the thrown error carries no message of its own. */
   errorFallback: string;
+  /**
+   * A phrase the team member has to TYPE before the confirm button will work.
+   *
+   * Only for the actions that cannot be undone, and it is not decoration: a
+   * confirmation dialog stops the accidental click but not the reflexive
+   * second one, which is the whole failure mode for something irreversible.
+   * Typing the school's name is the step that cannot be got through without
+   * having read which school this is.
+   *
+   * Matched case-insensitively and ignoring surrounding space. The API asks the
+   * same question strictly, so the caller sends the CANONICAL phrase rather
+   * than what was typed here — see DeleteSchoolControl.tsx. That keeps this a
+   * check on the person's attention while the server's stays a check on the
+   * request, and stops the two arguing over capitals.
+   *
+   * Omit it, and the dialog is the plain two-button confirmation it has always
+   * been.
+   */
+  typeToConfirm?: string;
   /** Resolves on success; the dialog closes. Throws to show the message. */
   onConfirm: () => Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [typed, setTyped] = useState("");
   const confirmRef = useRef<HTMLButtonElement | null>(null);
+  const typedRef = useRef<HTMLInputElement | null>(null);
   const titleId = `confirm-${label.replace(/\W+/g, "-").toLowerCase()}`;
   const colour = TONES[tone];
 
-  // Escape closes it, and the confirm button takes focus on open — a dialog
-  // that can only be dismissed with the mouse is a trap for anyone working
-  // from the keyboard. Not registered while closed, so it cannot swallow an
-  // Escape meant for something else on the page.
+  const armed = !typeToConfirm || typed.trim().toLowerCase() === typeToConfirm.trim().toLowerCase();
+
+  // Escape closes it, and something takes focus on open — a dialog that can
+  // only be dismissed with the mouse is a trap for anyone working from the
+  // keyboard. The field takes it when there is one, since it is the next thing
+  // that has to happen; otherwise the confirm button does, as before. Not
+  // registered while closed, so it cannot swallow an Escape meant for something
+  // else on the page.
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape" && !saving) setOpen(false);
     };
     window.addEventListener("keydown", onKey);
-    confirmRef.current?.focus();
+    if (typedRef.current) typedRef.current.focus();
+    else confirmRef.current?.focus();
     return () => window.removeEventListener("keydown", onKey);
   }, [open, saving]);
 
   const run = async () => {
-    if (saving) return;
+    if (saving || !armed) return;
     setSaving(true);
     setError(null);
     try {
@@ -97,6 +127,9 @@ export function ConfirmActionControl({
         type="button"
         onClick={() => {
           setError(null);
+          // Cleared on every open, so a phrase typed and then cancelled is not
+          // still sitting there arming the button next time.
+          setTyped("");
           setOpen(true);
         }}
         style={{
@@ -161,6 +194,39 @@ export function ConfirmActionControl({
               {body}
             </p>
 
+            {typeToConfirm && (
+              <label style={{ display: "block", margin: "0 0 18px" }}>
+                <span style={{ fontSize: "0.75rem", color: "#64748B", display: "block", marginBottom: 5, lineHeight: 1.45 }}>
+                  Type{" "}
+                  <span style={{ color: "#0F172A", fontWeight: 600, overflowWrap: "anywhere" }}>
+                    {typeToConfirm}
+                  </span>{" "}
+                  to confirm
+                </span>
+                <input
+                  ref={typedRef}
+                  value={typed}
+                  onChange={(e) => setTyped(e.target.value)}
+                  disabled={saving}
+                  // Nothing here is a name a browser should be helpfully filling
+                  // in, and a suggestion dropdown over a delete confirmation is
+                  // the last place for one.
+                  autoComplete="off"
+                  spellCheck={false}
+                  style={{
+                    width: "100%",
+                    boxSizing: "border-box",
+                    padding: "8px 10px",
+                    borderRadius: 8,
+                    border: `1px solid ${armed ? "#94A3B8" : "#E2E8F0"}`,
+                    fontSize: "0.8125rem",
+                    color: "#0F172A",
+                    background: saving ? "#F8FAFC" : "white",
+                  }}
+                />
+              </label>
+            )}
+
             {error && (
               <p style={{ fontSize: "0.8125rem", color: "#DC2626", margin: "0 0 12px" }}>{error}</p>
             )}
@@ -186,16 +252,19 @@ export function ConfirmActionControl({
                 type="button"
                 ref={confirmRef}
                 onClick={run}
-                disabled={saving}
+                disabled={saving || !armed}
                 style={{
                   padding: "8px 14px",
                   borderRadius: 8,
                   border: "none",
-                  background: saving ? colour.busy : colour.base,
+                  // Greyed rather than tinted while the phrase is unmatched: the
+                  // busy colour is a lighter version of the same hue, and using
+                  // it here would read as "working" instead of "not yet".
+                  background: !armed ? "#CBD5E1" : saving ? colour.busy : colour.base,
                   color: "white",
                   fontSize: "0.8125rem",
                   fontWeight: 600,
-                  cursor: saving ? "default" : "pointer",
+                  cursor: saving || !armed ? "default" : "pointer",
                 }}
               >
                 {saving ? busyLabel : confirmLabel}
