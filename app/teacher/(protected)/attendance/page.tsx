@@ -1,6 +1,7 @@
 "use client";
 
 import { AttendanceSheet } from "@/components/AttendanceSheet";
+import { TeacherAttendanceSubmit } from "@/components/TeacherAttendanceSubmit";
 
 /**
  * The teacher's register.
@@ -13,6 +14,13 @@ import { AttendanceSheet } from "@/components/AttendanceSheet";
  * candidate classes to the teacher's own before anything else runs, and
  * /attendance/mark refuses a student outside them — so the class picker here is
  * simply showing what the server already agreed to.
+ *
+ * TWO CONTROLS, TWO QUESTIONS. TeacherAttendanceSubmit above is how a teacher
+ * declares ONE day — themselves and their class, in one submission that the
+ * school then approves or rejects and that cannot be edited afterwards. The
+ * sheet below is how they look BACK over a range. Folding the two together
+ * would mean either giving the submission a date picker that implies it can be
+ * revised, or giving the sheet an approval state it has no concept of.
  */
 export default function TeacherAttendancePage() {
   return (
@@ -20,9 +28,11 @@ export default function TeacherAttendancePage() {
       <div className="mb-8">
         <h1 className="text-3xl mb-2">Attendance</h1>
         <p className="text-gray-600">
-          Take the register for your class, or look back over a date range
+          Record your own day and your class register, or look back over a date range
         </p>
       </div>
+
+      <TeacherAttendanceSubmit />
 
       <AttendanceSheet audience="teacher" />
     </div>
