@@ -1854,7 +1854,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                 <DialogTitle>Delete {displayInfo.firstName} {displayInfo.lastName}?</DialogTitle>
                 <DialogDescription>
                   This permanently deletes {displayInfo.firstName} {displayInfo.lastName} ({student.id}) and all of
-                  their records — ledger entries, test/exam marks, pickup contacts, attendance records, and report
+                  their records — ledger entries, assessment marks, pickup contacts, attendance records, and report
                   cards. This cannot be undone.
                 </DialogDescription>
               </DialogHeader>
@@ -2645,7 +2645,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
             <p className="text-sm text-gray-500">Loading marks...</p>
           ) : !breakdown || breakdown.length === 0 ? (
             <p className="text-sm text-gray-500">
-              No tests or exams recorded for {marksYear} {formatTermLabel(marksTerm)}.
+              No sequence tests or exams recorded for {marksYear} {formatTermLabel(marksTerm)}.
             </p>
           ) : (
             <div className="space-y-4">
@@ -2667,7 +2667,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                       <div key={t.testExamId} className="flex items-center gap-2">
                         <span className="text-sm" style={{ flex: 1 }}>
                           {t.name}
-                          <span className="text-sm text-gray-400"> · {t.type === 'EXAM' ? 'Exam' : 'Test'}</span>
+                          <span className="text-sm text-gray-400"> · {t.type === 'EXAM' ? 'Exam' : 'Sequence Test'}</span>
                         </span>
                         {t.state === 'EXEMPT' ? (
                           <span className="text-sm" style={{ color: '#05603D', fontWeight: 500 }}>Exempt</span>

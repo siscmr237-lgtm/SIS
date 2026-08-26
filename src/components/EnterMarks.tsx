@@ -157,7 +157,7 @@ export function EnterMarks({ onNavigate }: EnterMarksProps) {
           Back to Report Cards
         </button>
         <h1 className="text-3xl mb-2">Enter Marks</h1>
-        <p className="text-gray-600">Pick a class, subject, and test/exam, then enter each student's score</p>
+        <p className="text-gray-600">Pick a class, subject, and sequence test or exam, then enter each student's score</p>
       </div>
 
       <Card className="p-6 mb-6">
@@ -197,10 +197,10 @@ export function EnterMarks({ onNavigate }: EnterMarksProps) {
             />
           </div>
           <div>
-            <Label>Test/Exam</Label>
+            <Label>Sequence Test / Exam</Label>
             <Select value={testExamId} onValueChange={setTestExamId}>
               <SelectTrigger>
-                <SelectValue placeholder={testExams.length ? 'Select test/exam' : 'None for this class/term'} />
+                <SelectValue placeholder={testExams.length ? 'Select sequence test or exam' : 'None for this class/term'} />
               </SelectTrigger>
               <SelectContent>
                 {testExams.map((t: any) => (
@@ -233,7 +233,7 @@ export function EnterMarks({ onNavigate }: EnterMarksProps) {
 
       {!testExamId || !subjectId ? (
         <Card className="p-6">
-          <p className="text-gray-500">Select a class, term, academic year, test/exam, and subject to enter marks.</p>
+          <p className="text-gray-500">Select a class, term, academic year, sequence test or exam, and subject to enter marks.</p>
         </Card>
       ) : loadingRoster ? (
         <p className="p-4 text-gray-500">Loading roster...</p>

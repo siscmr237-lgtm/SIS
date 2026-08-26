@@ -952,14 +952,14 @@ export function generateReportCard(
 
   let cursorY: number = (doc as any).lastAutoTable.finalY;
 
-  // Tests & Exams breakdown — each test/exam's marksObtained/total individually,
+  // Sequence Tests & Exams breakdown — each assessment's marksObtained/total individually,
   // per subject, plus the compiled subject total. Optional: an older report
-  // card (or one predating Tests & Exams setup) simply omits this section.
+  // card (or one predating Sequence Tests & Exams setup) simply omits this section.
   if (extra?.breakdown?.length) {
     cursorY += 15;
     if (cursorY > 270) { doc.addPage(); cursorY = 20; }
     doc.setFontSize(12);
-    doc.text('Tests & Exams Breakdown', 20, cursorY);
+    doc.text('Sequence Tests & Exams Breakdown', 20, cursorY);
     cursorY += 8;
 
     for (const subject of extra.breakdown) {
@@ -984,10 +984,10 @@ export function generateReportCard(
 
       autoTable(doc, {
         startY: cursorY,
-        head: [['Test/Exam', 'Type', 'Marks Obtained', 'Total']],
+        head: [['Assessment', 'Type', 'Marks Obtained', 'Total']],
         body: subject.testExams.map(t => [
           t.name,
-          t.type === 'EXAM' ? 'Exam' : 'Test',
+          t.type === 'EXAM' ? 'Exam' : 'Sequence Test',
           // Exempt is a statement in its own right, not a missing mark: the
           // student was excused, and this assessment counts towards neither
           // side of their total.

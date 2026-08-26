@@ -155,7 +155,7 @@ export function ReportCards({ onNavigate }: ReportCardsProps) {
             onClick={() => setOpenManageTests(true)}
           >
             <ClipboardList size={20} />
-            Manage Tests &amp; Exams
+            Manage Sequence Tests &amp; Exams
           </Button>
           <ManageTestsExamsDialog
             open={openManageTests}
@@ -422,8 +422,8 @@ export function ReportCards({ onNavigate }: ReportCardsProps) {
                       try {
                         const full = await api.get(`/report-cards/${report.id}`);
 
-                        // Tests & Exams data is optional/best-effort here — an
-                        // older report card (or one with no Tests & Exams set
+                        // Sequence Tests & Exams data is optional/best-effort here — an
+                        // older report card (or one with no Sequence Tests & Exams set
                         // up yet) should still produce a PDF, just without
                         // this section.
                         let breakdown: any[] | undefined;

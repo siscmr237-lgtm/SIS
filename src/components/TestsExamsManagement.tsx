@@ -5,6 +5,11 @@ import { api } from '@/lib/api';
 import { useCachedResource, useSisCache } from '@/lib/SisCache';
 import { RevalidatingBadge, useResourceError } from './ResourceStatus';
 import { formatTermLabel, getDefaultTermFields } from '../utils/academicTerm';
+import {
+  defaultExamName,
+  defaultSequenceTestName,
+  isAutoAssessmentName,
+} from '../utils/assessmentNames';
 import { ArrowLeft, Plus, Trash2, Settings2, Pencil } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
@@ -24,7 +29,7 @@ interface TestsExamsManagementProps {
 }
 
 const TYPE_OPTIONS: { value: 'TEST' | 'EXAM'; label: string }[] = [
-  { value: 'TEST', label: 'Test' },
+  { value: 'TEST', label: 'Sequence Test' },
   { value: 'EXAM', label: 'Exam' },
 ];
 
@@ -59,7 +64,7 @@ export function TestsExamsManagement({ onNavigate }: TestsExamsManagementProps) 
   const testExams = testExamsData ?? [];
   const classSubjects = classSubjectsData ?? [];
 
-  useResourceError(testExamsError, 'tests and exams', testExamsData !== null);
+  useResourceError(testExamsError, 'sequence tests and exams', testExamsData !== null);
 
   const [openForm, setOpenForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -90,31 +95,67 @@ export function TestsExamsManagement({ onNavigate }: TestsExamsManagementProps) 
     setOpenForm(true);
   };
 
+  // An automatically-named row opens with an EMPTY box, not with its name typed
+  // into it. Filling it in would freeze a name that is meant to track a position:
+  // "1st Term Exam" has to be able to become "1st Term Exam 1" when a second exam
+  // joins the term, and it cannot do that to a name somebody appears to have
+  // chosen. Clearing the box on a row that WAS named puts it back to automatic.
   const openEditForm = (row: any) => {
     setEditingId(row.id);
-    setForm({ name: row.name, type: row.type, order: String(row.order ?? 0) });
+    setForm({
+      name: isAutoAssessmentName(row.name, row.type) ? '' : row.name,
+      type: row.type,
+      order: String(row.order ?? 0),
+    });
     setFormError(null);
     setOpenForm(true);
   };
 
+  /**
+   * What the row being edited will be called if the name box is left empty —
+   * shown in the box as its placeholder, so nobody has to invent a name to get a
+   * sensible one.
+   *
+   * Computed for the position the row occupies among others of ITS OWN type,
+   * which is what the default names describe. The exam form also needs the
+   * term's exam COUNT, because one exam is "1st Term Exam" while two are
+   * "1st Term Exam 1" and "1st Term Exam 2".
+   */
+  const placeholderName = (() => {
+    const sameType = testExams.filter((r: any) => r.type === form.type);
+    const existingIndex = editingId
+      ? sameType.findIndex((r: any) => r.id === editingId)
+      : -1;
+    const index = existingIndex >= 0 ? existingIndex : sameType.length;
+    if (form.type === 'TEST') return defaultSequenceTestName(index + 1);
+    const count = existingIndex >= 0 ? sameType.length : sameType.length + 1;
+    return defaultExamName(term, index + 1, count);
+  })();
+
   const handleSaveForm = async () => {
-    if (!form.name.trim()) { setFormError('Name is required'); return; }
     if (saving) return;
     setSaving(true);
     setFormError(null);
+    const typed = form.name.trim();
     try {
       if (editingId) {
+        // A cleared box sends the default explicitly rather than an empty
+        // string: PUT would store "" verbatim, and a nameless assessment is not
+        // a state anything downstream can render.
         await api.put(`/test-exams/${editingId}`, {
-          name: form.name.trim(),
+          name: typed || placeholderName,
           type: form.type,
           order: Number(form.order) || 0,
         });
       } else {
+        // The name is simply omitted when empty, and the server names the row
+        // for where it lands — which also renames the siblings the new row
+        // displaces. See sis-backend/src/utils/assessmentStructure.js.
         await api.post('/test-exams', {
           classId: Number(classId),
           academicYear,
           term,
-          name: form.name.trim(),
+          ...(typed ? { name: typed } : {}),
           type: form.type,
           order: Number(form.order) || 0,
         });
@@ -193,9 +234,9 @@ export function TestsExamsManagement({ onNavigate }: TestsExamsManagementProps) 
             <ArrowLeft size={16} />
             Back to Report Cards
           </button>
-          <h1 className="text-3xl mb-2">Tests &amp; Exams</h1>
+          <h1 className="text-3xl mb-2">Sequence Tests &amp; Exams</h1>
           <p className="text-gray-600">
-            Manage a class's tests and exams, and their per-subject totals{' '}
+            Manage a class's sequence tests and exams, and their per-subject totals{' '}
             <RevalidatingBadge active={revalidating} />
           </p>
         </div>
@@ -203,24 +244,27 @@ export function TestsExamsManagement({ onNavigate }: TestsExamsManagementProps) 
           <DialogTrigger asChild>
             <Button className="flex items-center gap-2" onClick={openCreateForm} disabled={!classId}>
               <Plus size={20} />
-              Add Test/Exam
+              Add Sequence Test or Exam
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>{editingId ? 'Edit Test/Exam' : 'Add Test/Exam'}</DialogTitle>
+              <DialogTitle>{editingId ? 'Edit Sequence Test or Exam' : 'Add Sequence Test or Exam'}</DialogTitle>
               <DialogDescription>
-                {editingId ? 'Update this test/exam.' : `For this class, ${formatTermLabel(term)} — ${academicYear}.`}
+                {editingId ? 'Update this sequence test or exam.' : `For this class, ${formatTermLabel(term)} — ${academicYear}.`}
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-2">
               <div>
-                <Label>Name</Label>
+                <Label>Name (optional)</Label>
                 <Input
-                  placeholder="e.g., CA1"
+                  placeholder={placeholderName}
                   value={form.name}
                   onChange={e => setForm(s => ({ ...s, name: e.target.value }))}
                 />
+                <p className="text-xs text-gray-500 mt-2">
+                  Leave empty to use &ldquo;{placeholderName}&rdquo;.
+                </p>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -300,13 +344,13 @@ export function TestsExamsManagement({ onNavigate }: TestsExamsManagementProps) 
 
       {!classId ? (
         <Card className="p-6">
-          <p className="text-gray-500">Select a class to manage its tests and exams.</p>
+          <p className="text-gray-500">Select a class to manage its sequence tests and exams.</p>
         </Card>
       ) : loading ? (
         <p className="p-4 text-gray-500">Loading...</p>
       ) : testExams.length === 0 ? (
         <Card className="p-6">
-          <p className="text-gray-500">No tests or exams yet for this class, term, and academic year.</p>
+          <p className="text-gray-500">No sequence tests or exams yet for this class, term, and academic year.</p>
         </Card>
       ) : (
         <Card>
@@ -324,7 +368,7 @@ export function TestsExamsManagement({ onNavigate }: TestsExamsManagementProps) 
                 {testExams.map(row => (
                   <TableRow key={row.id}>
                     <TableCell>{row.name}</TableCell>
-                    <TableCell>{row.type === 'EXAM' ? 'Exam' : 'Test'}</TableCell>
+                    <TableCell>{row.type === 'EXAM' ? 'Exam' : 'Sequence Test'}</TableCell>
                     <TableCell>{row.order}</TableCell>
                     <TableCell>
                       <div className="flex flex-wrap items-center gap-2">
@@ -360,7 +404,7 @@ export function TestsExamsManagement({ onNavigate }: TestsExamsManagementProps) 
         <DialogContent className="overflow-y-auto" style={{ maxWidth: 'min(672px, calc(100vw - 2rem))', maxHeight: '80vh' }}>
           <DialogHeader>
             <DialogTitle>Subject Totals — {totalsTestExam?.name}</DialogTitle>
-            <DialogDescription>Set each subject's total marks for this test/exam. Leave blank to skip.</DialogDescription>
+            <DialogDescription>Set each subject's total marks for this sequence test or exam. Leave blank to skip.</DialogDescription>
           </DialogHeader>
           <div className="py-2">
             {classSubjects.length === 0 ? (

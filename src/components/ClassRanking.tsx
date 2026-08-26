@@ -206,7 +206,7 @@ export function ClassRanking({ onNavigate }: ClassRankingProps) {
   const scopeLine = [
     level,
     terms.size ? [...terms].join(', ') : 'all terms',
-    examNames.size ? [...examNames].join(', ') : 'all tests & exams',
+    examNames.size ? [...examNames].join(', ') : 'all sequence tests & exams',
     subjectIds.size
       ? subjects.filter((s) => subjectIds.has(String(s.id))).map((s) => s.name).join(', ')
       : 'all subjects',
@@ -272,11 +272,11 @@ export function ClassRanking({ onNavigate }: ClassRankingProps) {
           />
 
           <MultiFilter
-            label="Test / Exam"
+            label="Sequence Test / Exam"
             options={offerableExams.map((e) => ({ value: e.name, label: e.name }))}
             selected={examNames}
             onToggle={toggle(examNames, setExamNames)}
-            emptyMeans="All tests & exams"
+            emptyMeans="All sequence tests & exams"
           />
 
           <MultiFilter
