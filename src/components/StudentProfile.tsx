@@ -32,6 +32,7 @@ import {
 import { Input } from './ui/input';
 import { ThreePartDateInput } from './ThreePartDateInput';
 import { PayFeesDialog, PayFeesSubmission } from './PayFeesDialog';
+import { DoneBy } from './DoneBy';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
 import {
@@ -67,6 +68,12 @@ interface LedgerEntry {
    * financial-sheet PDF's Fee column.
    */
   feeName?: string | null;
+  /**
+   * Who recorded this entry, as it read at the moment they did. NULL on every
+   * row written before attribution existed, and on the fee-structure charges the
+   * server writes by itself — neither has a person behind it to name.
+   */
+  createdByName?: string | null;
 }
 
 interface LedgerData {
@@ -1393,6 +1400,11 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
               <Field label="Parent / Guardian" value={displayInfo.parentName} />
               <Field label="Parent Phone" value={displayInfo.parentPhone} />
             </dl>
+
+            {/* Who enrolled this student. Renders nothing for a record that
+                predates attribution, which is every student enrolled before this
+                shipped — see DoneBy. */}
+            <DoneBy name={(student as any).createdByName} />
           </Card>
 
           {/* Medical History */}
@@ -2085,7 +2097,14 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                             <td className="px-4 py-3 text-gray-600">
                               {entry.category?.name ?? '—'}
                             </td>
-                            <td className="px-4 py-3 text-gray-900">{entry.description}</td>
+                            <td className="px-4 py-3 text-gray-900">
+                              {entry.description}
+                              {/* Per row, not per table: a ledger row IS the
+                                  record here, and a single footer under the
+                                  whole table would be answering a question
+                                  nobody asked about a list. */}
+                              <DoneBy name={entry.createdByName} variant="inline" />
+                            </td>
                             <td className={`px-4 py-3 text-right font-medium whitespace-nowrap ${
                               entry.type === 'CHARGE' ? 'text-orange-700' : 'text-green-600'
                             }`}>
@@ -2350,7 +2369,10 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                         </>
                       ) : (
                         <>
-                          <span className="text-sm" style={{ flex: 1, minWidth: 0 }}>{entry.description}</span>
+                          <span className="text-sm" style={{ flex: 1, minWidth: 0 }}>
+                            {entry.description}
+                            <DoneBy name={entry.createdByName} variant="inline" />
+                          </span>
                           <span className="text-sm font-medium" style={{ whiteSpace: 'nowrap' }}>
                             {entry.amount.toLocaleString()} FCFA
                           </span>

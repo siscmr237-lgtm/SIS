@@ -11,6 +11,7 @@ import { Save } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useCachedResource } from '@/lib/SisCache';
 import { AttendanceSheet } from './AttendanceSheet';
+import { DoneBy } from './DoneBy';
 
 export function Attendance() {
   // Still here because STAFF attendance is a single-day register and this is the
@@ -147,7 +148,13 @@ export function Attendance() {
 
                   return (
                     <TableRow key={staff.id}>
-                      <TableCell>{staff.firstName} {staff.lastName}</TableCell>
+                      <TableCell>
+                        {staff.firstName} {staff.lastName}
+                        {/* Who took this person's register on the selected date.
+                            Nothing at all on a day with no record, and on every
+                            day recorded before attribution existed. */}
+                        <DoneBy name={record?.createdByName} variant="inline" />
+                      </TableCell>
                       <TableCell>{staff.role}</TableCell>
                       <TableCell>{getStatusBadge(status)}</TableCell>
                       <TableCell>{record?.remarks || '-'}</TableCell>

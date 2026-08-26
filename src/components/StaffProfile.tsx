@@ -18,6 +18,7 @@ import {
 } from './ui/dialog';
 import { Input } from './ui/input';
 import { ThreePartDateInput } from './ThreePartDateInput';
+import { DoneBy } from './DoneBy';
 import { Label } from './ui/label';
 import {
   Select,
@@ -38,6 +39,12 @@ interface LedgerEntry {
   entryDate: string;
   paymentMethod?: string | null;
   category?: { name: string } | null;
+  /**
+   * Who recorded this entry, as it read at the moment they did. NULL on every
+   * row written before attribution existed, and on the fee-structure charges the
+   * server writes by itself — neither has a person behind it to name.
+   */
+  createdByName?: string | null;
 }
 
 interface OutstandingCharge {
@@ -488,6 +495,10 @@ export function StaffProfile({ staff, onNavigate }: StaffProfileProps) {
             <Field label="Type" value={displayInfo.isTeacher ? 'Teaching Staff' : 'Non-Teaching Staff'} />
           </dl>
 
+          {/* Who added this staff member. Renders nothing for a record written
+              before attribution existed — see DoneBy. */}
+          <DoneBy name={(staff as any).createdByName} />
+
           <StaffForm
             mode="edit"
             open={showEdit}
@@ -726,7 +737,12 @@ export function StaffProfile({ staff, onNavigate }: StaffProfileProps) {
                               </span>
                             </td>
                             <td className="px-4 py-3 text-gray-600">{entry.category?.name ?? '—'}</td>
-                            <td className="px-4 py-3 text-gray-900">{entry.description}</td>
+                            <td className="px-4 py-3 text-gray-900">
+                              {entry.description}
+                              {/* Per row: each salary, bonus, fine and payroll
+                                  run is its own record, recorded by one person. */}
+                              <DoneBy name={entry.createdByName} variant="inline" />
+                            </td>
                             <td className={`px-4 py-3 text-right font-medium whitespace-nowrap ${
                               entry.type === 'CHARGE' ? 'text-orange-700' : 'text-green-600'
                             }`}>
