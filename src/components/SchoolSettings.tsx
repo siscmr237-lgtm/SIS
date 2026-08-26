@@ -16,6 +16,7 @@ import { RevalidatingBadge, useResourceError } from './ResourceStatus';
 import { uploadImage } from '@/lib/uploadImage';
 import { PasswordHints } from './PasswordHints';
 import { HOLIDAY, TERM_OPTIONS, resolveSchoolTerm } from '@/utils/academicTerm';
+import { AdministratorsSection } from './AdministratorsSection';
 
 export function SchoolSettings() {
   const router = useRouter();
@@ -459,6 +460,12 @@ export function SchoolSettings() {
           </Button>
         </div>
       </Card>
+
+      {/* Administrators — renders nothing at all for an Administrator, who may
+          not see who else holds an account here. The refusal itself lives on the
+          server (requireOwner on every /admins route); this only keeps the app
+          from offering a section it would be refused. */}
+      <AdministratorsSection />
 
       {/* Logout */}
       <div className="mt-8 pt-6 border-t border-gray-200">

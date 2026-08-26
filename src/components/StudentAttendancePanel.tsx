@@ -25,7 +25,17 @@ import { Download } from 'lucide-react';
 
 const TERMS = ['Term 1', 'Term 2', 'Term 3'];
 
-interface Row { date: string; status: string | null; present: boolean | null }
+interface Row {
+  date: string;
+  status: string | null;
+  present: boolean | null;
+  /**
+   * Who took the register that day, as GET /attendance/sheet returns it. Null
+   * for a day recorded before attribution existed, and for a day nobody marked
+   * at all — both of which render as nothing rather than as a dash.
+   */
+  doneBy?: string | null;
+}
 
 export function StudentAttendancePanel({
   studentCode,
@@ -201,19 +211,27 @@ export function StudentAttendancePanel({
                 <tr className="border-b text-left text-xs text-gray-500">
                   <th className="px-4 py-3 font-medium">Date</th>
                   <th className="px-4 py-3 font-medium">Status</th>
+                  <th className="px-4 py-3 font-medium">Recorded by</th>
                 </tr>
               </thead>
               <tbody>
                 {/* Days nobody took the register are omitted rather than shown
                     blank — a blank row reads as an absence. */}
                 {rows.filter((r) => r.present !== null).length === 0 ? (
-                  <tr><td className="px-4 py-3 text-gray-500" colSpan={2}>No register taken in this period.</td></tr>
+                  <tr><td className="px-4 py-3 text-gray-500" colSpan={3}>No register taken in this period.</td></tr>
                 ) : (
                   rows.filter((r) => r.present !== null).map((r) => (
                     <tr key={r.date} className="border-b">
                       <td className="px-4 py-3">{r.date}</td>
                       <td className="px-4 py-3" style={{ color: r.present ? '#05603D' : '#E0552E', fontWeight: 500 }}>
                         {r.present ? 'Present' : 'Absent'}
+                      </td>
+                      {/* Its own column here rather than a second line under the
+                          status, because this table is two narrow columns and a
+                          stacked line would make every row twice as tall to
+                          carry one short name. */}
+                      <td className="px-4 py-3" style={{ color: '#94A3B8', fontSize: '0.75rem' }}>
+                        {r.doneBy || ''}
                       </td>
                     </tr>
                   ))

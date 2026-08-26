@@ -108,6 +108,13 @@ const PUBLIC_AUTH_PATHS = [
   '/auth/signup',
   '/auth/teacher/invite/verify',
   '/auth/teacher/set-password',
+  // The administrator invite, for exactly the same reason as the teacher one
+  // above: both are opened from an email link, and the invite token in the body
+  // — not a session — is what authorises them. Leaving these off the list would
+  // send whatever stale token this browser happens to hold along with a request
+  // that is about to establish a DIFFERENT account's credentials.
+  '/auth/admin/invite/verify',
+  '/auth/admin/set-password',
 ];
 
 async function request(path: string, init?: RequestInit) {
