@@ -21,6 +21,14 @@ import { ConfirmActionControl } from "./ConfirmActionControl";
  * the school's name cannot be got through without having read which school is
  * about to go.
  *
+ * THE DIALOG IS THE ONLY PLACE ANY OF THAT IS SAID. The button sits in a row
+ * beside Mark Waiting with no heading and no paragraph of its own — a long
+ * list printed on a page somebody is reading for other reasons is a list
+ * nobody reads, and it pushed the details they did come for further down. So
+ * the strings below are load-bearing rather than decorative: title, headcount
+ * and consequence are the whole warning, and they are shown at the one moment
+ * the reader is being asked to decide. Do not trim them to fit.
+ *
  * WHAT IS SENT IS THE STORED NAME, not the typed text. The API refuses the call
  * unless the body names the school exactly — a deliberate guard against a blind
  * DELETE from a mistyped path or a script walking ids. Sending the canonical
@@ -41,8 +49,9 @@ export function DeleteSchoolControl({
 }: {
   schoolId: number | string;
   schoolName: string;
-  /** Both counts are already on the page; the dialog repeats them because the
-   *  size of what is about to go is the fact most worth stating twice. */
+  /** Both counts are elsewhere on the page, but the dialog states them again:
+   *  the size of what is about to go is the fact most worth having in front
+   *  of somebody at the moment they are deciding. */
   studentCount: number;
   staffCount: number;
   /** Called once the server confirms the deletion. Navigate; do not re-render

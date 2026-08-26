@@ -19,19 +19,21 @@ import { DeleteSchoolControl } from "@/components/platform/DeleteSchoolControl";
  * gown. There is no uniform description field on School, so none is invented
  * here; the section shows the garments it actually has.
  *
- * THE ONE STATUS ACTION SITS AT THE FOOT, not the head. Approving a PENDING
- * school still leads, because that is a decision the page is asking for. The
- * reverse — marking an approved school as waiting again — is not asked for by
- * anything; it is reached for, rarely, and it belongs out of the way of the
- * details somebody came to read. See the note above it.
+ * THE ACTIONS SIT AT THE FOOT, not the head. Approving a PENDING school still
+ * leads, because that is a decision the page is asking for. Nothing else here
+ * is: marking an approved school as waiting again, and deleting it outright,
+ * are both reached for rarely and belong out of the way of the details
+ * somebody came to read. They share one row down there — see the note above
+ * it — and each is gated on its own thing, so it is normal for only one of
+ * them to be present.
  *
- * AND BELOW THAT, FOR A FOUNDER ONLY, deleting the school outright. Last on
- * the page and fenced off from everything above it, because it is not a
- * heavier version of the button it follows: that one closes a door and this
- * one takes the building. It is the only control here that asks for the
- * school's name to be typed, and the only one after which this page has
- * nothing left to show — so it navigates away instead of updating what it is
- * looking at.
+ * THE TWO ARE NOT DEGREES OF THE SAME ACTION, which is why the second is red
+ * where the first is amber. Mark Waiting closes a door and can be reopened;
+ * Delete takes the building. Delete is Founder-only, carries no explanation
+ * on the page — what it takes is spelled out in its dialog, behind the
+ * school's name having to be typed — and is the only control here after which
+ * this page has nothing left to show, so it navigates away instead of
+ * updating what it is looking at.
  */
 interface SchoolAdmin {
   id: number;
@@ -312,68 +314,79 @@ export default function SchoolDetailPage() {
         )}
       </div>
 
-      {/* Marking a school as waiting again, alone at the foot of the page and
-          deliberately outside every card.
+      {/* THE TWO ACTIONS, side by side at the foot of the page and deliberately
+          outside every card.
 
-          It used to head an "Approved and live" card explaining itself. The
-          card is gone: it announced a status the badge under the school's name
-          already gives, and put the page's only destructive-feeling control
-          above everything a team member actually comes here to read. On its own
-          down here it is still findable and no longer in the way. The dialog it
-          opens carries the warning the card's paragraph used to.
+          "Mark Waiting" used to head an "Approved and live" card explaining
+          itself. The card is gone: it announced a status the badge under the
+          school's name already gives, and put the page's destructive-feeling
+          controls above everything a team member actually comes here to read.
+          Down here they are still findable and no longer in the way, and each
+          dialog carries the warning that card's paragraph used to.
 
-          Still shown for APPROVED only. That has not changed and is not
-          cosmetic: a school that is not approved has no access to take away,
-          and the API refuses the call rather than dragging an INCOMPLETE school
-          forward into a submission it never made. */}
-      {school.registrationStatus === "APPROVED" && (
-        <div style={{ marginTop: 8, marginBottom: 16 }}>
-          <RevertToPendingControl
-            schoolId={school.id}
-            schoolName={school.name}
-            onReverted={(status) =>
-              setSchool((prev) => (prev ? { ...prev, registrationStatus: status } : prev))
-            }
-          />
-        </div>
-      )}
+          The row renders if EITHER control has something to offer, and each one
+          then decides for itself — they are gated on different things and it is
+          normal for only one to be here. Mark Waiting is APPROVED-only, and not
+          cosmetically so: a school that is not approved has no access to take
+          away, and the API refuses the call rather than dragging an INCOMPLETE
+          school forward into a submission it never made. Delete is Founder-only
+          and applies at every status.
 
-      {/* DELETING THE SCHOOL. Founder only, last on the page, and the one
-          control here that is given words of its own.
+          EACH CONTROL GETS ITS OWN WRAPPER, which is load bearing rather than
+          markup habit. Both of them return a FRAGMENT — a button, and beneath
+          it the failure message that button produced — so dropped straight into
+          this flex container the message would become a flex ITEM of its own,
+          sitting alongside the buttons instead of under the one it belongs to.
+          A wrapper makes each control exactly one item; align-items:flex-start
+          then lets either of them grow downwards without shoving the other down
+          the page. Line wrapping is allowed for the same reason it is on the
+          credential buttons above: at the narrowest console width two buttons
+          of this length do not fit on one line, and a row that overflowed would
+          put the second one off the edge.
 
-          That is not inconsistent with the note above, which took a card away
-          from the revert button for announcing a status the badge already
-          gives. This paragraph is not an announcement — it is the list of what
-          goes, which is the one thing neither the button's label nor the badge
-          can say, and the thing a team member has to have read before they
-          start typing. The rule above it is doing the same work the removed
-          card was doing badly: separating this from the details somebody came
-          to read, so it cannot be arrived at by accident on the way down.
+          NO EXPLANATORY PARAGRAPH beside them, on purpose. What the deletion
+          takes is a long list, and a long list printed on a page somebody is
+          reading for other reasons is a list nobody reads — while it pushes the
+          details they did come for further down. It is in the dialog instead,
+          which is the one moment the reader is being asked to decide, and which
+          cannot be got past without typing the school's name. */}
+      {(school.registrationStatus === "APPROVED" || isFounder === true) && (
+        <div
+          style={{
+            display: "flex", alignItems: "flex-start", gap: 10, flexWrap: "wrap",
+            marginTop: 8, marginBottom: 16,
+          }}
+        >
+          {school.registrationStatus === "APPROVED" && (
+            <div>
+              <RevertToPendingControl
+                schoolId={school.id}
+                schoolName={school.name}
+                onReverted={(status) =>
+                  setSchool((prev) => (prev ? { ...prev, registrationStatus: status } : prev))
+                }
+              />
+            </div>
+          )}
 
-          Rendered on isFounder === true, so nothing appears while the role is
-          still unknown. A Member who edits their own stored session into
-          rendering it still gets nothing: requirePlatformFounder refuses the
-          call. */}
-      {isFounder === true && (
-        <div style={{ marginTop: 26, paddingTop: 18, borderTop: "1px solid #E2E8F0" }}>
-          <h2 style={{ fontSize: "0.9375rem", fontWeight: 600, margin: "0 0 4px", color: "#0F172A" }}>
-            Delete this school
-          </h2>
-          <p style={{ fontSize: "0.8125rem", color: "#64748B", margin: "0 0 14px", lineHeight: 1.5, maxWidth: 560 }}>
-            Removes {school.name} and everything it has recorded — its students, staff, marks,
-            payments, attendance, report cards, timetable and uploaded files — along with every
-            account that signs in to it. Nothing is archived and there is no undo.
-          </p>
-          <DeleteSchoolControl
-            schoolId={school.id}
-            schoolName={school.name}
-            studentCount={school.studentCount}
-            staffCount={school.staffCount}
-            // replace, not push: the school this page is about no longer
-            // exists, so Back must not be able to return to it and start
-            // reloading a 404.
-            onDeleted={() => router.replace("/admin/schools")}
-          />
+          {/* isFounder === true, not "not false", so no Delete button appears
+              while the role is still unknown and is then taken away again. A
+              Member who edits their own stored session into rendering it still
+              gets nothing: requirePlatformFounder refuses the call. */}
+          {isFounder === true && (
+            <div>
+              <DeleteSchoolControl
+                schoolId={school.id}
+                schoolName={school.name}
+                studentCount={school.studentCount}
+                staffCount={school.staffCount}
+                // replace, not push: the school this page is about no longer
+                // exists, so Back must not be able to return to it and start
+                // reloading a 404.
+                onDeleted={() => router.replace("/admin/schools")}
+              />
+            </div>
+          )}
         </div>
       )}
     </div>
