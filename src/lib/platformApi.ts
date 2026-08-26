@@ -112,6 +112,14 @@ export const platformApi = {
     request(path, { method: 'POST', body: JSON.stringify(body ?? {}) }),
   put: (path: string, body?: unknown) =>
     request(path, { method: 'PUT', body: JSON.stringify(body ?? {}) }),
+  /**
+   * DELETE, WITH A BODY. Unusual, and deliberate: the one route that uses it
+   * is the school deletion, which refuses to act unless the request names the
+   * school it means. `body` is always sent, even as `{}`, so a caller that
+   * forgets it gets the server's refusal rather than a parse error.
+   */
+  del: (path: string, body?: unknown) =>
+    request(path, { method: 'DELETE', body: JSON.stringify(body ?? {}) }),
 };
 
 /** Login is the one call that must NOT send an existing token. */

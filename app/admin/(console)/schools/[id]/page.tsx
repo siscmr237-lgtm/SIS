@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { platformApi } from "@/lib/platformApi";
 import { PasswordResetControl } from "@/components/platform/PasswordResetControl";
@@ -10,6 +10,7 @@ import { RegistrationStatusBadge } from "@/components/platform/RegistrationStatu
 import { ApproveSchoolControl } from "@/components/platform/ApproveSchoolControl";
 import { RevertToPendingControl } from "@/components/platform/RevertToPendingControl";
 import { PhoneChangeControl } from "@/components/platform/PhoneChangeControl";
+import { DeleteSchoolControl } from "@/components/platform/DeleteSchoolControl";
 
 /**
  * One school. Identity, headcounts, and its admin accounts.
@@ -23,6 +24,14 @@ import { PhoneChangeControl } from "@/components/platform/PhoneChangeControl";
  * reverse — marking an approved school as waiting again — is not asked for by
  * anything; it is reached for, rarely, and it belongs out of the way of the
  * details somebody came to read. See the note above it.
+ *
+ * AND BELOW THAT, FOR A FOUNDER ONLY, deleting the school outright. Last on
+ * the page and fenced off from everything above it, because it is not a
+ * heavier version of the button it follows: that one closes a door and this
+ * one takes the building. It is the only control here that asks for the
+ * school's name to be typed, and the only one after which this page has
+ * nothing left to show — so it navigates away instead of updating what it is
+ * looking at.
  */
 interface SchoolAdmin {
   id: number;
@@ -83,11 +92,27 @@ function Swatch({ garment, colour }: { garment: string; colour: string | null })
 
 export default function SchoolDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const id = String(params?.id ?? "");
   const [school, setSchool] = useState<SchoolDetail | null>(null);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [logoFailed, setLogoFailed] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /**
+   * Whether the signed-in team member is a Founder, which is what decides
+   * whether the delete control is on this page at all.
+   *
+   * NULL until the answer is back, and the control renders on TRUE only — not
+   * on "not false" — so a Member never sees a Delete button flash up before it
+   * is taken away again.
+   *
+   * Asked of the server, never read out of the stored session: a role in
+   * localStorage is a claim the person holding the browser can edit. Hiding
+   * the button is a courtesy either way, since the API refuses a Member
+   * outright — the same reasoning as the Administrators link in the console
+   * layout.
+   */
+  const [isFounder, setIsFounder] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -103,6 +128,20 @@ export default function SchoolDetailPage() {
       .then((r: any) => setLogoUrl(r?.url ?? null))
       .catch(() => setLogoFailed(true));
   }, [id]);
+
+  // Its own effect, with no dependencies: who is signed in does not change
+  // because the route did, and folding it into the load above would re-ask it
+  // on every step between schools.
+  useEffect(() => {
+    platformApi
+      .get("/platform/me")
+      .then((user: any) => setIsFounder(user?.role === "FOUNDER"))
+      // A failure here is not this page failing. The console layout is
+      // already asking the same question and sends the browser to the login
+      // screen if the session has gone; all this has to do is not offer the
+      // button.
+      .catch(() => setIsFounder(false));
+  }, []);
 
   if (error) return <p style={{ fontSize: "0.875rem", color: "#DC2626" }}>{error}</p>;
   if (!school) return <p style={{ fontSize: "0.875rem", color: "#64748B" }}>Loading...</p>;
@@ -295,6 +334,45 @@ export default function SchoolDetailPage() {
             onReverted={(status) =>
               setSchool((prev) => (prev ? { ...prev, registrationStatus: status } : prev))
             }
+          />
+        </div>
+      )}
+
+      {/* DELETING THE SCHOOL. Founder only, last on the page, and the one
+          control here that is given words of its own.
+
+          That is not inconsistent with the note above, which took a card away
+          from the revert button for announcing a status the badge already
+          gives. This paragraph is not an announcement — it is the list of what
+          goes, which is the one thing neither the button's label nor the badge
+          can say, and the thing a team member has to have read before they
+          start typing. The rule above it is doing the same work the removed
+          card was doing badly: separating this from the details somebody came
+          to read, so it cannot be arrived at by accident on the way down.
+
+          Rendered on isFounder === true, so nothing appears while the role is
+          still unknown. A Member who edits their own stored session into
+          rendering it still gets nothing: requirePlatformFounder refuses the
+          call. */}
+      {isFounder === true && (
+        <div style={{ marginTop: 26, paddingTop: 18, borderTop: "1px solid #E2E8F0" }}>
+          <h2 style={{ fontSize: "0.9375rem", fontWeight: 600, margin: "0 0 4px", color: "#0F172A" }}>
+            Delete this school
+          </h2>
+          <p style={{ fontSize: "0.8125rem", color: "#64748B", margin: "0 0 14px", lineHeight: 1.5, maxWidth: 560 }}>
+            Removes {school.name} and everything it has recorded — its students, staff, marks,
+            payments, attendance, report cards, timetable and uploaded files — along with every
+            account that signs in to it. Nothing is archived and there is no undo.
+          </p>
+          <DeleteSchoolControl
+            schoolId={school.id}
+            schoolName={school.name}
+            studentCount={school.studentCount}
+            staffCount={school.staffCount}
+            // replace, not push: the school this page is about no longer
+            // exists, so Back must not be able to return to it and start
+            // reloading a 404.
+            onDeleted={() => router.replace("/admin/schools")}
           />
         </div>
       )}
