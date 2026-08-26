@@ -12,6 +12,7 @@ import { api } from '@/lib/api';
 import { useCachedResource } from '@/lib/SisCache';
 import { AttendanceSheet } from './AttendanceSheet';
 import { DoneBy } from './DoneBy';
+import { StaffAttendanceReview } from './StaffAttendanceReview';
 
 export function Attendance() {
   // Still here because STAFF attendance is a single-day register and this is the
@@ -109,6 +110,27 @@ export function Attendance() {
         </TabsContent>
 
         <TabsContent value="staff">
+          {/* WHAT THE TEACHERS SUBMITTED, and what the school does with it —
+              first, because it is the part that needs answering. An unapproved
+              submission is a claim waiting on a decision; the daily register
+              below is a thing the office fills in at its own pace.
+
+              The two are separate on purpose and must stay separate. This table
+              reads StaffAttendance, which is what a person SUBMITTED about
+              themselves and carries an approval lifecycle. The register below
+              writes AttendanceRecord rows with type = 'staff', which is what the
+              OFFICE recorded ABOUT somebody and has no approval concept at all.
+              A day can legitimately carry both, saying different things. */}
+          <StaffAttendanceReview />
+
+          <div style={{ marginTop: '1.5rem', marginBottom: '0.75rem' }}>
+            <h2 className="text-xl">Daily staff register</h2>
+            <p className="text-sm text-gray-500 mt-1">
+              What the office records about who was in, for one day. Independent of the
+              submissions above.
+            </p>
+          </div>
+
           <Card className="mb-4 p-4">
             <div className="flex flex-col sm:flex-row sm:items-end gap-3">
               <div className="flex-1">
