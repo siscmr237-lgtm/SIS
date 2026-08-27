@@ -29,6 +29,17 @@ import { toast } from 'sonner';
  * downstream behaviour operating on exactly one TestExam and one roster, exactly
  * as before.
  *
+ * THE TOTAL IS SET FROM HERE TOO. A subject with no configured total is not
+ * enterable — that is Stage 1's rule, and it is the right rule — but until now
+ * the only place to set one was the admin's Manage Sequence Tests & Exams
+ * dialog. So a teacher sitting in front of a marked script would reach this
+ * screen, be told the subject is not counted, and have no way to say what the
+ * paper was out of; the marks waited on somebody else opening a different
+ * screen. The teacher is the person who knows the answer, so the box is here,
+ * next to where it bites. The server gates it on the same canTeacherRecordMarks
+ * pairing that already gates reading this roster and saving these marks, so
+ * nothing about who may touch what has widened.
+ *
  * Inline styles for layout: src/index.css is a pre-compiled Tailwind build, so a
  * utility class not already in it renders as nothing at all.
  */
@@ -115,6 +126,14 @@ export function EnterMarksFlow({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [missed, setMissed] = useState<{ zeroed: MissedStudent[]; pending: MissedStudent[] } | null>(null);
+
+  // "What is this subject out of on this paper" — open only while it is being
+  // answered, so the roster is not sharing its width with a box nobody is using.
+  const [editingTotal, setEditingTotal] = useState(false);
+  const [totalDraft, setTotalDraft] = useState('');
+  const [savingTotal, setSavingTotal] = useState(false);
+  /** Set when the server refused a total that sits under a mark already entered. */
+  const [totalWarning, setTotalWarning] = useState<string | null>(null);
 
   /**
    * Two guards against out-of-order responses, which on this screen are not a
@@ -306,6 +325,12 @@ export function EnterMarksFlow({
     // The notice describes the subject just saved, so it must not survive into
     // a different one.
     setMissed(null);
+    // Same reasoning for the total editor: a draft left open belongs to the
+    // subject it was opened on, and applying it to the next one is exactly the
+    // mistake this screen has to make impossible.
+    setEditingTotal(false);
+    setTotalDraft('');
+    setTotalWarning(null);
     try {
       const r: any = await api.get(
         `/test-exams/${encodeURIComponent(testExamId)}/marks?subjectId=${encodeURIComponent(subjectId)}`,
@@ -333,6 +358,66 @@ export function EnterMarksFlow({
     if (!active) return;
     loadRoster();
   }, [active, loadRoster]);
+
+  /**
+   * Writes what this subject is out of on THIS assessment — one section, one
+   * paper, one subject.
+   *
+   * Deliberately narrow. The admin dialog sets totals for a whole class level at
+   * once, across every section, because that is the set-up job. This is the
+   * marking job: the teacher in front of one class's scripts, saying what the
+   * paper they just marked was out of. Writing the other sections from here
+   * would be a teacher silently changing a class they may not even teach.
+   *
+   * A LOWERED TOTAL IS CONFIRMED, not refused outright. Marks are validated
+   * against the total as they are saved, so dropping it afterwards leaves scores
+   * above what the paper is out of and every average built on them is quietly
+   * wrong. Re-scaling a paper you then re-enter is still a real thing to want,
+   * so the server names the count and a second press goes through.
+   */
+  const saveTotal = async (confirmLower = false) => {
+    if (savingTotal || !testExamId || !subjectId) return;
+    const n = Number(String(totalDraft).trim());
+    if (String(totalDraft).trim() === '' || !Number.isInteger(n) || n <= 0) {
+      setError('Enter a whole number greater than zero for what this subject is out of.');
+      return;
+    }
+    // Whether this subject was un-enterable a moment ago. It decides whether the
+    // roster has to be re-read below, and getting it wrong throws away work: a
+    // reload clears every input, so doing one after a mere CHANGE of total would
+    // silently discard the marks already typed above it.
+    const wasUnset = totalMarks == null;
+    setSavingTotal(true);
+    setError(null);
+    if (!confirmLower) setTotalWarning(null);
+    try {
+      await api.put(
+        `/test-exams/${encodeURIComponent(testExamId)}/subject-totals/${encodeURIComponent(subjectId)}`,
+        { totalMarks: n, ...(confirmLower ? { confirmLower: true } : {}) },
+      );
+      cache.invalidate('test-exams:*', 'subject-totals:*');
+      // Kept in step by hand rather than by a refetch: subjectTotals is what
+      // decides whether this subject is enterable at all, and leaving it stale
+      // would keep the inputs disabled behind a total that now exists.
+      setSubjectTotals((prev) => ({ ...prev, [Number(subjectId)]: n }));
+      setTotalMarks(n);
+      setEditingTotal(false);
+      setTotalWarning(null);
+      const subjectName = subjects.find((s) => String(s.id) === subjectId)?.name ?? 'This subject';
+      toast.success(`${subjectName} is now out of ${n}`);
+      // Only when the subject has just BECOME enterable. Its roster was read
+      // while the subject had no total, so the states and the disabled inputs on
+      // screen belong to that reading and have to be replaced. Nothing was
+      // typeable then, so there is nothing to lose by reloading — which is
+      // exactly why a plain change of total must not do the same.
+      if (wasUnset) await loadRoster();
+    } catch (e: any) {
+      if (e?.code === 'MARKS_ABOVE_TOTAL') setTotalWarning(e?.message || 'Marks already entered are above that total.');
+      else setError(e?.message || 'Could not set the total for this subject.');
+    } finally {
+      setSavingTotal(false);
+    }
+  };
 
   const setMark = (studentId: string, v: string) => {
     setError(null);
@@ -365,7 +450,7 @@ export function EnterMarksFlow({
     if (saving) return;
     setError(null);
     if (totalMarks == null) {
-      setError('This assessment has no total configured for that subject yet — set it under Manage Sequence Tests & Exams first.');
+      setError('This assessment has no total configured for that subject yet — press Set total above to say what the paper is out of.');
       return;
     }
     // One entry per roster row, with its state spelled out. Sending the whole
@@ -521,19 +606,108 @@ export function EnterMarksFlow({
                 : `${roster.length} student${roster.length === 1 ? '' : 's'} · ${entered} marked` +
                   (exemptCount ? ` · ${exemptCount} exempt` : '')}
             </p>
-            <p className="text-sm text-gray-500">
-              {totalMarks == null
-                ? <span style={{ color: '#B45309' }}>No total set for this subject</span>
-                : <>Out of <strong>{totalMarks}</strong></>}
-            </p>
+            {/* The total, and the way to set it. Not tucked behind a separate
+                screen: a subject with none cannot be marked at all, so the fix
+                belongs beside the sentence that says so. */}
+            {editingTotal ? (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-500">Out of</span>
+                <Input
+                  type="number"
+                  min={1}
+                  autoFocus
+                  value={totalDraft}
+                  onChange={(e) => setTotalDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') { e.preventDefault(); void saveTotal(); }
+                    if (e.key === 'Escape') { setEditingTotal(false); setTotalWarning(null); }
+                  }}
+                  disabled={savingTotal}
+                  placeholder="20"
+                  style={{ width: 80, textAlign: 'right' }}
+                  aria-label="Total marks for this subject on this assessment"
+                />
+                <Button
+                  size="sm"
+                  onClick={() => void saveTotal()}
+                  disabled={savingTotal}
+                  style={{ height: 32, paddingLeft: 10, paddingRight: 10, fontSize: 12 }}
+                >
+                  {savingTotal ? 'Saving...' : 'Save'}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => { setEditingTotal(false); setTotalWarning(null); }}
+                  disabled={savingTotal}
+                  style={{ height: 32, paddingLeft: 10, paddingRight: 10, fontSize: 12 }}
+                >
+                  Cancel
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <p className="text-sm text-gray-500">
+                  {totalMarks == null
+                    ? <span style={{ color: '#B45309' }}>No total set for this subject</span>
+                    : <>Out of <strong>{totalMarks}</strong></>}
+                </p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={saving || loadingRoster || !testExamId || !subjectId}
+                  onClick={() => {
+                    setError(null);
+                    setTotalWarning(null);
+                    setTotalDraft(totalMarks == null ? '' : String(totalMarks));
+                    setEditingTotal(true);
+                  }}
+                  style={{ height: 32, paddingLeft: 10, paddingRight: 10, fontSize: 12 }}
+                >
+                  {totalMarks == null ? 'Set total' : 'Change'}
+                </Button>
+              </div>
+            )}
           </div>
+
+          {/* Nothing is deleted by lowering a total — the marks stay, they are
+              simply above what the paper is now out of — so this is a plain
+              confirm and not a destructive one. */}
+          {totalWarning && (
+            <div
+              className="flex items-center gap-2"
+              style={{ flexWrap: 'wrap', marginBottom: '0.5rem' }}
+            >
+              <span className="text-sm" style={{ color: '#B45309', flex: '1 1 12rem', minWidth: 0 }}>
+                {totalWarning}
+              </span>
+              <Button
+                size="sm"
+                onClick={() => void saveTotal(true)}
+                disabled={savingTotal}
+                style={{ height: 32, paddingLeft: 10, paddingRight: 10, fontSize: 12 }}
+              >
+                {savingTotal ? 'Saving...' : 'Lower it anyway'}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setTotalWarning(null)}
+                disabled={savingTotal}
+                style={{ height: 32, paddingLeft: 10, paddingRight: 10, fontSize: 12 }}
+              >
+                Leave it
+              </Button>
+            </div>
+          )}
 
           {/* Stage 1's rule, stated where it bites: without a total this subject
               is not counted in ranking or scoring, so it is not enterable. */}
-          {!loadingRoster && !selectedSubjectEnterable && (
+          {!loadingRoster && !selectedSubjectEnterable && !editingTotal && (
             <p className="text-sm" style={{ color: '#B45309', marginBottom: '0.5rem' }}>
               This subject has no total set for this assessment, so it is not counted in ranking or
-              scoring and marks cannot be entered. Set one under Manage Sequence Tests &amp; Exams.
+              scoring and marks cannot be entered. Press <strong>Set total</strong> above to say what
+              the paper is out of.
             </p>
           )}
 
