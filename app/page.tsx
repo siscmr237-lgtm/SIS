@@ -394,17 +394,36 @@ const LANDING_CSS = `
 
   /* ---- STATS BAND -------------------------------------------------------- */
 
+  /* THE NAVY IS A BLOCK INSIDE THE PAGE, NOT A BAND ACROSS IT.
+     The section itself is plain, and the colour is carried by the box below,
+     which sits in the ordinary container -- so its left and right edges land
+     exactly where every heading and paragraph on the page starts rather than
+     running out to the window. Full-bleed again on phones, where a 20px margin
+     either side of a coloured block only makes the screen feel narrower; the
+     rule for that is in the phone block at the bottom. */
   .lewa-lp-stats {
-    background: #1e3a8a;
-    color: #ffffff;
-    padding-top: 44px;
-    padding-bottom: 44px;
+    background: #ffffff;
+    padding-top: 20px;
+    padding-bottom: 20px;
   }
 
+  .lewa-lp-statband {
+    background: #1e3a8a;
+    color: #ffffff;
+    border-radius: 16px;
+    padding: 44px 32px;
+  }
+
+  /* Two equal columns with the contents centred in each, so the gap between the
+     pair and the space outside them read as one even rhythm across the block.
+     It stays two columns at every width -- the phone block narrows the type
+     rather than stacking these, because a single number per row turns a compact
+     figure into a tall one. */
   .lewa-lp-statgrid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 28px;
+    text-align: center;
   }
 
   .lewa-lp-statnum {
@@ -734,10 +753,42 @@ const LANDING_CSS = `
       display: inline-flex;
     }
 
-    .lewa-lp-statgrid,
+    /* .lewa-lp-statgrid is deliberately NOT in this list. The two counts stay
+       side by side on a phone -- they are four characters between them, and
+       stacking them would make the shortest block on the page the tallest. */
     .lewa-lp-cardgrid,
     .lewa-lp-stepgrid {
       grid-template-columns: minmax(0, 1fr);
+    }
+
+    /* THE ONE FULL-BLEED BLOCK. The container is stripped of its width limit
+       and its side padding just here, so the navy reaches both edges of the
+       screen; the padding it loses is given back inside the band, which is
+       where it belongs when the block is the full width of the display. */
+    .lewa-lp-statwrap {
+      max-width: none;
+      padding-left: 0;
+      padding-right: 0;
+    }
+
+    .lewa-lp-stats {
+      padding-top: 0;
+      padding-bottom: 0;
+    }
+
+    .lewa-lp-statband {
+      border-radius: 0;
+      padding: 34px 20px;
+    }
+
+    .lewa-lp-statgrid {
+      gap: 14px;
+    }
+
+    /* Both labels have to sit on one line inside half a 360px screen.
+       "Students managed" is the long one and this is what keeps it there. */
+    .lewa-lp-statlabel {
+      font-size: 14px;
     }
 
     /* Stacked and full width, rather than two half-width buttons squeezed side
@@ -1197,16 +1248,22 @@ export default async function LewaLandingPage() {
         {/* Omitted in full when the counts did not arrive. See loadStats. */}
         {stats !== null ? (
           <section className="lewa-lp-stats">
-            <div className="lewa-lp-wrap lewa-lp-statgrid">
-              <div>
-                <div className="lewa-lp-statnum">{formatCount(stats.schools)}</div>
-                <p className="lewa-lp-statlabel">Schools on Lewa</p>
-              </div>
-              <div>
-                <div className="lewa-lp-statnum">
-                  {formatCount(stats.students)}
+            <div className="lewa-lp-wrap lewa-lp-statwrap">
+              <div className="lewa-lp-statband">
+                <div className="lewa-lp-statgrid">
+                  <div>
+                    <div className="lewa-lp-statnum">
+                      {formatCount(stats.schools)}
+                    </div>
+                    <p className="lewa-lp-statlabel">Schools on Lewa</p>
+                  </div>
+                  <div>
+                    <div className="lewa-lp-statnum">
+                      {formatCount(stats.students)}
+                    </div>
+                    <p className="lewa-lp-statlabel">Students managed</p>
+                  </div>
                 </div>
-                <p className="lewa-lp-statlabel">Students managed</p>
               </div>
             </div>
           </section>
