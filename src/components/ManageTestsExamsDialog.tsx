@@ -8,6 +8,7 @@ import {
   defaultSequenceTestName,
   isAutoAssessmentName,
 } from '../utils/assessmentNames';
+import { ApplyAssessmentsToClassesDialog } from './ApplyAssessmentsToClassesDialog';
 import { Button } from './ui/button';
 import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
@@ -51,6 +52,23 @@ import {
  * of them in a single transaction. The fan-out used to be done here, a request
  * per section, which could and did stop half way and leave sections of one level
  * sitting different papers.
+ *
+ * TOTALS ARE SET FOR EVERY SUBJECT AT ONCE, on the second screen. There is one
+ * box per subject, one "every subject out of N" to fill them all, and one Save
+ * — which goes to PUT /test-exams/levels/:level/subject-totals and writes the
+ * whole level in a single transaction. It used to be a Save button per subject,
+ * and each of those fanned out a request per section from here: twelve subjects
+ * across three sections was thirty-six requests and thirty-six places to stop,
+ * and stopping left the sections of one level marked out of different totals.
+ * A box left EMPTY is not a zero — it means the subject is not counted on that
+ * paper, which is a real answer and is why a blank is never sent.
+ *
+ * AND IT COPIES TO OTHER CLASSES. Most schools run the same shape of term in
+ * every class, and setting that out nine times by hand is where two classes end
+ * up marked out of different totals by a typo nobody notices until the report
+ * cards disagree. "Apply to other classes" copies this level's saved structure
+ * AND its totals onto the levels you tick — see ./ApplyAssessmentsToClassesDialog
+ * for what it replaces and what it leaves alone.
  */
 
 const TERMS = ['Term 1', 'Term 2', 'Term 3'];
@@ -147,9 +165,14 @@ export function ManageTestsExamsDialog({
   const [subjects, setSubjects] = useState<SubjectRow[]>([]);
   const [totals, setTotals] = useState<Record<number, string>>({});
   const [loadingSubjects, setLoadingSubjects] = useState(false);
-  const [savingSubjectId, setSavingSubjectId] = useState<number | null>(null);
+  const [savingTotals, setSavingTotals] = useState(false);
+  /** "Every subject is out of this" — fills the boxes, saves nothing by itself. */
+  const [bulkTotal, setBulkTotal] = useState('');
+  /** Set when the server refused a total that would sit under a mark already in. */
+  const [lowerWarning, setLowerWarning] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [applyOpen, setApplyOpen] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -252,6 +275,8 @@ export function ManageTestsExamsDialog({
     setOpenExam({ id: row.id, name: row.name.trim() || nameFor(type, index) });
     setError(null);
     setNotice(null);
+    setLowerWarning(null);
+    setBulkTotal('');
     setSubjects([]);
     setTotals({});
     setLoadingSubjects(true);
@@ -276,47 +301,85 @@ export function ManageTestsExamsDialog({
     }
   };
 
-  /**
-   * Writes one subject's total for this assessment across EVERY section of the
-   * level, so the sections cannot drift. Each section has its own TestExam row
-   * with the same name, so the id is resolved per section rather than reused.
-   */
-  const saveTotal = async (subjectId: number) => {
-    if (!openExam) return;
-    const raw = totals[subjectId] ?? '';
-    const n = Number(raw);
-    if (raw === '' || !Number.isFinite(n) || n <= 0 || !Number.isInteger(n)) {
-      setError('Enter a whole number greater than zero.');
+  /** Puts one number in every subject's box. Saves nothing until Save is pressed. */
+  const applyBulkTotal = () => {
+    const n = Number(bulkTotal);
+    if (bulkTotal.trim() === '' || !Number.isInteger(n) || n <= 0) {
+      setError('Enter a whole number greater than zero to give every subject.');
       return;
     }
-    setSavingSubjectId(subjectId);
     setError(null);
     setNotice(null);
-    try {
-      for (const section of sections) {
-        let examId = openExam.id;
-        if (section.id !== representative?.id) {
-          const list: any = await api.get(
-            `/test-exams?classId=${section.id}&term=${encodeURIComponent(term)}&academicYear=${encodeURIComponent(academicYear)}`,
-          );
-          const match = (Array.isArray(list) ? list : []).find(
-            (t: any) => String(t.name).trim().toLowerCase() === openExam.name.trim().toLowerCase(),
-          );
-          if (!match) continue; // section genuinely lacks this assessment
-          examId = match.id;
-        }
-        await api.put(`/test-exams/${examId}/subject-totals/${subjectId}`, { totalMarks: n });
+    setTotals(Object.fromEntries(subjects.map((s) => [s.id, String(n)])));
+  };
+
+  /**
+   * Writes EVERY subject's total for this assessment, across every section of
+   * the level, in one request.
+   *
+   * It used to be a button per subject, and each of those fanned out a request
+   * per section from here — resolve the assessment in the section, then PUT the
+   * total. A school with twelve subjects and three sections was thirty-six
+   * requests and thirty-six chances to stop half way, and what it left behind
+   * was sections of one level marked out of different totals. The server now
+   * does the whole level in one transaction; the assessment is identified across
+   * sections by NAME, because each section holds its own row for it.
+   *
+   * A BLANK BOX IS NOT A ZERO and is not sent. It means "this subject is not
+   * counted on this paper", which is a real answer — leaving it out is how a
+   * school runs an exam that some subjects do not sit.
+   */
+  const saveAllTotals = async (confirmLower = false) => {
+    if (!openExam || savingTotals) return;
+    const payload: { subjectId: number; totalMarks: number }[] = [];
+    for (const s of subjects) {
+      const raw = String(totals[s.id] ?? '').trim();
+      if (raw === '') continue;
+      const n = Number(raw);
+      if (!Number.isInteger(n) || n <= 0) {
+        setError(`${s.name}: enter a whole number greater than zero, or leave it empty.`);
+        return;
       }
-      cache.invalidateOn('test-exam:write');
-      setNotice(
-        sections.length > 1
-          ? `Saved across all ${sections.length} sections of ${level}.`
-          : 'Saved.',
+      payload.push({ subjectId: s.id, totalMarks: n });
+    }
+    if (!payload.length) {
+      setError('Enter a total for at least one subject.');
+      return;
+    }
+    setSavingTotals(true);
+    setError(null);
+    setNotice(null);
+    if (!confirmLower) setLowerWarning(null);
+    try {
+      const res: any = await api.put(
+        `/test-exams/levels/${encodeURIComponent(level)}/subject-totals`,
+        {
+          term,
+          academicYear,
+          assessmentName: openExam.name,
+          totals: payload,
+          ...(confirmLower ? { confirmLower: true } : {}),
+        },
       );
+      setLowerWarning(null);
+      cache.invalidateOn('test-exam:write');
+      const written = Number(res?.sections) || sections.length;
+      setNotice(
+        written > 1
+          ? `${payload.length} subject total${payload.length === 1 ? '' : 's'} saved across all ${written} sections of ${level}.`
+          : `${payload.length} subject total${payload.length === 1 ? '' : 's'} saved.`,
+      );
+      // Named, not counted: a section without this paper is a level that has
+      // drifted, and re-saving the structure is what squares it up.
+      const missing: string[] = Array.isArray(res?.missingSections) ? res.missingSections : [];
+      if (missing.length) {
+        setError(`${missing.join(', ')} ${missing.length === 1 ? 'does' : 'do'} not have ${openExam.name} — save the sequence tests and exams again to give ${missing.length === 1 ? 'it' : 'them'} one.`);
+      }
     } catch (e: any) {
-      setError(e?.message || 'Failed to save the total.');
+      if (e?.code === 'MARKS_ABOVE_TOTAL') setLowerWarning(e?.message || 'Marks already entered are above one of these totals.');
+      else setError(e?.message || 'Failed to save these totals.');
     } finally {
-      setSavingSubjectId(null);
+      setSavingTotals(false);
     }
   };
 
@@ -424,8 +487,8 @@ export function ManageTestsExamsDialog({
           </DialogTitle>
           <DialogDescription>
             {openExam
-              ? 'Set the total marks each subject is out of for this assessment. A subject left blank is not counted in ranking or scoring for it.'
-              : 'Choose a class and term, then say how many sequence tests and exams it runs. Names are optional — leave one empty to use the name shown in the box.'}
+              ? 'Set what every subject is marked out of for this assessment. A subject left blank is not counted in ranking or scoring for it. Saving writes them all at once, across every section of this class.'
+              : 'Choose a class and term, then say how many sequence tests and exams it runs. Names are optional — leave one empty to use the name shown in the box. Use Totals to say what each subject is marked out of, and Apply to other classes to give the same set-up to the rest.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -462,8 +525,19 @@ export function ManageTestsExamsDialog({
 
         {/* THE ONE SCROLLING CHILD. DialogContent is a capped flex column, so
             everything outside this stays on screen however long the lists get —
-            which is what keeps the error banner and the Save button reachable. */}
-        <div style={{ flex: '1 1 0', minHeight: 0, overflowY: 'auto' }}>
+            which is what keeps the error banner and the Save button reachable.
+
+            `flex-basis: auto`, NOT 0. DialogContent is capped by max-height and
+            has no definite height of its own, so with `flex: 1 1 0` this item
+            contributes 0 to the column's intrinsic height, the column sizes
+            itself as if the body were not there, and there is then no free space
+            to grow back into — the body lays out at zero pixels and `overflow-y:
+            auto` clips every row of it. That is not a subtle mis-sizing: it is
+            why this dialog opened with the two counts, every name box and every
+            subject row invisible, between the class pickers and the footer.
+            `auto` contributes the content height, so the column grows with the
+            list until max-height stops it and only then does this scroll. */}
+        <div style={{ flex: '1 1 auto', minHeight: 0, overflowY: 'auto' }}>
           {!openExam ? (
             loadingStructure ? (
               <p className="text-sm text-gray-500">Loading...</p>
@@ -495,38 +569,65 @@ export function ManageTestsExamsDialog({
           ) : subjects.length === 0 ? (
             <p className="text-sm text-gray-500">This class level has no subjects configured.</p>
           ) : (
-            subjects.map((s) => (
+            <>
+              {/* Most papers are out of the same number in every subject, so that
+                  is one box and one press rather than the same figure typed
+                  twelve times. It only fills the boxes — nothing is written until
+                  Save, so a subject that differs can still be corrected first. */}
               <div
-                key={s.id}
                 style={{
-                  display: 'flex', alignItems: 'center', gap: '0.75rem',
-                  padding: '0.4rem 0', borderBottom: '1px solid #F3F4F6',
+                  display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap',
+                  paddingBottom: '0.6rem', marginBottom: '0.2rem', borderBottom: '1px solid #E5E7EB',
                 }}
               >
-                <span className="text-sm" style={{ flex: 1, minWidth: 0 }}>{s.name}</span>
+                <span className="text-sm font-medium">Every subject out of</span>
                 <Input
                   type="number"
-                  className="w-24"
-                  placeholder="Total"
-                  value={totals[s.id] ?? ''}
-                  onChange={(e) => setTotals((v) => ({ ...v, [s.id]: e.target.value }))}
+                  className="w-20"
+                  min={1}
+                  placeholder="20"
+                  value={bulkTotal}
+                  onChange={(e) => setBulkTotal(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); applyBulkTotal(); } }}
+                  style={{ textAlign: 'center' }}
+                  aria-label="Total to give every subject"
                 />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => saveTotal(s.id)}
-                  disabled={savingSubjectId === s.id}
-                >
-                  {savingSubjectId === s.id ? 'Saving...' : 'Save'}
+                <Button type="button" variant="outline" size="sm" disabled={savingTotals} onClick={applyBulkTotal}>
+                  Fill all
                 </Button>
+                <span className="text-xs text-gray-400" style={{ flex: '1 1 8rem', minWidth: 0 }}>
+                  Fills the boxes below. Nothing is saved until you press Save totals.
+                </span>
               </div>
-            ))
+
+              {subjects.map((s) => (
+                <div
+                  key={s.id}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '0.75rem',
+                    padding: '0.4rem 0', borderBottom: '1px solid #F3F4F6',
+                  }}
+                >
+                  <span className="text-sm" style={{ flex: 1, minWidth: 0 }}>{s.name}</span>
+                  <Input
+                    type="number"
+                    className="w-24"
+                    min={1}
+                    placeholder="Not counted"
+                    value={totals[s.id] ?? ''}
+                    disabled={savingTotals}
+                    onChange={(e) => setTotals((v) => ({ ...v, [s.id]: e.target.value }))}
+                    aria-label={`${s.name} is out of`}
+                  />
+                </div>
+              ))}
+            </>
           )}
         </div>
 
         {/* Outside the scroller on purpose: a message about the save has to be
             visible from wherever the list happens to be scrolled to. */}
-        {(error || notice || deleteWarning) && (
+        {(error || notice || deleteWarning || lowerWarning) && (
           <div style={{ flex: '0 0 auto' }}>
             {error && <p className="text-sm" style={{ color: '#e0552e' }}>{error}</p>}
             {notice && <p className="text-sm" style={{ color: '#05603d' }}>{notice}</p>}
@@ -540,6 +641,22 @@ export function ManageTestsExamsDialog({
                 </Button>
                 <Button variant="outline" size="sm" disabled={saving} onClick={loadStructure}>
                   Keep them
+                </Button>
+              </div>
+            )}
+            {/* Nothing is deleted by this one — the marks stay, they are simply
+                above what the paper is now out of. So it is a plain confirm and
+                not a destructive one. */}
+            {lowerWarning && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                <span className="text-sm" style={{ color: '#e0552e', flex: '1 1 12rem', minWidth: 0 }}>
+                  {lowerWarning}
+                </span>
+                <Button size="sm" disabled={savingTotals} onClick={() => saveAllTotals(true)}>
+                  {savingTotals ? 'Saving...' : 'Lower it anyway'}
+                </Button>
+                <Button variant="outline" size="sm" disabled={savingTotals} onClick={() => setLowerWarning(null)}>
+                  Leave it
                 </Button>
               </div>
             )}
@@ -558,15 +675,55 @@ export function ManageTestsExamsDialog({
         >
           <span className="text-xs text-gray-500">Academic year: {academicYear || '—'}</span>
           {openExam ? (
-            <Button variant="outline" size="sm" onClick={() => { setOpenExam(null); setNotice(null); setError(null); }}>
-              Back
-            </Button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={savingTotals}
+                onClick={() => {
+                  setOpenExam(null);
+                  setNotice(null);
+                  setError(null);
+                  setLowerWarning(null);
+                }}
+              >
+                Back
+              </Button>
+              <Button size="sm" disabled={savingTotals || loadingSubjects || !subjects.length} onClick={() => saveAllTotals()}>
+                {savingTotals ? 'Saving...' : 'Save totals'}
+              </Button>
+            </div>
           ) : (
-            <Button size="sm" disabled={saving || loadingStructure || !level || !academicYear} onClick={() => saveStructure()}>
-              {saving ? 'Saving...' : 'Save'}
-            </Button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+              {/* Copies what is SAVED, so it sits next to Save rather than
+                  replacing it — an unsaved edit on screen is not yet part of the
+                  set-up there is anything to copy. */}
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={saving || loadingStructure || !level || !academicYear || levels.length < 2}
+                title={levels.length < 2 ? 'This school has only one class level.' : undefined}
+                onClick={() => setApplyOpen(true)}
+              >
+                Apply to other classes
+              </Button>
+              <Button size="sm" disabled={saving || loadingStructure || !level || !academicYear} onClick={() => saveStructure()}>
+                {saving ? 'Saving...' : 'Save'}
+              </Button>
+            </div>
           )}
         </div>
+
+        <ApplyAssessmentsToClassesDialog
+          open={applyOpen}
+          onOpenChange={setApplyOpen}
+          sourceLevel={level}
+          levels={levels}
+          term={term}
+          academicYear={academicYear}
+          testCount={tests.length}
+          examCount={exams.length}
+        />
       </DialogContent>
     </Dialog>
   );
