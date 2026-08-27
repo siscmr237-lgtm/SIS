@@ -6,6 +6,8 @@ export interface ParentMatch {
   id: number;
   name: string;
   phone: string;
+  /** Whether this guardian has already agreed to WhatsApp messages. */
+  whatsappConsent?: boolean;
 }
 
 interface ParentTypeaheadProps {

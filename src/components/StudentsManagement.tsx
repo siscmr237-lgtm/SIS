@@ -107,6 +107,9 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
     class: "",
     parentName: "",
     parentPhone: "",
+    // FALSE, and it must stay false. A pre-ticked box is not consent — nobody
+    // agreed to anything by failing to notice a checkbox during enrolment.
+    parentWhatsappConsent: false,
     enrollmentDate: "",
     address: "",
     allergies: "",
@@ -355,8 +358,19 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
                   value={form.parentName}
                   onChange={(name) => setForm((s) => ({ ...s, parentName: name }))}
                   onSelect={(parent: ParentMatch) => {
-                    setForm((s) => ({ ...s, parentName: parent.name, parentPhone: parent.phone }));
-                    setParentBaseline({ id: parent.id, name: parent.name, phone: parent.phone });
+                    // Adopt the consent this guardian has ALREADY given, into both
+                    // the box and the baseline. Leaving the box unticked over a
+                    // guardian who had consented would post a false on save and
+                    // revoke it as a side effect of picking their name.
+                    const consent = Boolean(parent.whatsappConsent);
+                    setForm((s) => ({
+                      ...s, parentName: parent.name, parentPhone: parent.phone,
+                      parentWhatsappConsent: consent,
+                    }));
+                    setParentBaseline({
+                      id: parent.id, name: parent.name, phone: parent.phone,
+                      whatsappConsent: consent,
+                    });
                   }}
                   placeholder="Enter parent name"
                 />
@@ -367,6 +381,34 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
                   value={form.parentPhone}
                   onChange={(v) => setForm((s) => ({ ...s, parentPhone: v }))}
                 />
+              </div>
+              {/* WHATSAPP CONSENT. Native input rather than ui/checkbox: that
+                  component is barely used in this app and its classes may not
+                  be in the frozen stylesheet, whereas the register in
+                  AttendanceSheet ticks with a plain input and is proven live.
+
+                  Unticked by default and never auto-ticked by anything. It also
+                  says out loud that the consent belongs to the GUARDIAN, not to
+                  this child: it is stored on the shared Parent row, so a family
+                  with three children here agrees once. */}
+              <div className="sis-form-full">
+                <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={form.parentWhatsappConsent}
+                    onChange={(e) => setForm((s) => ({ ...s, parentWhatsappConsent: e.target.checked }))}
+                    style={{ marginTop: 3 }}
+                  />
+                  <span>
+                    <span style={{ color: '#0f2345' }}>
+                      This guardian agrees to receive WhatsApp messages from the school
+                    </span>
+                    <span className="text-xs text-gray-500" style={{ display: 'block', marginTop: 2 }}>
+                      Needed before absence notices can be sent to them. The agreement is
+                      the guardian’s, so it applies to all of their children at this school.
+                    </span>
+                  </span>
+                </label>
               </div>
               <div className="sis-form-full">
                 <Label>Address</Label>
@@ -531,7 +573,7 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
                       dateOfBirth: form.dateOfBirth,
                       gender: form.gender,
                       class: form.class,
-                      ...buildParentPayload(parentBaseline, form.parentName, form.parentPhone),
+                      ...buildParentPayload(parentBaseline, form.parentName, form.parentPhone, form.parentWhatsappConsent),
                       enrollmentDate: form.enrollmentDate,
                       address: form.address,
                       allergies: form.allergies || null,
@@ -562,6 +604,7 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
                       class: "",
                       parentName: "",
                       parentPhone: "",
+                      parentWhatsappConsent: false,
                       enrollmentDate: "",
                       address: "",
                       allergies: "",
