@@ -63,12 +63,22 @@ import {
  * A box left EMPTY is not a zero — it means the subject is not counted on that
  * paper, which is a real answer and is why a blank is never sent.
  *
- * AND IT COPIES TO OTHER CLASSES. Most schools run the same shape of term in
+ * AND IT COPIES TO OTHER CLASSES. Most schools run the same shape of year in
  * every class, and setting that out nine times by hand is where two classes end
  * up marked out of different totals by a typo nobody notices until the report
- * cards disagree. "Apply to other classes" copies this level's saved structure
- * AND its totals onto the levels you tick — see ./ApplyAssessmentsToClassesDialog
- * for what it replaces and what it leaves alone.
+ * cards disagree. "Apply to other classes" copies EVERY TERM this level has set
+ * up — the structure and the totals — onto the levels you tick. See
+ * ./ApplyAssessmentsToClassesDialog for what it replaces and what it leaves
+ * alone.
+ *
+ * NOTHING MOVES WHILE THERE IS UNSAVED WORK. The class picker, the term picker,
+ * Totals and Apply are all held until Save. A term's papers are read and written
+ * per term, so moving the Term picker re-reads and throws the edit away with no
+ * warning and no way back — adding a third sequence test to Term 1, switching to
+ * Term 2 to do the same, and finding on return that Term 1 still runs two is a
+ * mistake this screen used to invite. Apply is held for a second reason as well:
+ * it copies what is SAVED, so an unsaved edit would be silently left out of what
+ * lands on the other classes.
  */
 
 const TERMS = ['Term 1', 'Term 2', 'Term 3'];
@@ -127,6 +137,21 @@ function toEditable(row: StructureRow, type: 'TEST' | 'EXAM'): AssessmentRow {
 
 const blankRow = (): AssessmentRow => ({ id: null, name: '', markCount: 0, activated: false });
 
+/**
+ * The two lists reduced to what a SAVE would actually write: how many of each,
+ * and the name typed in each box. Ids, mark counts and activation are left out
+ * on purpose — none of them is editable here, so a change in one is the server
+ * telling us something, not the user having unsaved work.
+ *
+ * Names are trimmed because the save trims them: typing a trailing space and
+ * deleting it again has changed nothing, and a dirty flag that says otherwise
+ * blocks the term picker over a keystroke that did not happen.
+ */
+function snapshot(tests: AssessmentRow[], exams: AssessmentRow[]) {
+  const line = (rows: AssessmentRow[]) => JSON.stringify(rows.map((r) => r.name.trim()));
+  return { tests: line(tests), exams: line(exams) };
+}
+
 /** Grows or shrinks a list to `next`, keeping what is already in it. */
 function resize(rows: AssessmentRow[], next: number): AssessmentRow[] {
   const n = Math.max(0, Math.min(MAX_PER_TYPE, Math.trunc(next)));
@@ -152,6 +177,8 @@ export function ManageTestsExamsDialog({
 
   const [tests, setTests] = useState<AssessmentRow[]>([]);
   const [exams, setExams] = useState<AssessmentRow[]>([]);
+  /** The last thing the server said, to tell an edit from a fresh read. */
+  const [baseline, setBaseline] = useState(() => snapshot([], []));
   const [sectionCount, setSectionCount] = useState(0);
   const [loadingStructure, setLoadingStructure] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -208,17 +235,49 @@ export function ManageTestsExamsDialog({
         `/test-exams/levels/${encodeURIComponent(level)}/structure`
         + `?term=${encodeURIComponent(term)}&academicYear=${encodeURIComponent(academicYear)}`,
       );
-      setTests((Array.isArray(res?.tests) ? res.tests : []).map((r: StructureRow) => toEditable(r, 'TEST')));
-      setExams((Array.isArray(res?.exams) ? res.exams : []).map((r: StructureRow) => toEditable(r, 'EXAM')));
+      const loadedTests = (Array.isArray(res?.tests) ? res.tests : []).map((r: StructureRow) => toEditable(r, 'TEST'));
+      const loadedExams = (Array.isArray(res?.exams) ? res.exams : []).map((r: StructureRow) => toEditable(r, 'EXAM'));
+      setTests(loadedTests);
+      setExams(loadedExams);
+      // What is on the server, so an edit can be told from a fresh read. Set
+      // from the SAME rows the boxes are filled with, never from the response
+      // separately — the two drifting apart is a dirty flag that is either
+      // always on or never on.
+      setBaseline(snapshot(loadedTests, loadedExams));
       setSectionCount(Array.isArray(res?.sections) ? res.sections.length : 0);
     } catch (e: any) {
       setTests([]);
       setExams([]);
+      setBaseline(snapshot([], []));
       setError(e?.message || 'Failed to load this term’s sequence tests and exams.');
     } finally {
       setLoadingStructure(false);
     }
   }, [level, term, academicYear]);
+
+  /**
+   * Whether the boxes hold something the server has not been told about.
+   *
+   * A term's papers are read and written per term, so moving the Term picker
+   * throws away whatever is on screen — silently, and with no way back. That is
+   * the whole reason this exists: adding a third sequence test to Term 1,
+   * switching to Term 2 to do the same, and finding on return that Term 1 still
+   * runs two is a mistake the screen invites rather than one the user makes.
+   * Both pickers are held until Save, and so is Apply to other classes, which
+   * copies what is SAVED and would quietly leave the unsaved edit out.
+   */
+  const dirty = useMemo(() => {
+    const now = snapshot(tests, exams);
+    return now.tests !== baseline.tests || now.exams !== baseline.exams;
+  }, [tests, exams, baseline]);
+
+  /** Refuses a move off this term, and says why. True when it blocked. */
+  const blockedByUnsaved = (what: string) => {
+    if (!dirty || loadingStructure) return false;
+    setNotice(null);
+    setError(`Save your changes to ${term} before ${what}.`);
+    return true;
+  };
 
   // Back to the structure whenever the filters move — the open assessment
   // belongs to the level and term that were showing when it was opened.
@@ -463,13 +522,16 @@ export function ManageTestsExamsDialog({
             {row.markCount > 0 ? `${row.markCount} marks` : 'sat'}
           </span>
         )}
+        {/* Totals belong to a SAVED assessment, so an unsaved row has nothing to
+            hang them on and an unsaved rename would have this screen headed by a
+            name the server does not know. */}
         <Button
           type="button"
           variant="outline"
           size="sm"
           disabled={row.id == null}
           title={row.id == null ? 'Save first, then set what each subject is marked out of.' : undefined}
-          onClick={() => openTotals(row, type, i)}
+          onClick={() => { if (!blockedByUnsaved('setting subject totals')) openTotals(row, type, i); }}
           style={{ flex: '0 0 auto' }}
         >
           Totals
@@ -488,15 +550,22 @@ export function ManageTestsExamsDialog({
           <DialogDescription>
             {openExam
               ? 'Set what every subject is marked out of for this assessment. A subject left blank is not counted in ranking or scoring for it. Saving writes them all at once, across every section of this class.'
-              : 'Choose a class and term, then say how many sequence tests and exams it runs. Names are optional — leave one empty to use the name shown in the box. Use Totals to say what each subject is marked out of, and Apply to other classes to give the same set-up to the rest.'}
+              : 'Choose a class and term, then say how many tests and exams are there.'}
           </DialogDescription>
         </DialogHeader>
 
         {!openExam && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4" style={{ flex: '0 0 auto' }}>
+            {/* Both pickers refuse to move while there is unsaved work, because
+                moving either one re-reads the structure and throws the edit away
+                without saying so. The Select is controlled, so declining to set
+                the state leaves it showing what is actually loaded. */}
             <div>
               <Label>Class</Label>
-              <Select value={level} onValueChange={setLevel}>
+              <Select
+                value={level}
+                onValueChange={(v) => { if (!blockedByUnsaved('switching class')) setLevel(v); }}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder={levels.length ? 'Select class' : 'No classes yet'} />
                 </SelectTrigger>
@@ -509,7 +578,10 @@ export function ManageTestsExamsDialog({
             </div>
             <div>
               <Label>Term</Label>
-              <Select value={term} onValueChange={setTerm}>
+              <Select
+                value={term}
+                onValueChange={(v) => { if (!blockedByUnsaved('moving to another term')) setTerm(v); }}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select term" />
                 </SelectTrigger>
@@ -562,6 +634,15 @@ export function ManageTestsExamsDialog({
                     ? `Saving applies to all ${sectionCount} sections of ${level}.`
                     : 'Saving applies to this class.'}
                 </p>
+
+                {/* Said before the block bites, not only when it does. A picker
+                    that refuses to move is confusing if the first news of an
+                    unsaved edit is the refusal itself. */}
+                {dirty && (
+                  <p className="text-xs" style={{ color: '#B45309', marginTop: '0.25rem' }}>
+                    Unsaved changes to {term}. Save before changing class or term.
+                  </p>
+                )}
               </>
             )
           ) : loadingSubjects ? (
@@ -695,15 +776,15 @@ export function ManageTestsExamsDialog({
             </div>
           ) : (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-              {/* Copies what is SAVED, so it sits next to Save rather than
-                  replacing it — an unsaved edit on screen is not yet part of the
-                  set-up there is anything to copy. */}
+              {/* Copies what is SAVED, and every term of it — so it sits next to
+                  Save rather than replacing it, and refuses to run while an edit
+                  on screen has not been written yet. */}
               <Button
                 variant="outline"
                 size="sm"
                 disabled={saving || loadingStructure || !level || !academicYear || levels.length < 2}
                 title={levels.length < 2 ? 'This school has only one class level.' : undefined}
-                onClick={() => setApplyOpen(true)}
+                onClick={() => { if (!blockedByUnsaved('applying this set-up elsewhere')) setApplyOpen(true); }}
               >
                 Apply to other classes
               </Button>
@@ -714,15 +795,16 @@ export function ManageTestsExamsDialog({
           )}
         </div>
 
+        {/* No term is passed: it copies every term this class has set up, which
+            is a question for the server and not for whichever term happens to be
+            showing behind this. */}
         <ApplyAssessmentsToClassesDialog
           open={applyOpen}
           onOpenChange={setApplyOpen}
           sourceLevel={level}
           levels={levels}
-          term={term}
           academicYear={academicYear}
-          testCount={tests.length}
-          examCount={exams.length}
+          terms={TERMS}
         />
       </DialogContent>
     </Dialog>

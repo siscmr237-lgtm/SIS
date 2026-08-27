@@ -10,22 +10,31 @@ import {
 import { toast } from 'sonner';
 
 /**
- * Copies ONE class level's term set-up onto other class levels — its sequence
- * tests, its exams, their names and order, and what every subject is marked out
- * of.
+ * Copies ONE class level's whole YEAR of set-up onto other class levels — every
+ * term's sequence tests, its exams, their names and order, and what every
+ * subject is marked out of.
+ *
+ * EVERY TERM, not the one showing behind it. A term-at-a-time copy is the same
+ * repetition this exists to remove, one level down: an admin who has laid out
+ * all three terms of Class 1 would have to reopen this and press it again per
+ * term per target, and the term they forget is the one that silently differs.
+ * The summary below lists what each term holds so it is clear what "all of it"
+ * amounts to before Apply is pressed. A term the source has nothing in is left
+ * alone rather than cleared on the target — the admin picked classes to receive
+ * a set-up, not terms to empty.
  *
  * The case it exists for: a school whose Class 1 through Class 6 all run three
- * sequence tests and one exam, each out of the same totals, set out once and
- * then repeated five times by hand. That repetition is where two classes end up
- * marked out of different totals by a typo nobody notices until the report cards
- * disagree with each other. Modelled on ApplyFeesToClassesDialog, which solves
- * the identical problem for fees.
+ * sequence tests and one exam a term, each out of the same totals, set out once
+ * and then repeated five times by hand. That repetition is where two classes end
+ * up marked out of different totals by a typo nobody notices until the report
+ * cards disagree with each other. Modelled on ApplyFeesToClassesDialog, which
+ * solves the identical problem for fees.
  *
  * IT COPIES WHAT IS SAVED, not what is on the screen behind it. The server reads
  * the source level's rows; an edit typed into the parent dialog and not yet
  * saved is not part of the set-up yet, and copying it would put a structure on
- * six classes that the source itself does not have. The parent keeps Save next
- * to this button for exactly that reason.
+ * six classes that the source itself does not have. The parent refuses to open
+ * this at all while anything is unsaved, for exactly that reason.
  *
  * THE STRUCTURE IS REPLACED; THE TOTALS ARE MERGED. Those two rules differ on
  * purpose, and the difference is worth stating on screen rather than only in the
@@ -60,12 +69,13 @@ interface Props {
   sourceLevel: string;
   /** Every class level the school has. The source is filtered out here. */
   levels: string[];
-  term: string;
   academicYear: string;
-  /** What the source runs, purely so the dialog can say so before it is applied. */
-  testCount: number;
-  examCount: number;
+  /** The school's terms, so the summary can ask about each of them. */
+  terms: string[];
 }
+
+/** One term's line in the "here is what will be copied" summary. */
+interface TermSummary { term: string; tests: number; exams: number }
 
 /** Matches the parent dialog's cap and mobile gutter. */
 const DIALOG_MAX_WIDTH = 'min(560px, calc(100vw - 2rem))';
@@ -76,7 +86,7 @@ const MUTED = '#6B7280';
 const RED = '#B91C1C';
 
 export function ApplyAssessmentsToClassesDialog({
-  open, onOpenChange, sourceLevel, levels, term, academicYear, testCount, examCount,
+  open, onOpenChange, sourceLevel, levels, academicYear, terms,
 }: Props) {
   const cache = useSisCache();
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -84,10 +94,11 @@ export function ApplyAssessmentsToClassesDialog({
   const [error, setError] = useState<string | null>(null);
   /** Set when the server refused a copy that would delete marks. */
   const [deleteWarning, setDeleteWarning] = useState<string | null>(null);
+  const [summary, setSummary] = useState<TermSummary[] | null>(null);
 
   const targets = levels.filter((l) => l !== sourceLevel);
 
-  // Cleared on every open, and on a change of source or period. A tick left over
+  // Cleared on every open, and on a change of source or year. A tick left over
   // from the last time this was opened would be a class the admin never chose on
   // this occasion, about to have its assessments rewritten.
   useEffect(() => {
@@ -95,7 +106,40 @@ export function ApplyAssessmentsToClassesDialog({
     setSelected(new Set());
     setError(null);
     setDeleteWarning(null);
-  }, [open, sourceLevel, term, academicYear]);
+  }, [open, sourceLevel, academicYear]);
+
+  // What each term actually holds, so "every term" is a list and not a promise.
+  // Read term by term from the structure endpoint the parent already uses rather
+  // than from a new one: it is the same answer, and a second way of computing it
+  // is a second thing that can disagree with the copy about what is there.
+  useEffect(() => {
+    if (!open || !sourceLevel || !academicYear) { setSummary(null); return; }
+    let alive = true;
+    setSummary(null);
+    Promise.all(terms.map(async (t): Promise<TermSummary> => {
+      try {
+        const res: any = await api.get(
+          `/test-exams/levels/${encodeURIComponent(sourceLevel)}/structure`
+          + `?term=${encodeURIComponent(t)}&academicYear=${encodeURIComponent(academicYear)}`,
+        );
+        return {
+          term: t,
+          tests: Array.isArray(res?.tests) ? res.tests.length : 0,
+          exams: Array.isArray(res?.exams) ? res.exams.length : 0,
+        };
+      } catch {
+        // A term that cannot be read is shown as empty rather than failing the
+        // whole dialog. The copy itself reads the same rows and is authoritative.
+        return { term: t, tests: 0, exams: 0 };
+      }
+    }))
+      .then((rows) => { if (alive) setSummary(rows); })
+      .catch(() => { if (alive) setSummary([]); });
+    return () => { alive = false; };
+  }, [open, sourceLevel, academicYear, terms]);
+
+  const termsWithWork = (summary ?? []).filter((s) => s.tests + s.exams > 0);
+  const nothingToCopy = summary !== null && termsWithWork.length === 0;
 
   const toggle = (level: string, on: boolean) => {
     setError(null);
@@ -113,10 +157,11 @@ export function ApplyAssessmentsToClassesDialog({
     setError(null);
     if (!confirmDelete) setDeleteWarning(null);
     try {
+      // No `terms` in the body: omitting it is what tells the server "every term
+      // this level has set up", which is the promise the button makes.
       const res: any = await api.post(
         `/test-exams/levels/${encodeURIComponent(sourceLevel)}/structure/copy`,
         {
-          term,
           academicYear,
           targetLevels: [...selected],
           ...(confirmDelete ? { confirmDelete: true } : {}),
@@ -126,13 +171,18 @@ export function ApplyAssessmentsToClassesDialog({
       const failed: { classLevel: string; error: string }[] = res?.failed ?? [];
       const skippedSubjects: { id: number; name: string }[] = res?.skippedSubjects ?? [];
       const strandedSubjects: { id: number; name: string }[] = res?.strandedSubjects ?? [];
+      const copiedTerms: string[] = Array.isArray(res?.terms) ? res.terms : [];
 
       setDeleteWarning(null);
 
       if (applied.length) {
         cache.invalidateOn('test-exam:write');
+        // The terms are named, not counted. "Applied to 3 classes" leaves the
+        // admin still having to open each one to find out how much of the year
+        // it got.
         toast.success(
-          `${sourceLevel}'s ${term} sequence tests and exams applied to ${applied.map((a) => a.classLevel).join(', ')}`,
+          `${sourceLevel}'s ${copiedTerms.length ? copiedTerms.join(', ') : 'sequence tests and exams'}`
+          + ` applied to ${applied.map((a) => a.classLevel).join(', ')}`,
         );
         // Named rather than counted: a subject the target does not teach is a
         // real gap in that class's set-up, and the admin has to decide whether
@@ -174,9 +224,9 @@ export function ApplyAssessmentsToClassesDialog({
     }
   };
 
-  const runs = [
-    testCount ? `${testCount} sequence test${testCount === 1 ? '' : 's'}` : null,
-    examCount ? `${examCount} exam${examCount === 1 ? '' : 's'}` : null,
+  const runs = (s: TermSummary) => [
+    s.tests ? `${s.tests} sequence test${s.tests === 1 ? '' : 's'}` : null,
+    s.exams ? `${s.exams} exam${s.exams === 1 ? '' : 's'}` : null,
   ].filter(Boolean).join(' and ');
 
   return (
@@ -187,10 +237,32 @@ export function ApplyAssessmentsToClassesDialog({
         </DialogHeader>
 
         <p style={{ fontSize: '0.875rem', color: MUTED, marginTop: 4, flex: '0 0 auto' }}>
-          Copies <strong style={{ color: NAVY }}>{sourceLevel || '—'}</strong>&rsquo;s {term} set-up
-          {runs ? <> — {runs}, their names, and what every subject is marked out of</> : null}
-          {' '}onto the classes you tick below. Every section of those classes gets it.
+          Copies every term <strong style={{ color: NAVY }}>{sourceLevel || '—'}</strong> has set up
+          in {academicYear || 'this year'} — the sequence tests and exams, their names, and what every
+          subject is marked out of — onto the classes you tick below. Every section of those classes
+          gets it.
         </p>
+
+        {/* Spelled out per term. "Every term" is a promise; this is the list, so
+            a term that was never set up is visibly not part of the copy rather
+            than quietly missing from it afterwards. */}
+        <div style={{ flex: '0 0 auto', marginTop: 8 }}>
+          {summary === null ? (
+            <p style={{ fontSize: '0.8125rem', color: MUTED }}>Reading what {sourceLevel} runs...</p>
+          ) : nothingToCopy ? (
+            <p style={{ fontSize: '0.8125rem', color: ORANGE }}>
+              {sourceLevel} has no sequence tests or exams set up in any term yet, so there is nothing
+              to copy. Add them and save first.
+            </p>
+          ) : (
+            summary.map((s) => (
+              <p key={s.term} style={{ fontSize: '0.8125rem', color: s.tests + s.exams ? NAVY : MUTED }}>
+                <strong>{s.term}</strong>{' — '}
+                {s.tests + s.exams ? runs(s) : 'nothing set up, so it is left alone'}
+              </p>
+            ))
+          )}
+        </div>
 
         {/* Before the checklist, not after it: the warning has to be readable
             while the boxes are being ticked, not once the choice is made. */}
@@ -205,9 +277,10 @@ export function ApplyAssessmentsToClassesDialog({
             This REPLACES the sequence tests and exams on the classes you pick.
           </p>
           <p style={{ fontSize: '0.8125rem', marginTop: 4 }}>
-            A class running more papers than {sourceLevel || 'this one'} loses the extra ones, and any
-            marks entered against them. You will be asked again before that happens. Subject totals
-            are written over, never cleared, so marks already entered keep something to be out of.
+            In any term listed above, a class running more papers than {sourceLevel || 'this one'}
+            {' '}loses the extra ones, and any marks entered against them. You will be asked again
+            before that happens. Subject totals are written over, never cleared, so marks already
+            entered keep something to be out of.
           </p>
         </div>
 
@@ -271,7 +344,10 @@ export function ApplyAssessmentsToClassesDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={applying}>
             Cancel
           </Button>
-          <Button onClick={() => apply()} disabled={applying || selected.size === 0}>
+          <Button
+            onClick={() => apply()}
+            disabled={applying || selected.size === 0 || summary === null || nothingToCopy}
+          >
             {applying
               ? 'Applying...'
               : `Apply${selected.size ? ` to ${selected.size} class${selected.size === 1 ? '' : 'es'}` : ''}`}
