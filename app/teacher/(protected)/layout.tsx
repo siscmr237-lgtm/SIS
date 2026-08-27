@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Menu } from "lucide-react";
 import { TeacherSidebar } from "@/components/TeacherSidebar";
 import { MOBILE_DRAWER_CSS } from "@/components/mobileDrawerCss";
+import { PageFade } from "@/components/PageFade";
 import { useTeacherAuthGate } from "@/lib/teacherAuthGate";
 
 // Shell for the teacher section, mirroring app/(app)/layout.tsx.
@@ -45,7 +46,9 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
       />
       <TeacherSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <main className="flex-1 overflow-y-auto pt-14 md:pt-0">
-        {children}
+        {/* Same arrival animation as the admin shell, from the same component so
+            the two sections cannot drift. See src/components/PageFade.tsx. */}
+        <PageFade>{children}</PageFade>
       </main>
     </div>
   );

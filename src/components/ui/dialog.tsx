@@ -6,6 +6,42 @@ import { XIcon } from "lucide-react";
 
 import { cn } from "./utils";
 
+/**
+ * The open and close animation for every dialog in the app: the backdrop fades,
+ * the panel fades and scales from 0.96. The rules are OVERLAY_MOTION_CSS in
+ * ./motionCss.ts, mounted once by app/layout.tsx -- that file explains why they
+ * cannot live in a <style> element in here, and the short version is that
+ * anything rendered beside DialogContent is unmounted by Radix the moment the
+ * dialog starts closing, stylesheet included.
+ *
+ * WHY THE TAILWIND ANIMATION CLASSES CAME OFF THE TWO ELEMENTS BELOW. They were
+ * real -- `data-[state=open]:animate-in` and its four companions ARE in the
+ * frozen src/index.css -- and that was the problem: `animation` is a single
+ * property, so those rules and these ones cannot both apply. Both selectors
+ * score the same (one class plus one attribute), which leaves the winner decided
+ * by which of the two stylesheets the browser happened to see last. Removing the
+ * classes settles it instead of betting on it, and the timings asked for here
+ * are not what those classes give anyway: they run a shared `ease` curve in both
+ * directions, where the panel wants ease-out on the way in and ease-in on the
+ * way out. `duration-200` went with them -- its only job was feeding those
+ * animations their length.
+ *
+ * The `slide-in-from-*` classes went from the popovers and menus for the same
+ * reason: all they did was set custom properties that the frozen build's `enter`
+ * keyframes read, and those keyframes are no longer the ones running.
+ *
+ * IT DOES NOT TOUCH THE MOBILE HEIGHT CAP. That cap is three inline
+ * declarations on DialogContent -- max-height, display: flex, flex-direction --
+ * and inline styles outrank every stylesheet rule, so the animation cannot
+ * reach them. It only ever sets `opacity`, `transform` and `animation`, none of
+ * which is a flex or sizing property: a dialog whose middle child is the
+ * nominated scroller still caps at the viewport and still scrolls that child,
+ * mid-animation included. The one interaction worth naming is that `transform`
+ * on the panel makes it a containing block for fixed-position descendants --
+ * and there are none, because every popover and list inside a dialog is
+ * portalled to the body precisely so it can escape this element's clipping.
+ */
+
 function Dialog({
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Root>) {
@@ -37,10 +73,7 @@ function DialogOverlay({
   return (
     <DialogPrimitive.Overlay
       data-slot="dialog-overlay"
-      className={cn(
-        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/50",
-        className,
-      )}
+      className={cn("fixed inset-0 z-50 bg-black/50", className)}
       {...props}
     />
   );
@@ -90,7 +123,7 @@ function DialogContent({
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          "bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border p-6 shadow-lg duration-200 sm:max-w-lg",
+          "bg-background fixed top-[50%] left-[50%] z-50 w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border p-6 shadow-lg sm:max-w-lg",
           className,
         )}
         style={{

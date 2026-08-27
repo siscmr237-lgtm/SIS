@@ -32,6 +32,8 @@ export const viewport = {
 import '../src/index.css';
 import { Toaster } from '../src/components/ui/sonner';
 import { SupportButton } from '../src/components/SupportButton';
+import { BUTTON_PRESS_CSS } from '../src/components/ui/buttonPressCss';
+import { OVERLAY_MOTION_CSS } from '../src/components/ui/motionCss';
 
 /**
  * Neutralises the scrollbar compensation Radix's scroll lock applies to <body>,
@@ -118,6 +120,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             needs no such care -- Next adds that one from app/manifest.ts. */}
         <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
         <style>{SCROLL_LOCK_GUTTER_CSS}</style>
+        {/* The shared Button's hover/press/release feel. Mounted here, once, for
+            the same reason as the block above: it has to reach elements this
+            file does not render, and there are ~150 Buttons in the app -- a
+            <style> inside the component would be ~150 copies of it in the DOM.
+            See src/components/ui/buttonPressCss.ts. */}
+        <style>{BUTTON_PRESS_CSS}</style>
+        {/* The open and close animation for every dialog, popover and dropdown
+            menu. Here for a harder reason than the two blocks above: Radix
+            unmounts anything rendered beside a closing surface, so a stylesheet
+            mounted by the dialog would be gone before the exit animation it
+            describes could run -- and Presence, finding no animation, would then
+            unmount the panel on the spot. src/components/ui/motionCss.ts sets
+            this out in full. */}
+        <style>{OVERLAY_MOTION_CSS}</style>
         {children}
         {/* Moved off sonner's bottom-right default, which is now the support
             button's corner. Without this the two overlap on every toast. */}

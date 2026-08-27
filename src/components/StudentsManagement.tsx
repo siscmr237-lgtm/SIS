@@ -74,6 +74,7 @@ const ADD_STUDENT_FORM_CSS = `
     }
   }
 `;
+import { TABLE_ROW_MOTION_CSS, rowStaggerStyle } from "./ui/motionCss";
 import { ParentTypeahead, ParentMatch } from "./ParentTypeahead";
 import { buildParentPayload, ParentBaseline } from "@/utils/parentPayload";
 import { splitFullName } from "@/utils/fullName";
@@ -616,6 +617,12 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
       </Card>
 
       <Card>
+        {/* Rows fade in as the roster arrives, each 30ms behind the one above,
+           capped at the tenth. Mounted here rather than globally because the
+           rows are ordinary table children — nothing portals or unmounts them
+           mid-animation, so the stylesheet's life matching the table's is
+           exactly right. See src/components/ui/motionCss.ts. */}
+        <style>{TABLE_ROW_MOTION_CSS}</style>
         <div className="overflow-x-auto">
         <Table>
           <TableHeader>
@@ -635,7 +642,7 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
           </TableHeader>
           <TableBody>
             {filteredStudents.map((student, index) => (
-              <TableRow key={student.id}>
+              <TableRow key={student.id} data-sis-row="" style={rowStaggerStyle(index)}>
                 <TableCell style={{ color: '#6B7280' }}>{index + 1}</TableCell>
                 <TableCell>
                   <button
