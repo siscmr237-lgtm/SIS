@@ -5,6 +5,7 @@ import { Menu } from "lucide-react";
 import { SisCacheProvider } from "@/lib/SisCache";
 import { Sidebar } from "@/components/Sidebar";
 import { MOBILE_DRAWER_CSS } from "@/components/mobileDrawerCss";
+import { PageFade } from "@/components/PageFade";
 import { useAuthGateWithRetry, useRegistrationWatch } from "@/lib/authGate";
 import { AuthGateError } from "@/components/AuthGateError";
 
@@ -74,7 +75,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             scroller, which is the blank space you could swipe into to the right
             of every page. min-w-0 lets it shrink to its share instead. */}
         <main className="flex-1 min-w-0 overflow-y-auto pt-14 md:pt-0">
-          {children}
+          {/* Every page in this section fades and rises on arrival, from here
+              rather than from seventeen page files. PageFade.tsx explains why it
+              is keyed on the pathname — a layout is not re-mounted as the user
+              moves around inside it, and a CSS animation only runs on insert. */}
+          <PageFade>{children}</PageFade>
         </main>
       </div>
     </SisCacheProvider>

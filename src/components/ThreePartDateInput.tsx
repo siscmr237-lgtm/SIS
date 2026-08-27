@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import * as Popover from '@radix-ui/react-popover';
+import { popMotionCss } from './ui/motionCss';
 
 /**
  * A date as three dropdowns — Day | Month | Year — inside one bordered box.
@@ -157,6 +158,13 @@ const DATE_CSS = [
   '.sis-tpd-opt:hover{background:#F3F4F6}',
   '.sis-tpd-opt[aria-selected="true"]{background:#0f2345;color:#FFFFFF;border-left-color:#e6c482}',
   '.sis-tpd-opt[aria-selected="true"]:hover{background:#0f2345}',
+  /* The list's open and close, the same fade-and-scale as the dialogs. Mounted
+     from this component rather than globally because this block sits on the date
+     box itself, not inside the portal Radix tears down when the list closes — so
+     the exit animation still has its rule when it runs. Do not write an opening
+     style tag literally in here: it is stylesheet text, and the server escapes
+     it where the client does not, which hydrates as a mismatch. */
+  popMotionCss('.sis-tpd-list'),
 ].join('\n');
 
 /** One cell of the three: a trigger, and its portalled list of options. */

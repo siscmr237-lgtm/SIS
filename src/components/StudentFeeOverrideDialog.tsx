@@ -284,9 +284,12 @@ export function StudentFeeOverrideDialog({
                     value={r.amount}
                     onChange={e => edit(i, { amount: e.target.value })}
                   />
+                  {/* data-no-press: a 32px icon-only bin, excluded from the
+                      shared button press — see src/components/ui/button.tsx. */}
                   <Button
                     variant="ghost"
                     size="sm"
+                    data-no-press=""
                     onClick={() => removeRow(i)}
                     aria-label={`Remove ${r.name || 'fee'}`}
                     style={{ width: 32 }}

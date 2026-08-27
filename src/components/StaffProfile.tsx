@@ -594,7 +594,9 @@ export function StaffProfile({ staff, onNavigate }: StaffProfileProps) {
         <div className="space-y-4">
           <div className="flex justify-end md:hidden">
             <div className="relative" ref={actionsMenuRef}>
-              <Button variant="outline" size="sm" onClick={() => setShowActionsMenu(v => !v)}>
+              {/* data-no-press: icon-only, excluded from the shared button
+                  press — see src/components/ui/button.tsx. */}
+              <Button variant="outline" size="sm" data-no-press="" onClick={() => setShowActionsMenu(v => !v)}>
                 <MoreHorizontal size={16} />
               </Button>
               {showActionsMenu && (

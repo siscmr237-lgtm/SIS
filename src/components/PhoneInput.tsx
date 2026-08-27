@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import * as Popover from '@radix-ui/react-popover';
+import { popMotionCss } from './ui/motionCss';
 
 /**
  * A phone number field: country picker on the left, national digits on the right,
@@ -330,6 +331,17 @@ const PHONE_CSS = `
 .sis-phone-opt:hover{background:#F3F4F6}
 .sis-phone-opt[aria-selected="true"]{background:#2563EB;color:#FFFFFF}
 .sis-phone-opt[aria-selected="true"]:hover{background:#1D4ED8}
+
+/* The list's own open and close, the same fade-and-scale as the dialogs. Safe
+   to mount from this component — unlike a dialog's, this block lives on the
+   input itself, not inside the portal Radix tears down when the list closes, so
+   the exit animation still has its rule when it needs it.
+
+   NOTE FOR ANYONE EDITING THIS COMMENT: it is inside the stylesheet text, and
+   React's server renderer CSS-escapes an opening style tag written literally in
+   there while the client does not — which hydrates as a text mismatch on every
+   page carrying a phone field. Describe the element, do not spell its tag. */
+${popMotionCss('.sis-phone-list')}
 `;
 
 export function PhoneInput({

@@ -18,6 +18,7 @@ import { RevalidatingBadge, useResourceError } from './ResourceStatus';
 import { StaffForm, StaffFormPayload } from './StaffForm';
 import { RecordPayrollDialog } from './RecordPayrollDialog';
 import { StaffChargeDot } from './StaffChargeStatus';
+import { TABLE_ROW_MOTION_CSS, rowStaggerStyle } from './ui/motionCss';
 
 interface StaffManagementProps {
   onNavigate?: (page: NavigationPage) => void;
@@ -117,6 +118,10 @@ export function StaffManagement({ onNavigate, onViewStaff }: StaffManagementProp
           </Card>
 
           <Card>
+            {/* Rows fade in as the roster arrives, each 30ms behind the one
+               above, capped at the tenth. Same arrangement as the students
+               table — see src/components/ui/motionCss.ts. */}
+            <style>{TABLE_ROW_MOTION_CSS}</style>
             <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -129,8 +134,8 @@ export function StaffManagement({ onNavigate, onViewStaff }: StaffManagementProp
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredStaff.map((member) => (
-                  <TableRow key={member.id}>
+                {filteredStaff.map((member, index) => (
+                  <TableRow key={member.id} data-sis-row="" style={rowStaggerStyle(index)}>
                     <TableCell>
                       <button
                         onClick={() => onViewStaff?.(member)}

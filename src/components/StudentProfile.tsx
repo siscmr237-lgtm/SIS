@@ -1,5 +1,6 @@
 import { ArrowLeft, Edit, FileText, Megaphone, MessageCircle, MoreHorizontal, Plus, Trash2, X } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
+import { popMotionCss } from './ui/motionCss';
 import * as Popover from '@radix-ui/react-popover';
 import { generateFeeDriveNotice, generateFinancialSheet } from '../utils/pdfGenerator';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -1022,6 +1023,19 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
           [data-custom-fees-popover][data-state="open"],
           [data-custom-fees-popover][data-state="closed"] { animation-duration: 1ms; }
         }
+
+        /* The mobile ⋯ finance menu, further down this file, gets the app's
+           standard surface animation. The rules are HERE rather than in the
+           scoped block inside the menu itself, and that placement is the whole
+           point: Radix keeps a closing menu mounted only until its animation
+           ends, so a stylesheet that closes with the menu takes the animation's
+           own rule away and the menu is dropped instead of faded. This block is
+           on the page, so it outlives every open and close.
+
+           (Nothing in this comment may spell an opening style tag literally —
+           it is stylesheet text, which the server escapes and the client does
+           not, and the difference hydrates as a text mismatch.) */
+${popMotionCss('[data-sis-finance-menu]')}
       `}</style>
 
       {/* Name on the left, the mobile ⋯ menu right-aligned on the same line.
@@ -1218,12 +1232,18 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
                 ThreePartDateInput's portalled list. */}
             <DropdownMenu.Root>
               <DropdownMenu.Trigger asChild>
-                <Button variant="outline" size="sm" aria-label="Finance actions">
+                {/* data-no-press: icon-only, so the shared button press is off.
+                    A 32px square holding a 16px glyph shrinks by less than a
+                    pixel at scale 0.96 — too little to read as a press, and
+                    enough to land the three dots on a half-pixel and blur them
+                    while it runs. See src/components/ui/button.tsx. */}
+                <Button variant="outline" size="sm" aria-label="Finance actions" data-no-press="">
                   <MoreHorizontal size={16} />
                 </Button>
               </DropdownMenu.Trigger>
               <DropdownMenu.Portal>
                 <DropdownMenu.Content
+                  data-sis-finance-menu=""
                   align="end"
                   sideOffset={6}
                   collisionPadding={12}

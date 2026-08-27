@@ -324,9 +324,12 @@ export function Timetable() {
                 <TableCell>{entry.subject}</TableCell>
                 <TableCell>{entry.teacher}</TableCell>
                 <TableCell>
+                  {/* data-no-press: icon-only, excluded from the shared button
+                      press — see src/components/ui/button.tsx. */}
                   <Button
                     variant="ghost"
                     size="sm"
+                    data-no-press=""
                     className="text-red-600"
                   >
                     <Trash2 size={16} />
