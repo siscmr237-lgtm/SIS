@@ -152,6 +152,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
     parentId: student.parentId,
     parentName: student.parentName || '',
     parentPhone: student.parentPhone || '',
+    parentWhatsappConsent: Boolean((student as any).parentWhatsappConsent),
     class: student.class || '',
     allergies: student.allergies || '',
     medicalConditions: student.medicalConditions || '',
@@ -162,6 +163,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
   const [editForm, setEditForm] = useState({
     fullName: '', gender: '', dateOfBirth: '',
     enrollmentDate: '', address: '', parentName: '', parentPhone: '', class: '',
+    parentWhatsappConsent: false,
     allergies: '', medicalConditions: '', currentMedications: '', medicalNotes: '',
   });
   // Tracks the parent last confirmed for this edit session — the student's
@@ -170,6 +172,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
   // relinking, editing that parent's own record in place, or creating a new one.
   const [parentBaseline, setParentBaseline] = useState<ParentBaseline>({
     id: displayInfo.parentId, name: displayInfo.parentName, phone: displayInfo.parentPhone,
+    whatsappConsent: displayInfo.parentWhatsappConsent,
   });
   const [editSubmitting, setEditSubmitting] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
@@ -796,7 +799,9 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
         dateOfBirth: editForm.dateOfBirth || undefined,
         enrollmentDate: editForm.enrollmentDate || undefined,
         address: editForm.address.trim(),
-        ...buildParentPayload(parentBaseline, editForm.parentName, editForm.parentPhone),
+        ...buildParentPayload(
+          parentBaseline, editForm.parentName, editForm.parentPhone, editForm.parentWhatsappConsent,
+        ),
         class: editForm.class,
         allergies: editForm.allergies.trim() || null,
         medicalConditions: editForm.medicalConditions.trim() || null,
@@ -813,13 +818,17 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
         parentId: updated.parentId,
         parentName: updated.parentName,
         parentPhone: updated.parentPhone,
+        parentWhatsappConsent: Boolean(updated.parentWhatsappConsent),
         class: editForm.class,
         allergies: editForm.allergies.trim(),
         medicalConditions: editForm.medicalConditions.trim(),
         currentMedications: editForm.currentMedications.trim(),
         medicalNotes: editForm.medicalNotes.trim(),
       });
-      setParentBaseline({ id: updated.parentId, name: updated.parentName, phone: updated.parentPhone });
+      setParentBaseline({
+        id: updated.parentId, name: updated.parentName, phone: updated.parentPhone,
+        whatsappConsent: Boolean(updated.parentWhatsappConsent),
+      });
       for (const c of editNewContacts) {
         if (c.name.trim()) {
           const created = await api.post(`/students/${student.id}/pickup-contacts`, {
@@ -1387,13 +1396,18 @@ ${popMotionCss('[data-sis-finance-menu]')}
                     address: displayInfo.address,
                     parentName: displayInfo.parentName,
                     parentPhone: displayInfo.parentPhone,
+                    parentWhatsappConsent: displayInfo.parentWhatsappConsent,
                     class: displayInfo.class,
                     allergies: displayInfo.allergies,
                     medicalConditions: displayInfo.medicalConditions,
                     currentMedications: displayInfo.currentMedications,
                     medicalNotes: displayInfo.medicalNotes,
                   });
-                  setParentBaseline({ id: displayInfo.parentId, name: displayInfo.parentName, phone: displayInfo.parentPhone });
+                  setParentBaseline({
+                    id: displayInfo.parentId, name: displayInfo.parentName,
+                    phone: displayInfo.parentPhone,
+                    whatsappConsent: displayInfo.parentWhatsappConsent,
+                  });
                   setEditShowMedicalHistory(
                     !!(displayInfo.allergies || displayInfo.medicalConditions ||
                        displayInfo.currentMedications || displayInfo.medicalNotes)
@@ -1419,6 +1433,13 @@ ${popMotionCss('[data-sis-finance-menu]')}
               <Field label="Address" value={displayInfo.address} />
               <Field label="Parent / Guardian" value={displayInfo.parentName} />
               <Field label="Parent Phone" value={displayInfo.parentPhone} />
+              {/* Shown on the profile, not only in the edit dialog: whether a
+                  family can be messaged is something the office needs to see
+                  while looking at the child, not something to go hunting for. */}
+              <Field
+                label="WhatsApp messages"
+                value={displayInfo.parentWhatsappConsent ? 'Agreed' : 'Not agreed'}
+              />
             </dl>
 
             {/* Who enrolled this student. Renders nothing for a record that
@@ -1698,8 +1719,17 @@ ${popMotionCss('[data-sis-finance-menu]')}
                     value={editForm.parentName}
                     onChange={(name) => setEditForm(f => ({ ...f, parentName: name }))}
                     onSelect={(parent: ParentMatch) => {
-                      setEditForm(f => ({ ...f, parentName: parent.name, parentPhone: parent.phone }));
-                      setParentBaseline({ id: parent.id, name: parent.name, phone: parent.phone });
+                      // Adopt the consent this guardian has already given, so
+                      // picking their name cannot quietly revoke it on save.
+                      const consent = Boolean(parent.whatsappConsent);
+                      setEditForm(f => ({
+                        ...f, parentName: parent.name, parentPhone: parent.phone,
+                        parentWhatsappConsent: consent,
+                      }));
+                      setParentBaseline({
+                        id: parent.id, name: parent.name, phone: parent.phone,
+                        whatsappConsent: consent,
+                      });
                     }}
                     placeholder="Parent or guardian name"
                   />
@@ -1710,6 +1740,28 @@ ${popMotionCss('[data-sis-finance-menu]')}
                     value={editForm.parentPhone}
                     onChange={(v) => setEditForm(f => ({ ...f, parentPhone: v }))}
                   />
+                </div>
+                {/* WhatsApp consent — see the matching box on the enrolment
+                    form. Native input, because ui/checkbox is barely used here
+                    and the frozen stylesheet may not carry its classes. */}
+                <div className="col-span-2">
+                  <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={editForm.parentWhatsappConsent}
+                      onChange={(e) => setEditForm(f => ({ ...f, parentWhatsappConsent: e.target.checked }))}
+                      style={{ marginTop: 3 }}
+                    />
+                    <span>
+                      <span style={{ color: '#0f2345' }}>
+                        This guardian agrees to receive WhatsApp messages from the school
+                      </span>
+                      <span className="text-xs text-gray-500" style={{ display: 'block', marginTop: 2 }}>
+                        Needed before absence notices can be sent to them. The agreement is
+                        the guardian’s, so it applies to all of their children at this school.
+                      </span>
+                    </span>
+                  </label>
                 </div>
                 <div>
                   <Label>Enrollment Date</Label>

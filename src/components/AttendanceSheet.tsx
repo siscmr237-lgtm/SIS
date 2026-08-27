@@ -9,7 +9,8 @@ import { Card } from './ui/card';
 import { Label } from './ui/label';
 import { ThreePartDateInput } from './ThreePartDateInput';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { Download } from 'lucide-react';
+import { Download, MessageCircle } from 'lucide-react';
+import { AbsenceNoticesDialog } from './AbsenceNoticesDialog';
 import { toast } from 'sonner';
 
 /**
@@ -82,6 +83,7 @@ export function AttendanceSheet({ audience }: { audience: 'admin' | 'teacher' })
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notifying, setNotifying] = useState(false);
 
   // Only the newest request may write state: changing a filter twice quickly
   // would otherwise let the earlier register land last, and a tick then goes to
@@ -140,6 +142,16 @@ export function AttendanceSheet({ audience }: { audience: 'admin' | 'teacher' })
 
   const days = sheet?.days ?? [];
   const singleDay = days.length === 1;
+
+  /**
+   * Whether the register for the day in view has been taken at all.
+   *
+   * A null cell is not an absence -- it means nobody marked that day -- so this
+   * asks whether ANY student has a status, not whether any is absent. It is what
+   * gates the Notify parents button: before the register exists there is nothing
+   * to notify anyone about, and the panel would open on an empty list.
+   */
+  const marked = singleDay && (sheet?.students ?? []).some((s) => s.cells.some((c) => c.status != null));
 
   /** Marking is per day, so this is only reachable with one day in view. */
   const mark = async (studentId: string, present: boolean) => {
@@ -284,6 +296,30 @@ export function AttendanceSheet({ audience }: { audience: 'admin' | 'teacher' })
               <Button variant="outline" onClick={() => markAll(false)} disabled={saving}>Mark all absent</Button>
             </>
           ) : null}
+          {/* NOTIFY PARENTS. Admin only, one day only, and only once the
+              register for that day has actually been taken.
+
+              The `marked` test is the important one. Before anyone has ticked
+              anything, every cell is null — which the grid correctly shows as
+              "no register taken", NOT as a school full of absentees — and
+              offering to notify parents at that moment would put a button
+              labelled "notify" next to a list that means nothing yet. It
+              appears once there is a register to act on.
+
+              Teachers do not get it: a teacher takes the register, but deciding
+              to message a family is the office's call, and /whatsapp is
+              admin-only on the server regardless. */}
+          {audience === 'admin' && singleDay && marked ? (
+            <Button
+              variant="outline"
+              onClick={() => setNotifying(true)}
+              disabled={saving}
+              className="flex items-center gap-2"
+            >
+              <MessageCircle size={16} />
+              Notify parents
+            </Button>
+          ) : null}
         </div>
 
         {error && <p className="text-sm" style={{ color: '#B91C1C', marginTop: '0.5rem' }}>{error}</p>}
@@ -394,6 +430,16 @@ export function AttendanceSheet({ audience }: { audience: 'admin' | 'teacher' })
       <p className="text-sm text-gray-500" style={{ marginTop: '0.75rem' }}>
         A dash means no register was taken that day — it does not count as an absence.
       </p>
+
+      {/* Rendered unconditionally so its own open/close animation runs; it is a
+          Radix dialog and portals itself out of this subtree, which is what
+          keeps it clear of layout.tsx's overflow-hidden. */}
+      <AbsenceNoticesDialog
+        open={notifying}
+        onOpenChange={setNotifying}
+        date={days[0] ?? ''}
+        sectionId={sheet?.section?.id ?? null}
+      />
     </div>
   );
 }
