@@ -45,17 +45,21 @@ const TEACHER_LOGIN_PATH = "/teacher/login";
 type Stats = { schools: number; students: number } | null;
 
 /**
- * NO CSS IN THIS FILE CONTAINS A QUOTE, AN AMPERSAND, OR AN ANGLE BRACKET.
- *
- * React escapes the text children of every element, <style> included: a double
- * quote in this string would reach the browser as an HTML entity and take the
- * whole declaration down with it, with nothing to say so. So the logo is an
- * <img> element rather than a CSS background-image, the step numbers are real
- * text rather than generated content, and every selector here is a class or a
- * descendant of one -- no attribute selectors, no child combinators.
+ * Every class name is prefixed lewa-lp-, and every selector is a class or a
+ * descendant of one. Nothing here can match an element the app renders, and no
+ * app rule can reach in, which is what makes a page-scoped stylesheet safe to
+ * mount from inside a component.
  *
  * The grid rules at the bottom are the only responsive logic on the page, and
  * they go the same way each time: three columns to one, two to one.
+ *
+ * As it happens this CSS also contains no quote, ampersand or angle bracket.
+ * That is not load-bearing -- React treats <style> as a raw-text element and
+ * passes its child through unescaped, which is verifiable on any page in this
+ * app: BUTTON_PRESS_CSS ships [aria-disabled="true"] and it arrives with its
+ * quotes intact. It is simply that nothing here needed one: the logo is an
+ * <img> so the crop can be expressed in px, and the step numbers are real text
+ * rather than generated content, both of which are better anyway.
  */
 const LANDING_CSS = `
   .lewa-lp-page {
