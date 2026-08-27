@@ -44,7 +44,9 @@ interface Row {
   phone: string | null;
   /** What is actually on file, so a bad number can be shown and corrected. */
   storedPhone: string | null;
-  state: 'ready' | 'no_consent' | 'no_number' | 'already_sent' | 'not_absent';
+  state: 'ready' | 'no_consent' | 'no_number' | 'already_sent' | 'not_absent' | 'other_status';
+  /** The register's own word for this student on this date: absent, late, ... */
+  attendanceStatus: string | null;
   status: string | null;
   errorCode?: string | null;
   errorMessage?: string | null;
@@ -56,6 +58,13 @@ interface Payload {
   schoolName: string;
   configured: boolean;
   students: Row[];
+}
+
+/** "late" -> "Late". The register stores lower-case words; a row reads better. */
+function titleCase(value: string | null): string {
+  const raw = String(value ?? '').trim();
+  if (!raw) return '';
+  return raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
 }
 
 /** Twilio's vocabulary, plus our own 'failed_to_send', as a person reads it. */
@@ -109,6 +118,17 @@ function stateLabel(row: Row): { text: string; colour: string; hint?: string } {
       };
     case 'already_sent':
       return { text: 'Already sent today', colour: NAVY };
+    case 'other_status':
+      // Marked, and not present, but not ABSENT: late, excused, or a status
+      // from the unvalidated attendance write routes. Shown with the
+      // register's own word, because that is the true and useful thing to
+      // say — the admin is looking at that same word on the sheet behind
+      // this panel, and "not eligible" would not connect the two.
+      return {
+        text: titleCase(row.attendanceStatus) || 'Not absent',
+        colour: MUTED,
+        hint: `The template says this child “was absent from school today”, which is not what the register says. Only a student marked absent can be sent this notice.`,
+      };
     default:
       return { text: 'Not absent', colour: MUTED };
   }
