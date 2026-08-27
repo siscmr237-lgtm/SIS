@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { api } from "../../../src/lib/api";
 import { fetchRegistrationSnapshot, routeForSnapshot } from "../../../src/lib/registrationStatus";
+import { SCHOOL_HOME_PATH } from "../../../src/lib/registrationRoutes";
 import { clampSectionCount, expandClassSections, MAX_SECTIONS } from "../../../src/lib/classes";
 import { postImage, prepareImage } from "../../../src/lib/uploadImage";
 import { EMPTY_UNIFORM_COLORS, UniformColors } from "../../../src/lib/uniformColors";
@@ -173,7 +174,7 @@ export default function OnboardingPage() {
         // null means APPROVED — an existing school, which must never see this
         // form. Anything pointing somewhere other than here is followed too.
         if (destination === null) {
-          router.replace("/");
+          router.replace(SCHOOL_HOME_PATH);
         } else if (destination !== "/school/onboarding") {
           router.replace(destination);
         }
@@ -339,7 +340,7 @@ export default function OnboardingPage() {
       router.replace(
         submitted?.school?.registrationStatus === "PENDING"
           ? "/school/pending-verification"
-          : "/",
+          : SCHOOL_HOME_PATH,
       );
     } catch (err: any) {
       setError(err.message || "Something went wrong. Please try again.");

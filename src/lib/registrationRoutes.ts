@@ -17,6 +17,25 @@ export const ONBOARDING_PATH = '/school/onboarding';
 export const VERIFY_EMAIL_PATH = '/school/verify-email';
 
 /**
+ * Where an admin who is cleared to use the product actually goes.
+ *
+ * THIS MUST NOT BE '/'. It was, everywhere, until the site root became the
+ * public marketing page. Before that, '/' was a gate of its own: a client
+ * component that ran the auth check and forwarded to the dashboard, so
+ * "send them to /" and "send them to the app" were the same instruction and
+ * nobody had to say which they meant. The moment the root started rendering
+ * marketing copy, every one of those redirects quietly signed an admin in and
+ * dropped them on the landing page.
+ *
+ * Naming the destination is the fix. /school/dashboard sits inside the (app)
+ * route group, whose layout runs useAuthGateWithRetry and useRegistrationWatch
+ * on mount — the same live, server-read check the old root did — so nothing
+ * that depended on '/' re-running the gate has lost anything by being pointed
+ * here instead.
+ */
+export const SCHOOL_HOME_PATH = '/school/dashboard';
+
+/**
  * The teacher-side equivalent of the waiting page.
  *
  * A teacher gets refused for their school's status just as an admin does, but

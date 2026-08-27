@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { OtpVerifyScreen } from "../../../src/components/OtpVerifyScreen";
 import { api } from "../../../src/lib/api";
 import { routeForFreshUser } from "../../../src/lib/registrationStatus";
+import { SCHOOL_HOME_PATH } from "../../../src/lib/registrationRoutes";
 
 // ---------------------------------------------------------------------------
 // Shared style helpers (same look as signup/login/password-reset)
@@ -282,12 +283,16 @@ export default function VerifyEmailPage() {
         return;
       }
       if (user.emailVerified === true) {
-        // Forwarded to "/" rather than worked out here, because the only thing
-        // this page knows about the school is the cached copy in localStorage —
-        // and that cannot be trusted to say where an approved, pending or
-        // incomplete school belongs. "/" runs the real gate, which asks the
-        // server, and lands them in the right place from there.
-        router.replace("/");
+        // Forwarded to the app rather than worked out here, because the only
+        // thing this page knows about the school is the cached copy in
+        // localStorage — and that cannot be trusted to say where an approved,
+        // pending or incomplete school belongs. The (app) layout runs the real
+        // gate, which asks the server, and lands them in the right place from
+        // there.
+        //
+        // This used to point at "/", back when the root was that gate. It is
+        // now the public landing page, so the destination has to be named.
+        router.replace(SCHOOL_HOME_PATH);
         return;
       }
       setEmail(user.email);

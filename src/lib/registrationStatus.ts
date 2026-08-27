@@ -2,6 +2,7 @@ import { api } from './api';
 import {
   pathForRegistrationStatus,
   PENDING_VERIFICATION_PATH,
+  SCHOOL_HOME_PATH,
   VERIFY_EMAIL_PATH,
   type RegistrationStatus,
 } from './registrationRoutes';
@@ -83,11 +84,16 @@ export function routeForFreshUser(user: any): string {
   const status: RegistrationStatus | undefined = school?.registrationStatus;
 
   if (!status) {
-    return school?.onboardingCompleted === false ? '/school/onboarding' : '/';
+    return school?.onboardingCompleted === false
+      ? '/school/onboarding'
+      : SCHOOL_HOME_PATH;
   }
+  // null from routeForSnapshot means APPROVED — "belongs exactly where it asked
+  // to be" — and for a login there is no such place yet, so it resolves to the
+  // app's own home rather than to the site root. See SCHOOL_HOME_PATH.
   return routeForSnapshot({
     registrationStatus: status,
     onboardingCompleted: Boolean(school?.onboardingCompleted),
     emailVerified: user?.emailVerified !== false,
-  }) ?? '/';
+  }) ?? SCHOOL_HOME_PATH;
 }
