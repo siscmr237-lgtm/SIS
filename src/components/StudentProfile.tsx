@@ -3,7 +3,7 @@ import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { popMotionCss } from './ui/motionCss';
 import * as Popover from '@radix-ui/react-popover';
 import { generateFeeDriveNotice, generateFinancialSheet } from '../utils/pdfGenerator';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { api } from '../lib/api';
 import { useSisCache } from '../lib/SisCache';
@@ -92,6 +92,48 @@ interface PickupContact {
   relationship: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+/** One student's answer from GET /whatsapp/fee-reminder/eligibility. */
+/**
+ * WHETHER THE PAYMENT-RECEIPT MESSAGE IS AVAILABLE. It is not.
+ *
+ * The server route answers 503 unless WHATSAPP_PAYMENT_CONFIRMATION_ENABLED is
+ * set, because it still composes free TEXT — which WhatsApp does not accept for
+ * a message a business starts — and the approved template that would replace it
+ * (fee_payment_received) is still PENDING review. This constant keeps the UI
+ * honest about that instead of offering a button whose only outcome is an error
+ * dialog seconds after somebody recorded a payment.
+ *
+ * A button that throws is worse than a button that is not there: the payment
+ * WAS recorded, and an error at that moment reads as though it was not.
+ *
+ * Flip this to true at the same time as the server variable.
+ */
+const PAYMENT_RECEIPT_ENABLED = false;
+
+interface FeeReminderRow {
+  studentId: string;
+  studentName: string;
+  guardianName: string;
+  /** Post-normalisation, exactly the digits the message will be sent to. */
+  phone: string | null;
+  /** What is on file, so an unusable number can be shown and corrected. */
+  storedPhone: string | null;
+  balance: number;
+  state: 'ready' | 'no_consent' | 'no_number' | 'nothing_outstanding' | 'cooldown';
+  daysAgo?: number;
+  lastSentAt?: string | null;
+  nextEligibleAt?: string | null;
+}
+
+interface FeeReminderEligibility {
+  schoolName: string;
+  /** "1st Term 2026/2027" — appears in the message as {{3}}. */
+  termLabel: string;
+  cooldownDays: number;
+  configured: boolean;
+  students: FeeReminderRow[];
 }
 
 interface StudentProfileProps {
@@ -255,6 +297,23 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
    * Defers the post-payment receipt prompt. See scheduleReceiptPrompt below for
    * why the delay exists; the ref is here so an unmount can cancel it.
    */
+  /**
+   * WHETHER A FEE REMINDER MAY BE SENT, ANSWERED BY THE SERVER.
+   *
+   * Not derived here from the balance. The server applies four rules — consent,
+   * a number that can actually be dialled, something outstanding, and a 14-day
+   * cooldown — and only it can see the last one, because the cooldown lives in
+   * the message log. Computing a different answer on this side would let the
+   * button offer a send the server then refuses, which is the failure the whole
+   * confirmation step exists to avoid.
+   */
+  const [feeElig, setFeeElig] = useState<FeeReminderEligibility | null>(null);
+  /**
+   * The fee-drive date the message will quote. Required: the approved template
+   * states that the school WILL hold a drive on this day, and there is no such
+   * date stored anywhere, so the person sending has to supply the one they know.
+   */
+  const [feeDriveDate, setFeeDriveDate] = useState('');
   const waPromptTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => {
     if (waPromptTimer.current) clearTimeout(waPromptTimer.current);
@@ -676,10 +735,16 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
       // Settle Registration button showing for a group that no longer owed
       // anything, since that button reads the same list.
       await Promise.all([refreshLedger(), loadOwing()]);
-      // Offered, never automatic. The money is recorded either way; whether the
-      // family gets a message about it is the school's call, and some payments
-      // are handed over in person with a paper receipt already given.
-      if (canWhatsApp) scheduleReceiptPrompt(paidTotal);
+      // NOT OFFERED AT PRESENT. The payment-confirmation endpoint is switched
+      // off behind WHATSAPP_PAYMENT_CONFIRMATION_ENABLED — it still sends free
+      // text, which WhatsApp refuses for a message a business starts, and the
+      // fee_payment_received template that would replace it is still pending
+      // approval. Prompting here would open a dialog whose only outcome is a
+      // 503, immediately after somebody recorded money.
+      //
+      // Deliberately left as a call site rather than deleted, so turning the
+      // feature on is one line here and one environment variable.
+      if (PAYMENT_RECEIPT_ENABLED && canWhatsApp) scheduleReceiptPrompt(paidTotal);
     } catch (e: any) {
       setSubmitError(e.message || 'Failed to record payment');
     } finally {
@@ -703,14 +768,74 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
   const waParentPhone = String(displayInfo.parentPhone ?? '').trim();
   const waParentName = String(displayInfo.parentName ?? '').trim();
   const canWhatsApp = waParentPhone.length > 0;
+
   /**
-   * The reminder additionally needs something to remind them ABOUT. Same gate
-   * as the Fee Drive Letter beside it, for the same reason written out there,
-   * and the server refuses a zero-or-credit balance anyway.
+   * Ask the server whether a reminder may be sent, and re-ask whenever the
+   * ledger changes.
+   *
+   * The ledger dependency is the point: recording a payment can clear the
+   * balance, and the button must stop offering to chase a family who has just
+   * paid without anyone reloading the page. Editing the guardian re-runs it too,
+   * since consent and the phone number both live on that record.
    */
-  const canSendReminder = canWhatsApp && (ledgerData?.balance ?? 0) > 0;
+  const feeEligRow = feeElig?.students?.[0] ?? null;
+  const loadFeeEligibility = useCallback(async () => {
+    try {
+      const res: any = await api.get(
+        `/whatsapp/fee-reminder/eligibility?studentId=${encodeURIComponent(student.id)}`,
+      );
+      setFeeElig(res);
+    } catch {
+      // A failure here must not break the page. The control simply stays
+      // disabled, which is the safe direction: an unknown answer is not a yes.
+      setFeeElig(null);
+    }
+  }, [student.id]);
+
+  useEffect(() => {
+    loadFeeEligibility();
+  }, [loadFeeEligibility, ledgerData, displayInfo.parentId, displayInfo.parentWhatsappConsent, displayInfo.parentPhone]);
+
+  /**
+   * WHY THE REMINDER CANNOT BE SENT, in the words the office needs.
+   *
+   * Null when it can. Everything here mirrors a rule the SERVER applies, so the
+   * button and the endpoint always agree — the wording is this side's business,
+   * the decision is not.
+   */
+  const feeReminderBlockedReason: string | null = (() => {
+    if (!feeElig) return 'Checking…';
+    if (!feeElig.configured) return 'WhatsApp is not set up on the server';
+    if (!feeEligRow) return 'Unavailable for this student';
+    switch (feeEligRow.state) {
+      case 'ready': return null;
+      case 'no_consent':
+        return feeEligRow.guardianName
+          ? 'No consent — tick the WhatsApp box on this student’s guardian'
+          : 'No guardian on file';
+      case 'no_number':
+        return feeEligRow.storedPhone
+          ? `No valid number — "${feeEligRow.storedPhone}" needs its country code`
+          : 'No phone number on file';
+      case 'nothing_outstanding':
+        return 'Nothing outstanding';
+      case 'cooldown': {
+        const d = feeEligRow.daysAgo ?? 0;
+        const when = d === 0 ? 'today' : d === 1 ? 'yesterday' : `${d} days ago`;
+        return `Sent ${when} — one reminder per ${feeElig.cooldownDays} days`;
+      }
+      default: return 'Unavailable';
+    }
+  })();
+  const canSendReminder = feeReminderBlockedReason === null;
   /** How the confirmation and the sent notice refer to the recipient. */
   const waRecipientLabel = waParentName || "this student's guardian";
+  /**
+   * The number AS IT WILL BE DIALLED, from the server's own normaliser — not the
+   * stored text. These differ ("679379134" is dialled as "+237679379134"), and
+   * the dialled form is the one worth checking against the child's name.
+   */
+  const waDialled = feeEligRow?.phone ?? null;
 
   const openWhatsAppReminder = () => {
     setWaError(null);
@@ -768,15 +893,40 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
     setWaBusy(true);
     setWaError(null);
     try {
-      const res: any =
-        waAction.kind === 'reminder'
-          ? await api.post('/whatsapp/fee-reminder', { studentId: student.id })
-          : await api.post('/whatsapp/payment-confirmation', {
-              studentId: student.id,
-              amount: waAction.amount,
-            });
-      setWaSent(String(res?.message ?? ''));
-      toast.success('WhatsApp message sent');
+      if (waAction.kind === 'reminder') {
+        const res: any = await api.post('/whatsapp/fee-reminder', {
+          studentIds: [student.id],
+          driveDate: feeDriveDate,
+        });
+        // A BATCH RESPONSE, even for one student — the endpoint takes a list so
+        // a fee drive can go out in one call, and a single send is a list of
+        // one. So the per-student outcome has to be unpacked: the request
+        // succeeded as an HTTP call even when the one message in it did not.
+        const row = res?.results?.[0];
+        if (!row?.sent) {
+          setWaError(row?.errorMessage || 'The reminder could not be sent.');
+        } else {
+          setWaSent(
+            `Sent to ${row.guardianName || 'the guardian'} at ${row.phone}.
+
+`
+            + `Regarding the outstanding fees for ${row.studentName} (${res.termLabel}), `
+            + `ahead of the fee drive on ${res.driveDate}.`,
+          );
+          toast.success('Fee reminder sent');
+        }
+        // Re-ask the server: this send has just started the cooldown, so the
+        // button must go disabled with the new reason rather than invite a
+        // second one.
+        await loadFeeEligibility();
+      } else {
+        const res: any = await api.post('/whatsapp/payment-confirmation', {
+          studentId: student.id,
+          amount: waAction.amount,
+        });
+        setWaSent(String(res?.message ?? ''));
+        toast.success('WhatsApp message sent');
+      }
     } catch (e: any) {
       // The server's own wording, which names the actual problem — an
       // unreachable number, a guardian with no phone, a provider refusal. A
@@ -1302,17 +1452,19 @@ ${popMotionCss('[data-sis-finance-menu]')}
                       Fee Drive Letter
                     </DropdownMenu.Item>
                   )}
-                  {/* Same two gates as the desktop button — a balance to chase and
-                      a number to chase it on — so this menu and that row offer the
-                      same actions rather than one hiding what the other shows. */}
-                  {canSendReminder && (
-                    <DropdownMenu.Item
-                      data-sis-finance-item=""
-                      onSelect={() => openWhatsAppReminder()}
-                    >
-                      Send Fee Reminder
-                    </DropdownMenu.Item>
-                  )}
+                  {/* Mirrors the desktop button exactly, including the reason —
+                      this menu and that row must offer the same actions in the
+                      same state, or the app appears to disagree with itself
+                      depending on window width. */}
+                  <DropdownMenu.Item
+                    data-sis-finance-item=""
+                    disabled={!canSendReminder}
+                    onSelect={() => openWhatsAppReminder()}
+                  >
+                    {canSendReminder
+                      ? 'Send Fee Reminder'
+                      : `Send Fee Reminder — ${feeReminderBlockedReason}`}
+                  </DropdownMenu.Item>
                   <DropdownMenu.Item
                     data-sis-finance-item=""
                     onSelect={() => setShowFeeOverride(true)}
@@ -2007,14 +2159,31 @@ ${popMotionCss('[data-sis-finance-menu]')}
                 {feeDriveBusy ? 'Preparing…' : 'Fee Drive Letter'}
               </Button>
             )}
-            {/* Two gates, both necessary: a balance worth a reminder, and a
-                guardian number to send it to. Absent rather than disabled when
-                either is missing — see canWhatsApp. */}
-            {canSendReminder && (
-              <Button variant="outline" onClick={openWhatsAppReminder}>
+            {/* DISABLED WITH THE REASON, rather than hidden.
+                A control that vanishes leaves the office guessing which of four
+                things is wrong — no consent, no usable number, nothing owed, or
+                a reminder already sent this fortnight — and the reason is
+                exactly what tells them what to fix. It used to disappear
+                whenever there was no phone number, which read as the feature
+                being broken.
+
+                The title is on the wrapping span, not the button: a disabled
+                button does not fire mouse events in every browser, so a title on
+                it would be silently unreachable for some users. */}
+            <span title={feeReminderBlockedReason ?? undefined} style={{ display: 'inline-flex' }}>
+              <Button
+                variant="outline"
+                onClick={openWhatsAppReminder}
+                disabled={!canSendReminder}
+              >
                 <MessageCircle size={16} className="mr-1" />
                 Send Fee Reminder
               </Button>
+            </span>
+            {feeReminderBlockedReason && feeReminderBlockedReason !== 'Checking…' && (
+              <span className="text-xs text-gray-500" style={{ alignSelf: 'center' }}>
+                {feeReminderBlockedReason}
+              </span>
             )}
             <Button variant="outline" onClick={() => setShowFeeOverride(true)}>
               Edit This Student&apos;s Fees
@@ -2612,12 +2781,84 @@ ${popMotionCss('[data-sis-finance-menu]')}
                 </DialogTitle>
                 <DialogDescription>
                   {waSent
-                    ? `Sent to ${waRecipientLabel} at ${waParentPhone}. This is exactly what was delivered:`
+                    ? 'This is what was sent:'
                     : waAction?.kind === 'receipt'
-                      ? `Send a WhatsApp receipt for the ${waAction.amount.toLocaleString()} FCFA just recorded to ${waRecipientLabel} at ${waParentPhone}?`
-                      : `Send a WhatsApp fee reminder to ${waRecipientLabel} at ${waParentPhone}?`}
+                      ? `Send a WhatsApp receipt for the ${waAction.amount.toLocaleString()} FCFA just recorded?`
+                      : 'Check these details before sending. A WhatsApp cannot be unsent.'}
                 </DialogDescription>
               </DialogHeader>
+
+              {/* WHO IT IS ACTUALLY GOING TO.
+                  The guardian's name beside the number AS IT WILL BE DIALLED —
+                  which is not the stored text: "679379134" is dialled as
+                  "+237679379134", and the server's own normaliser produced this
+                  string, so what is read here is what is used. This pairing is
+                  the last chance to notice that a message about a named child's
+                  fees is about to reach a stranger. */}
+              {!waSent && waAction?.kind === 'reminder' && feeEligRow && (
+                <div
+                  style={{
+                    border: '1px solid #E5E7EB', borderRadius: 8, background: '#F9FAFB',
+                    padding: '0.75rem', fontSize: '0.8125rem', lineHeight: 1.6,
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem' }}>
+                    <span style={{ color: '#6B7280' }}>Guardian</span>
+                    <span style={{ color: '#0f2345', fontWeight: 600, textAlign: 'right' }}>
+                      {feeEligRow.guardianName || 'Not recorded'}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem' }}>
+                    <span style={{ color: '#6B7280' }}>Will be sent to</span>
+                    {/* Monospaced and spaced: this is read digit by digit, not
+                        recognised at a glance. */}
+                    <span style={{
+                      fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+                      letterSpacing: '0.02em', color: '#0f2345', fontWeight: 600,
+                    }}>
+                      {waDialled ?? '—'}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem' }}>
+                    <span style={{ color: '#6B7280' }}>Outstanding</span>
+                    <span style={{ color: '#0f2345', fontWeight: 600 }}>
+                      {feeEligRow.balance.toLocaleString()} FCFA
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem' }}>
+                    <span style={{ color: '#6B7280' }}>Term in message</span>
+                    <span style={{ color: '#0f2345' }}>{feeElig?.termLabel || '—'}</span>
+                  </div>
+                  {/* Said out loud because it is genuinely surprising: the
+                      approved template has no amount slot, so the figure above
+                      decides WHETHER the family is chased but is never quoted to
+                      them. Somebody will otherwise assume the parent was told a
+                      number and be wrong about what the school said. */}
+                  <p className="text-xs text-gray-500" style={{ marginTop: '0.5rem' }}>
+                    The message does not quote the amount — it asks them to settle the
+                    outstanding fees before the drive.
+                  </p>
+                </div>
+              )}
+
+              {/* THE DRIVE DATE, required.
+                  The template states the school WILL hold a fee drive on this
+                  day. No such date is stored anywhere, so it is asked for here
+                  rather than invented — a wrong one is a promise to every parent
+                  in the message. */}
+              {!waSent && waAction?.kind === 'reminder' && (
+                <div>
+                  <Label>Fee drive date</Label>
+                  <ThreePartDateInput
+                    value={feeDriveDate}
+                    onChange={(v) => setFeeDriveDate(v ?? '')}
+                    aria-label="Fee drive date"
+                  />
+                  <p className="text-xs text-gray-500" style={{ marginTop: 2 }}>
+                    Appears in the message as the day of the drive. Must be today or later.
+                  </p>
+                </div>
+              )}
 
               {/* The sent text, verbatim. Its own scroll rather than the dialog's,
                   so a long school name cannot push the Done button off a phone
@@ -2657,10 +2898,13 @@ ${popMotionCss('[data-sis-finance-menu]')}
                     <Button variant="outline" onClick={closeWhatsApp} disabled={waBusy}>
                       {waAction?.kind === 'receipt' ? 'No' : 'Cancel'}
                     </Button>
-                    <Button onClick={sendWhatsApp} disabled={waBusy}>
+                    <Button
+                      onClick={sendWhatsApp}
+                      disabled={waBusy || (waAction?.kind === 'reminder' && !feeDriveDate)}
+                    >
                       {waBusy
                         ? 'Sending…'
-                        : waAction?.kind === 'receipt' ? 'Yes, send receipt' : 'Send'}
+                        : waAction?.kind === 'receipt' ? 'Yes, send receipt' : 'Send reminder'}
                     </Button>
                   </>
                 )}
