@@ -94,6 +94,65 @@ interface PickupContact {
   updatedAt: string;
 }
 
+/**
+ * WHY A REMINDER WAS REFUSED, IN WORDS A SCHOOL SECRETARY CAN ACT ON.
+ *
+ * One map, read both by the button that goes disabled BEFORE a send and by the
+ * dialog that reports a refusal AFTER one, so the same situation is never
+ * described two different ways depending on when it was noticed.
+ *
+ * It exists because every non-success used to collapse into "The reminder could
+ * not be sent." A send the provider had refused was reported with that sentence
+ * and no more, and finding out what had actually happened meant reading the
+ * hosting provider's request log. Whatever the server refuses for, it says so by
+ * name; this turns the name into a sentence and nothing is thrown away.
+ */
+function feeReminderReason(
+  reason: string | null | undefined,
+  row?: { lastSentAt?: string | null; nextEligibleAt?: string | null; storedPhone?: string | null } | null,
+  fallback?: string | null,
+): string {
+  const onDay = (v?: string | null) => {
+    if (!v) return null;
+    const d = new Date(v);
+    return Number.isNaN(d.getTime())
+      ? null
+      : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  };
+  switch (reason) {
+    case 'cooldown_active': {
+      const sent = onDay(row?.lastSentAt);
+      const next = onDay(row?.nextEligibleAt);
+      if (sent && next) return `Already reminded on ${sent}. Next reminder available ${next}.`;
+      if (sent) return `Already reminded on ${sent}.`;
+      return 'This guardian was reminded recently.';
+    }
+    case 'duplicate_same_day':
+      return 'A reminder was already sent today.';
+    case 'no_consent':
+      return 'This guardian has not agreed to WhatsApp messages.';
+    case 'no_number':
+      return row?.storedPhone
+        ? `"${row.storedPhone}" is not a number this can send to — it needs its country code.`
+        : 'No phone number is on file for this guardian.';
+    case 'nothing_outstanding':
+      return 'Nothing outstanding.';
+    case 'NOT_CONFIGURED':
+      return 'WhatsApp is not set up on the server yet.';
+    case 'NO_TEMPLATE':
+      return 'No approved message template is configured.';
+    case 'TIMEOUT':
+      return 'WhatsApp did not answer in time. It may still have been sent — check before resending.';
+    case 'NETWORK':
+      return 'Could not reach WhatsApp. Try again shortly.';
+    default:
+      // Anything else is a provider refusal, and its own message is more
+      // specific than any sentence written here — Twilio names the actual
+      // problem, and discarding that is what made this hard to diagnose.
+      return fallback || 'The reminder could not be sent.';
+  }
+}
+
 /** One student's answer from GET /whatsapp/fee-reminder/eligibility. */
 /**
  * WHETHER THE PAYMENT-RECEIPT MESSAGE IS AVAILABLE. It is not.
@@ -121,7 +180,8 @@ interface FeeReminderRow {
   /** What is on file, so an unusable number can be shown and corrected. */
   storedPhone: string | null;
   balance: number;
-  state: 'ready' | 'no_consent' | 'no_number' | 'nothing_outstanding' | 'cooldown';
+  state: 'ready' | 'no_consent' | 'no_number' | 'nothing_outstanding'
+    | 'cooldown_active' | 'duplicate_same_day';
   daysAgo?: number;
   lastSentAt?: string | null;
   nextEligibleAt?: string | null;
@@ -805,27 +865,12 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
    */
   const feeReminderBlockedReason: string | null = (() => {
     if (!feeElig) return 'Checking…';
-    if (!feeElig.configured) return 'WhatsApp is not set up on the server';
-    if (!feeEligRow) return 'Unavailable for this student';
-    switch (feeEligRow.state) {
-      case 'ready': return null;
-      case 'no_consent':
-        return feeEligRow.guardianName
-          ? 'No consent — tick the WhatsApp box on this student’s guardian'
-          : 'No guardian on file';
-      case 'no_number':
-        return feeEligRow.storedPhone
-          ? `No valid number — "${feeEligRow.storedPhone}" needs its country code`
-          : 'No phone number on file';
-      case 'nothing_outstanding':
-        return 'Nothing outstanding';
-      case 'cooldown': {
-        const d = feeEligRow.daysAgo ?? 0;
-        const when = d === 0 ? 'today' : d === 1 ? 'yesterday' : `${d} days ago`;
-        return `Sent ${when} — one reminder per ${feeElig.cooldownDays} days`;
-      }
-      default: return 'Unavailable';
-    }
+    if (!feeElig.configured) return 'WhatsApp is not set up on the server yet.';
+    if (!feeEligRow) return 'Unavailable for this student.';
+    if (feeEligRow.state === 'ready') return null;
+    // Same map the post-send failure uses, so a refusal is worded identically
+    // whether it was caught before the tap or after it.
+    return feeReminderReason(feeEligRow.state, feeEligRow);
   })();
   const canSendReminder = feeReminderBlockedReason === null;
   /** How the confirmation and the sent notice refer to the recipient. */
@@ -904,7 +949,15 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
         // succeeded as an HTTP call even when the one message in it did not.
         const row = res?.results?.[0];
         if (!row?.sent) {
-          setWaError(row?.errorMessage || 'The reminder could not be sent.');
+          // THE ACTUAL REASON, not a flattened sentence. row.reason is the
+          // server's own name for the refusal — cooldown_active,
+          // duplicate_same_day, no_consent, a Twilio error code — and
+          // feeReminderReason turns it into something a school secretary can act
+          // on, falling back to the provider's own wording when it is more
+          // specific than anything we could write. Collapsing all of this into
+          // "could not be sent" is what made the last failure take a hosting
+          // log to diagnose.
+          setWaError(feeReminderReason(row?.reason, row, row?.errorMessage));
         } else {
           setWaSent(
             `Sent to ${row.guardianName || 'the guardian'} at ${row.phone}.
