@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { platformApi } from "@/lib/platformApi";
 import { PasswordField } from "@/components/platform/PasswordField";
 import { PasswordHints } from "@/components/PasswordHints";
+import { ContentLoader } from "@/components/ContentLoader";
 
 /**
  * Founder-only. The menu entry is hidden from a Member, but that is presentation
@@ -93,7 +94,7 @@ export default function AdministratorsPage() {
       </div>
 
       {error && <p style={{ fontSize: "0.875rem", color: "#DC2626" }}>{error}</p>}
-      {!error && rows === null && <p style={{ fontSize: "0.875rem", color: "#64748B" }}>Loading...</p>}
+      {!error && rows === null && <ContentLoader minHeight={200} />}
 
       {rows && (
         <div style={{ background: "white", borderRadius: 12, border: "1px solid #E2E8F0", overflowX: "auto" }}>

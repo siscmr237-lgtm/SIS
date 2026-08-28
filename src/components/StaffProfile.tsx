@@ -30,6 +30,7 @@ import {
 import { StaffForm, StaffFormPayload } from './StaffForm';
 import { RecordPayrollDialog } from './RecordPayrollDialog';
 import { StaffChargeDot } from './StaffChargeStatus';
+import { ContentLoader } from './ContentLoader';
 
 interface LedgerEntry {
   id: string;
@@ -640,7 +641,7 @@ export function StaffProfile({ staff, onNavigate }: StaffProfileProps) {
             </Button>
           </div>
 
-          {ledgerLoading && <Card className="p-6 text-gray-500">Loading...</Card>}
+          {ledgerLoading && <Card><ContentLoader minHeight={160} /></Card>}
 
           {ledgerError && (
             <Card className="p-6 text-red-600">

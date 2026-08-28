@@ -10,6 +10,7 @@ import { UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
 import { useAdminRole } from '@/lib/adminRole';
+import { ContentLoader } from './ContentLoader';
 
 /**
  * WHO ELSE MAY WORK IN THIS SCHOOL. Owner-only, on the School Settings page.
@@ -150,7 +151,7 @@ export function AdministratorsSection() {
       </div>
 
       {error && <p className="text-sm text-red-600">{error}</p>}
-      {!error && rows === null && <p className="text-sm text-gray-500">Loading…</p>}
+      {!error && rows === null && <ContentLoader minHeight={140} />}
 
       {rows && (
         <div style={{ border: '1px solid #E2E8F0', borderRadius: 12, overflowX: 'auto' }}>

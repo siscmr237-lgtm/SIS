@@ -21,6 +21,7 @@ import { Label } from './ui/label';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from './ui/table';
+import { ContentLoader, TableLoader } from './ContentLoader';
 
 interface ClassesManagementProps {
   onNavigate?: (page: NavigationPage) => void;
@@ -619,9 +620,7 @@ export function ClassesManagement({ onNavigate }: ClassesManagementProps) {
         retrying={creating || addSubmitting}
       />
 
-      {loading ? (
-        <p className="p-4 text-gray-500">Loading classes...</p>
-      ) : classes.length === 0 ? (
+      {!loading && classes.length === 0 ? (
         <Card className="p-12 flex flex-col items-center gap-4 text-center">
           <p className="text-gray-500">No classes have been created yet.</p>
           <Button onClick={handleCreateStandard} disabled={creating}>
@@ -648,7 +647,9 @@ export function ClassesManagement({ onNavigate }: ClassesManagementProps) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {classes.map(cls => (
+              {/* The headings stay; only the rows wait. */}
+              {loading && <TableLoader colSpan={3} />}
+              {!loading && classes.map(cls => (
                 <TableRow key={cls.id}>
                   <TableCell>{cls.name}</TableCell>
                   <TableCell>
@@ -710,7 +711,7 @@ export function ClassesManagement({ onNavigate }: ClassesManagementProps) {
           </DialogHeader>
           <div className="py-2 space-y-3">
             {loadingSubjects ? (
-              <p className="text-sm text-gray-500">Loading...</p>
+              <ContentLoader minHeight={140} />
             ) : (
               <>
                 {classSubjects.length === 0 ? (

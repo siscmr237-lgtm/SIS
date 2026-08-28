@@ -15,6 +15,7 @@ import { Label } from './ui/label';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from './ui/table';
+import { TableLoader } from './ContentLoader';
 
 interface SubjectsManagementProps {
   onNavigate?: (page: NavigationPage) => void;
@@ -135,9 +136,7 @@ export function SubjectsManagement({ onNavigate }: SubjectsManagementProps) {
         </Dialog>
       </div>
 
-      {loading ? (
-        <p className="p-4 text-gray-500">Loading subjects...</p>
-      ) : subjects.length === 0 ? (
+      {!loading && subjects.length === 0 ? (
         <Card className="p-12 flex flex-col items-center gap-4 text-center">
           <p className="text-gray-500">No subjects have been created yet.</p>
           {seedResult && <p className="text-green-600 text-sm">{seedResult}</p>}
@@ -162,7 +161,9 @@ export function SubjectsManagement({ onNavigate }: SubjectsManagementProps) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {subjects.map(subject => (
+                {/* The headings stay; only the rows wait. */}
+                {loading && <TableLoader colSpan={2} />}
+                {!loading && subjects.map(subject => (
                   <TableRow key={subject.id}>
                     <TableCell>{subject.name}</TableCell>
                     <TableCell>

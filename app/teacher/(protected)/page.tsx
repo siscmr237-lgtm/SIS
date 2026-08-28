@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { useTeacherAssignments, useTeacherTeaching } from "@/lib/teacherAssignments";
+import { ContentLoader } from "@/components/ContentLoader";
 
 export default function TeacherDashboardPage() {
   const { data: assignments, loading, error } = useTeacherAssignments();
@@ -35,7 +36,7 @@ export default function TeacherDashboardPage() {
         <Card className="p-6">
           <h2 className="text-base font-medium mb-4">Class Teacher Of</h2>
           {loading ? (
-            <p className="text-sm text-gray-500">Loading...</p>
+            <ContentLoader minHeight={140} />
           ) : classTeacherOf.length === 0 ? (
             <p className="text-sm text-gray-500">
               You are not currently the class teacher of any class.
@@ -58,7 +59,7 @@ export default function TeacherDashboardPage() {
         <Card className="p-6">
           <h2 className="text-base font-medium mb-4">Your Classes</h2>
           {loadingClasses ? (
-            <p className="text-sm text-gray-500">Loading...</p>
+            <ContentLoader minHeight={140} />
           ) : teachingClasses.length === 0 ? (
             <p className="text-sm text-gray-500">
               You have no classes yet. Your school admin assigns these.

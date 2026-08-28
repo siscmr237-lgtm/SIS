@@ -10,6 +10,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { ThreePartDateInput } from './ThreePartDateInput';
+import { ContentLoader } from './ContentLoader';
 
 /**
  * Pay several of one student's fees from a single hand-over of money.
@@ -227,7 +228,7 @@ export function PayFeesDialog({
 
         <div style={BODY} data-role="pay-body">
           {loading ? (
-            <p className="text-sm text-gray-500" style={{ paddingTop: '0.5rem' }}>Loading fees…</p>
+            <ContentLoader minHeight={140} />
           ) : categories.length === 0 ? (
             <p className="text-sm text-gray-500" style={{ paddingTop: '0.5rem' }}>
               This student has no fee categories yet.

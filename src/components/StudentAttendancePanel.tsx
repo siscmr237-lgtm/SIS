@@ -9,6 +9,7 @@ import { ThreePartDateInput } from './ThreePartDateInput';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Download } from 'lucide-react';
+import { ContentLoader } from './ContentLoader';
 
 /**
  * One student's attendance, on their own detail page.
@@ -193,7 +194,7 @@ export function StudentAttendancePanel({
 
       <Card>
         {loading ? (
-          <p className="p-6 text-gray-500">Loading attendance...</p>
+          <ContentLoader minHeight={160} />
         ) : !summary ? (
           <p className="p-6 text-gray-500">No attendance for the selected period.</p>
         ) : (

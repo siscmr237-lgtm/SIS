@@ -4,6 +4,7 @@ import { PaymentStatusDot, useStudentPaymentStatuses } from './PaymentStatus';
 import { ZeroMarkDot, useStudentsWithZeroMarks } from './MarkStatus';
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../lib/api';
+import { TableLoader } from './ContentLoader';
 import { useCachedResource, useSisCache } from '../lib/SisCache';
 import { formatTermLabel } from '../utils/academicTerm';
 import { NavigationPage } from '../App';
@@ -780,9 +781,7 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
           </div>
         </div>
 
-        {studentLoading ? (
-          <p className="p-6 text-gray-500">Loading...</p>
-        ) : (
+        {(
           /* The class is what actually guarantees the scroll container (it is
              already in the pre-compiled build and was doing this job before);
              the data attribute only adds the edge shadow. Keeping the class
@@ -805,7 +804,9 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
                 </tr>
               </thead>
               <tbody>
-                {studentTxRows.length === 0 ? (
+                {studentLoading ? (
+                  <TableLoader colSpan={6} />
+                ) : studentTxRows.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="px-4 py-6 text-center text-gray-500">
                       No transactions found.
@@ -902,9 +903,7 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
           </p>
         </div>
 
-        {transactionsLoading ? (
-          <p className="p-6 text-gray-500">Loading...</p>
-        ) : (
+        {(
           /* The class is what actually guarantees the scroll container (it is
              already in the pre-compiled build and was doing this job before);
              the data attribute only adds the edge shadow. Keeping the class
@@ -926,7 +925,9 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
                 </tr>
               </thead>
               <tbody>
-                {transactions.length === 0 ? (
+                {transactionsLoading ? (
+                  <TableLoader colSpan={5} />
+                ) : transactions.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="px-4 py-6 text-center text-gray-500">
                       No payroll or expense transactions recorded yet.

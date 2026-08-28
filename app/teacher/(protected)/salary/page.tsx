@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { api } from "@/lib/api";
+import { ContentLoader } from "@/components/ContentLoader";
 
 interface LedgerEntry {
   id: string;
@@ -65,7 +66,7 @@ export default function TeacherSalaryPage() {
         <p className="text-gray-600">Your pay history and outstanding balance</p>
       </div>
 
-      {loading && <Card className="p-6 text-gray-500">Loading...</Card>}
+      {loading && <Card><ContentLoader minHeight={180} /></Card>}
 
       {error && (
         <Card className="p-6 text-red-600">

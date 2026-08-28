@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import { StaffProfile } from "@/components/StaffProfile";
 import { useAppNavigation } from "@/lib/navigation";
 import type { Staff } from "@/types";
+import { ContentLoader } from "@/components/ContentLoader";
 
 function StaffProfileLoader() {
   const params = useParams<{ code: string }>();
@@ -32,7 +33,7 @@ function StaffProfileLoader() {
   }, [params.code]);
 
   if (status === "loading") {
-    return <div className="p-4 md:p-8 text-gray-500">Loading...</div>;
+    return <div className="p-4 md:p-8"><ContentLoader minHeight={280} /></div>;
   }
   if (status === "error" || !staff) {
     return <div className="p-4 md:p-8 text-gray-500">Staff member not found.</div>;
@@ -42,7 +43,7 @@ function StaffProfileLoader() {
 
 export default function StaffProfilePage() {
   return (
-    <Suspense fallback={<div className="p-4 md:p-8 text-gray-500">Loading...</div>}>
+    <Suspense fallback={<div className="p-4 md:p-8"><ContentLoader minHeight={280} /></div>}>
       <StaffProfileLoader />
     </Suspense>
   );

@@ -11,6 +11,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Check, Plus } from 'lucide-react';
 import { toast } from 'sonner';
+import { ContentLoader } from './ContentLoader';
 
 /**
  * Manages which subjects a class LEVEL teaches.
@@ -206,11 +207,11 @@ export function LevelSubjectsDialog({ open, onOpenChange, onManageCatalogue }: P
         </div>
 
         {levelsLoading ? (
-          <p className="text-sm text-gray-500 py-4">Loading class levels...</p>
+          <ContentLoader minHeight={140} />
         ) : !level ? (
           <p className="text-sm text-gray-500 py-4">Create a class first, then set its subjects here.</p>
         ) : loading ? (
-          <p className="text-sm text-gray-500 py-4">Loading subjects...</p>
+          <ContentLoader minHeight={140} />
         ) : (
           <>
             <div className="flex items-end gap-2" style={{ borderTop: '1px solid #E5E7EB', paddingTop: 12 }}>

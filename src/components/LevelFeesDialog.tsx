@@ -14,6 +14,7 @@ import { FirstInstallmentDialog, type FeeGroup, type LevelFeeRow } from './First
 import { ApplyFeesToClassesDialog } from './ApplyFeesToClassesDialog';
 import { Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { ContentLoader } from './ContentLoader';
 
 /**
  * Editor for a class LEVEL's fee structure.
@@ -527,7 +528,7 @@ export function LevelFeesDialog({ open, onOpenChange, inWizard = false, onAllLev
         </div>
 
         {loading ? (
-          <p className="text-sm text-gray-500 py-4">Loading fees...</p>
+          <ContentLoader minHeight={140} />
         ) : !level ? (
           <p className="text-sm text-gray-500 py-4">Create a class first, then set its fees here.</p>
         ) : (

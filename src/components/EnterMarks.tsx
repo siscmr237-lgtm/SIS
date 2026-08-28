@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from './ui/table';
+import { ContentLoader } from './ContentLoader';
 
 interface EnterMarksProps {
   onNavigate?: (page: NavigationPage) => void;
@@ -236,7 +237,7 @@ export function EnterMarks({ onNavigate }: EnterMarksProps) {
           <p className="text-gray-500">Select a class, term, academic year, sequence test or exam, and subject to enter marks.</p>
         </Card>
       ) : loadingRoster ? (
-        <p className="p-4 text-gray-500">Loading roster...</p>
+        <ContentLoader minHeight={180} />
       ) : roster.length === 0 ? (
         <Card className="p-6">
           <p className="text-gray-500">No students found in this class.</p>

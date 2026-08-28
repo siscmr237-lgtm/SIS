@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from './ui/table';
+import { TableLoader } from './ContentLoader';
 
 /**
  * Class ranking.
@@ -292,9 +293,7 @@ export function ClassRanking({ onNavigate }: ClassRankingProps) {
       {error && <Card className="p-6 mb-6 text-red-600 text-sm cr-noprint">{error}</Card>}
 
       <Card>
-        {loading ? (
-          <p className="p-6 text-gray-500">Loading ranking...</p>
-        ) : rows.length === 0 ? (
+        {!loading && rows.length === 0 ? (
           <p className="p-6 text-gray-500">No students in {level || 'this class'}.</p>
         ) : (
           <div className="overflow-x-auto">
@@ -308,7 +307,9 @@ export function ClassRanking({ onNavigate }: ClassRankingProps) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {rows.map((r: any) => (
+                {/* The headings stay; only the rows wait. */}
+                {loading && <TableLoader colSpan={4} />}
+                {!loading && rows.map((r: any) => (
                   <TableRow key={r.studentId}>
                     <TableCell>
                       {/* Unranked, not last: a student with nothing counted has

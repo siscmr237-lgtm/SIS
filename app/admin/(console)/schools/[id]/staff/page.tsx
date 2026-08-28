@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { platformApi } from "@/lib/platformApi";
 import { PasswordResetControl } from "@/components/platform/PasswordResetControl";
+import { ContentLoader } from "@/components/ContentLoader";
 
 /**
  * One school's staff: name, email, phone, and the password control.
@@ -50,7 +51,16 @@ export default function SchoolStaffPage() {
   };
 
   if (error) return <p style={{ fontSize: "0.875rem", color: "#DC2626" }}>{error}</p>;
-  if (!data) return <p style={{ fontSize: "0.875rem", color: "#64748B" }}>Loading...</p>;
+  // "Staff" is written into this page; the school it belongs to is not, so
+  // the back link waits with the rest of the data.
+  if (!data) {
+    return (
+      <div style={{ maxWidth: 1000 }}>
+        <h1 style={{ fontSize: "1.25rem", fontWeight: 600, color: "#0F172A", margin: "10px 0 4px" }}>Staff</h1>
+        <ContentLoader minHeight={220} />
+      </div>
+    );
+  }
 
   return (
     <div style={{ maxWidth: 1000 }}>

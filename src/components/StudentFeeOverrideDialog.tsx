@@ -11,6 +11,7 @@ import {
 import { Input } from './ui/input';
 import { Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { ContentLoader } from './ContentLoader';
 
 /**
  * Editor for ONE student's personal fee structure — a scholarship, a staff
@@ -255,7 +256,7 @@ export function StudentFeeOverrideDialog({
 
         {loading ? (
           <div style={BODY}>
-            <p className="text-sm text-gray-500 py-4">Loading fees...</p>
+            <ContentLoader minHeight={140} />
           </div>
         ) : (
           <>

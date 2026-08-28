@@ -6,6 +6,7 @@ import { Suspense, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { PasswordHints } from "@/components/PasswordHints";
 import { api } from "@/lib/api";
+import { ContentLoader } from "@/components/ContentLoader";
 
 /**
  * Step 2 of two: where the link in the reset email lands.
@@ -340,7 +341,7 @@ export default function SchoolResetPasswordPage() {
   // same reason /teacher/set-password is arranged this way.
   return (
     <Shell>
-      <Suspense fallback={<p className="text-sm text-gray-600">Loading…</p>}>
+      <Suspense fallback={<ContentLoader minHeight={220} />}>
         <ResetPasswordForm />
       </Suspense>
     </Shell>

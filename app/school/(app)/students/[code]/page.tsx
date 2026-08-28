@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import { StudentProfile } from "@/components/StudentProfile";
 import { useAppNavigation } from "@/lib/navigation";
 import type { Student } from "@/types";
+import { ContentLoader } from "@/components/ContentLoader";
 
 function StudentProfileLoader() {
   const params = useParams<{ code: string }>();
@@ -32,7 +33,7 @@ function StudentProfileLoader() {
   }, [params.code]);
 
   if (status === "loading") {
-    return <div className="p-4 md:p-8 text-gray-500">Loading...</div>;
+    return <div className="p-4 md:p-8"><ContentLoader minHeight={280} /></div>;
   }
   if (status === "error" || !student) {
     return <div className="p-4 md:p-8 text-gray-500">Student not found.</div>;
@@ -42,7 +43,7 @@ function StudentProfileLoader() {
 
 export default function StudentProfilePage() {
   return (
-    <Suspense fallback={<div className="p-4 md:p-8 text-gray-500">Loading...</div>}>
+    <Suspense fallback={<div className="p-4 md:p-8"><ContentLoader minHeight={280} /></div>}>
       <StudentProfileLoader />
     </Suspense>
   );

@@ -11,6 +11,7 @@ import { ApproveSchoolControl } from "@/components/platform/ApproveSchoolControl
 import { RevertToPendingControl } from "@/components/platform/RevertToPendingControl";
 import { PhoneChangeControl } from "@/components/platform/PhoneChangeControl";
 import { DeleteSchoolControl } from "@/components/platform/DeleteSchoolControl";
+import { ContentLoader } from "@/components/ContentLoader";
 
 /**
  * One school. Identity, headcounts, and its admin accounts.
@@ -146,7 +147,18 @@ export default function SchoolDetailPage() {
   }, []);
 
   if (error) return <p style={{ fontSize: "0.875rem", color: "#DC2626" }}>{error}</p>;
-  if (!school) return <p style={{ fontSize: "0.875rem", color: "#64748B" }}>Loading...</p>;
+  // Everything in this page's header is the school's own, so only the way
+  // back can be drawn before the record arrives.
+  if (!school) {
+    return (
+      <div style={{ maxWidth: 760 }}>
+        <Link href="/admin/schools" style={{ color: "#64748B", fontSize: "0.8125rem", textDecoration: "none" }}>
+          ← Schools
+        </Link>
+        <ContentLoader minHeight={240} />
+      </div>
+    );
+  }
 
   const uniform = school.uniformColors || { shirt: null, trouser: null, gown: null };
   const anyUniform = uniform.shirt || uniform.trouser || uniform.gown;

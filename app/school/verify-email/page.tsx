@@ -7,6 +7,7 @@ import { OtpVerifyScreen } from "../../../src/components/OtpVerifyScreen";
 import { api } from "../../../src/lib/api";
 import { routeForFreshUser } from "../../../src/lib/registrationStatus";
 import { SCHOOL_HOME_PATH } from "../../../src/lib/registrationRoutes";
+import { ContentLoader } from "@/components/ContentLoader";
 
 // ---------------------------------------------------------------------------
 // Shared style helpers (same look as signup/login/password-reset)
@@ -338,7 +339,7 @@ export default function VerifyEmailPage() {
   };
 
   if (!ready) {
-    return <div className="p-6 text-sm text-gray-600">Loading...</div>;
+    return <ContentLoader minHeight={"100vh"} />;
   }
 
   return (

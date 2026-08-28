@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Download, MessageCircle } from 'lucide-react';
 import { AbsenceNoticesDialog } from './AbsenceNoticesDialog';
 import { toast } from 'sonner';
+import { ContentLoader } from './ContentLoader';
 
 /**
  * The class register, shared by the admin screen and the teacher portal.
@@ -332,7 +333,7 @@ export function AttendanceSheet({ audience }: { audience: 'admin' | 'teacher' })
 
       <Card>
         {loading ? (
-          <p className="p-6 text-gray-500">Loading register...</p>
+          <ContentLoader minHeight={180} />
         ) : !sheet ? (
           <p className="p-6 text-gray-500">Choose a class to see its register.</p>
         ) : sheet.students.length === 0 ? (

@@ -3,7 +3,6 @@ import {
   PENDING_VERIFICATION_PATH,
   TEACHER_SCHOOL_REVIEW_PATH,
 } from './registrationRoutes';
-import { beginRead, endRead, isRead } from './pageLoading';
 
 const runtimeApiUrl =
   (typeof process !== 'undefined' && (process as any).env?.NEXT_PUBLIC_API_URL) ||
@@ -118,28 +117,7 @@ const PUBLIC_AUTH_PATHS = [
   '/auth/admin/set-password',
 ];
 
-/**
- * Every read the app makes passes through here, which is what lets PageLoader
- * know whether the page it is covering has finished fetching what it needs.
- * The count is moved around the inner function rather than inside it so that
- * neither of the two throw sites below, nor the redirect-on-401 path, has to
- * remember anything: the `finally` clears the count whichever way the request
- * ends.
- *
- * Reads only -- see src/lib/pageLoading.ts for why a POST must never raise the
- * veil.
- */
 async function request(path: string, init?: RequestInit) {
-  if (!isRead(init)) return sendRequest(path, init);
-  beginRead();
-  try {
-    return await sendRequest(path, init);
-  } finally {
-    endRead();
-  }
-}
-
-async function sendRequest(path: string, init?: RequestInit) {
   const token = typeof window !== 'undefined' ? window.localStorage.getItem('auth_token') : null;
 
   // Caller-supplied headers are merged in FIRST so that Authorization, set

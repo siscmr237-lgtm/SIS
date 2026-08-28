@@ -11,6 +11,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { toast } from 'sonner';
+import { ContentLoader } from './ContentLoader';
 
 /**
  * How much of each fee has to be paid upfront — the first-installment rule,
@@ -389,7 +390,7 @@ export function FirstInstallmentDialog({ open, onOpenChange, levels, level, onSa
         </div>
 
         {loading ? (
-          <p className="text-sm text-gray-500 py-4">Loading fees...</p>
+          <ContentLoader minHeight={140} />
         ) : !selected ? (
           <p className="text-sm text-gray-500 py-4">Create a class first, then set its fees here.</p>
         ) : (

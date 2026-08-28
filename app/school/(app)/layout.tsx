@@ -8,6 +8,7 @@ import { MOBILE_DRAWER_CSS } from "@/components/mobileDrawerCss";
 import { PageFade } from "@/components/PageFade";
 import { useAuthGateWithRetry, useRegistrationWatch } from "@/lib/authGate";
 import { AuthGateError } from "@/components/AuthGateError";
+import { ContentLoader } from "@/components/ContentLoader";
 
 // Shared shell for every internal section (Dashboard, Students, Staff, ...).
 // Mounts fresh on every direct URL visit and every hard reload, so the auth
@@ -31,7 +32,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   if (status !== "ready") {
-    return <div className="p-6 text-sm text-gray-600">Loading...</div>;
+    return <ContentLoader minHeight={"100vh"} />;
   }
 
   return (

@@ -11,6 +11,7 @@ import {
 } from './ui/dialog';
 import { ClipboardCheck } from 'lucide-react';
 import { toast } from 'sonner';
+import { ContentLoader } from './ContentLoader';
 
 /**
  * A TEACHER SUBMITTING THEIR OWN DAY, and the register that goes with it.
@@ -205,7 +206,7 @@ export function TeacherAttendanceSubmit() {
       </div>
 
       {loadError && <p className="text-sm text-red-600">{loadError}</p>}
-      {!loadError && rows === null && <p className="text-sm text-gray-500">Loading…</p>}
+      {!loadError && rows === null && <ContentLoader minHeight={160} />}
       {rows && rows.length === 0 && (
         <p className="text-sm text-gray-500">
           You have not submitted any attendance yet.
@@ -327,7 +328,7 @@ export function TeacherAttendanceSubmit() {
                   )}
                 </div>
 
-                {students === null && <p className="text-sm text-gray-500 mt-2">Loading your class…</p>}
+                {students === null && <ContentLoader minHeight={160} />}
                 {students && students.length === 0 && (
                   <p className="text-sm text-gray-500 mt-2">
                     You are not the class teacher of any class, so there is no register to take.

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { ContentLoader } from "@/components/ContentLoader";
 
 /**
  * /teacher/school-under-review — where a teacher lands when their SCHOOL, not
@@ -71,7 +72,7 @@ export default function TeacherSchoolUnderReviewPage() {
   };
 
   if (!ready) {
-    return <div className="p-6 text-sm text-gray-600">Loading...</div>;
+    return <ContentLoader minHeight={"100vh"} />;
   }
 
   return (

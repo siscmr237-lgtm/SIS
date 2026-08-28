@@ -6,6 +6,7 @@ import { ThreePartDateInput } from './ThreePartDateInput';
 import { Label } from './ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogClose } from './ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
+import { TableLoader } from './ContentLoader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Textarea } from './ui/textarea';
 import { Plus, FileText, Search } from 'lucide-react';
@@ -29,12 +30,14 @@ export function StaffManagement({ onNavigate, onViewStaff }: StaffManagementProp
   const cache = useSisCache();
   const {
     data: staffData,
+    loading: staffLoading,
     revalidating,
     error: staffError,
     refresh: refreshStaff,
   } = useCachedResource<Staff[]>('staff', () => api.get('/staff'));
   const {
     data: workRecordsData,
+    loading: workRecordsLoading,
     error: workRecordsError,
     refresh: refreshWorkRecords,
   } = useCachedResource<any[]>('work-records', () => api.get('/work-records'));
@@ -134,7 +137,9 @@ export function StaffManagement({ onNavigate, onViewStaff }: StaffManagementProp
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredStaff.map((member, index) => (
+                {/* The headings stay; only the rows wait. */}
+                {staffLoading && <TableLoader colSpan={5} />}
+                {!staffLoading && filteredStaff.map((member, index) => (
                   <TableRow key={member.id} data-sis-row="" style={rowStaggerStyle(index)}>
                     <TableCell>
                       <button
@@ -282,7 +287,8 @@ export function StaffManagement({ onNavigate, onViewStaff }: StaffManagementProp
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {workRecords.map((record) => (
+                {workRecordsLoading && <TableLoader colSpan={6} />}
+                {!workRecordsLoading && workRecords.map((record) => (
                   <TableRow key={record.id}>
                     <TableCell>{record.date}</TableCell>
                     <TableCell>{record.staffName}</TableCell>

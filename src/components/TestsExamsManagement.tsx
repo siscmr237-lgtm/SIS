@@ -23,6 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from './ui/table';
+import { TableLoader } from './ContentLoader';
 
 interface TestsExamsManagementProps {
   onNavigate?: (page: NavigationPage) => void;
@@ -346,9 +347,7 @@ export function TestsExamsManagement({ onNavigate }: TestsExamsManagementProps) 
         <Card className="p-6">
           <p className="text-gray-500">Select a class to manage its sequence tests and exams.</p>
         </Card>
-      ) : loading ? (
-        <p className="p-4 text-gray-500">Loading...</p>
-      ) : testExams.length === 0 ? (
+      ) : !loading && testExams.length === 0 ? (
         <Card className="p-6">
           <p className="text-gray-500">No sequence tests or exams yet for this class, term, and academic year.</p>
         </Card>
@@ -365,7 +364,9 @@ export function TestsExamsManagement({ onNavigate }: TestsExamsManagementProps) 
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {testExams.map(row => (
+                {/* The headings stay; only the rows wait. */}
+                {loading && <TableLoader colSpan={4} />}
+                {!loading && testExams.map(row => (
                   <TableRow key={row.id}>
                     <TableCell>{row.name}</TableCell>
                     <TableCell>{row.type === 'EXAM' ? 'Exam' : 'Sequence Test'}</TableCell>

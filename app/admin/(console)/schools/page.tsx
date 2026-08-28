@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { platformApi } from "@/lib/platformApi";
 import { RegistrationStatusBadge } from "@/components/platform/RegistrationStatusBadge";
+import { ContentLoader } from "@/components/ContentLoader";
 
 /**
  * Every school, read-only, plus where each one stands in signing up.
@@ -66,7 +67,7 @@ export default function SchoolsPage() {
       )}
 
       {!error && rows === null && (
-        <p style={{ fontSize: "0.875rem", color: "#64748B" }}>Loading...</p>
+        <ContentLoader minHeight={200} />
       )}
 
       {rows && rows.length === 0 && (

@@ -43,6 +43,7 @@ import { ParentTypeahead, ParentMatch } from './ParentTypeahead';
 import { buildParentPayload, ParentBaseline } from '../utils/parentPayload';
 import { isCompleteFullName, joinFullName, splitFullName } from '../utils/fullName';
 import { PAYMENT_METHODS } from '../utils/paymentMethods';
+import { ContentLoader } from './ContentLoader';
 
 interface LedgerEntry {
   id: string;
@@ -170,6 +171,23 @@ function feeReminderReason(
  * Flip this to true at the same time as the server variable.
  */
 const PAYMENT_RECEIPT_ENABLED = false;
+
+/**
+ * FEE OUTREACH — the Fee Drive Letter and the Send Fee Reminder controls.
+ *
+ * Hidden for now, at the request of the school. Both work: the letter is a PDF
+ * this screen already generates, and the reminder is the WhatsApp template
+ * route. Neither is being removed, and nothing below them has been deleted —
+ * the handlers, the eligibility fetch and the confirmation dialog are all still
+ * here, so bringing them back is this one line.
+ *
+ * HIDDEN RATHER THAN DISABLED, which is the opposite of what the reminder
+ * button does for its own per-student reasons. That distinction is deliberate:
+ * a DISABLED button says "not for this student, and here is why", which is
+ * information the office needs. This is "not available to anyone yet", which is
+ * not about the student in front of them and would only be noise on every row.
+ */
+const FEE_OUTREACH_ENABLED = false;
 
 interface FeeReminderRow {
   studentId: string;
@@ -1496,7 +1514,7 @@ ${popMotionCss('[data-sis-finance-menu]')}
                   {/* Same balance gate as the desktop row, so the two menus
                       offer the same actions rather than one hiding a button the
                       other shows. */}
-                  {(ledgerData?.balance ?? 0) > 0 && (
+                  {FEE_OUTREACH_ENABLED && (ledgerData?.balance ?? 0) > 0 && (
                     <DropdownMenu.Item
                       data-sis-finance-item=""
                       disabled={feeDriveBusy}
@@ -1509,15 +1527,17 @@ ${popMotionCss('[data-sis-finance-menu]')}
                       this menu and that row must offer the same actions in the
                       same state, or the app appears to disagree with itself
                       depending on window width. */}
-                  <DropdownMenu.Item
-                    data-sis-finance-item=""
-                    disabled={!canSendReminder}
-                    onSelect={() => openWhatsAppReminder()}
-                  >
-                    {canSendReminder
-                      ? 'Send Fee Reminder'
-                      : `Send Fee Reminder — ${feeReminderBlockedReason}`}
-                  </DropdownMenu.Item>
+                  {FEE_OUTREACH_ENABLED && (
+                    <DropdownMenu.Item
+                      data-sis-finance-item=""
+                      disabled={!canSendReminder}
+                      onSelect={() => openWhatsAppReminder()}
+                    >
+                      {canSendReminder
+                        ? 'Send Fee Reminder'
+                        : `Send Fee Reminder — ${feeReminderBlockedReason}`}
+                    </DropdownMenu.Item>
+                  )}
                   <DropdownMenu.Item
                     data-sis-finance-item=""
                     onSelect={() => setShowFeeOverride(true)}
@@ -1685,7 +1705,7 @@ ${popMotionCss('[data-sis-finance-menu]')}
               </Button>
             </div>
             {contactsLoading ? (
-              <p className="text-sm text-gray-400">Loading…</p>
+              <ContentLoader minHeight={120} />
             ) : pickupContacts.length === 0 ? (
               <p className="text-sm text-gray-400 italic">No pickup contacts recorded.</p>
             ) : (
@@ -2206,7 +2226,7 @@ ${popMotionCss('[data-sis-finance-menu]')}
                 that is always present but sometimes produces a letter saying
                 nothing is worse than one that is absent — the same reasoning as
                 Settle Registration above. */}
-            {(ledgerData?.balance ?? 0) > 0 && (
+            {FEE_OUTREACH_ENABLED && (ledgerData?.balance ?? 0) > 0 && (
               <Button variant="outline" onClick={handleDownloadFeeDriveLetter} disabled={feeDriveBusy}>
                 <Megaphone size={16} className="mr-1" />
                 {feeDriveBusy ? 'Preparing…' : 'Fee Drive Letter'}
@@ -2223,17 +2243,22 @@ ${popMotionCss('[data-sis-finance-menu]')}
                 The title is on the wrapping span, not the button: a disabled
                 button does not fire mouse events in every browser, so a title on
                 it would be silently unreachable for some users. */}
-            <span title={feeReminderBlockedReason ?? undefined} style={{ display: 'inline-flex' }}>
-              <Button
-                variant="outline"
-                onClick={openWhatsAppReminder}
-                disabled={!canSendReminder}
-              >
-                <MessageCircle size={16} className="mr-1" />
-                Send Fee Reminder
-              </Button>
-            </span>
-            {feeReminderBlockedReason && feeReminderBlockedReason !== 'Checking…' && (
+            {FEE_OUTREACH_ENABLED && (
+              <span title={feeReminderBlockedReason ?? undefined} style={{ display: 'inline-flex' }}>
+                <Button
+                  variant="outline"
+                  onClick={openWhatsAppReminder}
+                  disabled={!canSendReminder}
+                >
+                  <MessageCircle size={16} className="mr-1" />
+                  Send Fee Reminder
+                </Button>
+              </span>
+            )}
+            {/* The per-student reason only makes sense beside the button it
+                explains. With the button hidden it would be a bare sentence
+                about a feature nobody can see. */}
+            {FEE_OUTREACH_ENABLED && feeReminderBlockedReason && feeReminderBlockedReason !== 'Checking…' && (
               <span className="text-xs text-gray-500" style={{ alignSelf: 'center' }}>
                 {feeReminderBlockedReason}
               </span>
@@ -2251,7 +2276,7 @@ ${popMotionCss('[data-sis-finance-menu]')}
               now a popover on the "Custom fees" badge beside the student's class,
               which shows itself once on load and then stays out of the way. */}
 
-          {ledgerLoading && <Card className="p-6 text-gray-500">Loading...</Card>}
+          {ledgerLoading && <Card><ContentLoader minHeight={160} /></Card>}
           {ledgerError && (
             <Card className="p-6 text-red-600">
               {/reach database|connect|ECONNREFUSED|ETIMEDOUT/i.test(ledgerError)
@@ -2459,7 +2484,7 @@ ${popMotionCss('[data-sis-finance-menu]')}
 
               <div style={{ maxHeight: '55vh', overflowY: 'auto' }}>
                 {owingLoading ? (
-                  <p className="text-sm text-gray-500">Loading…</p>
+                  <ContentLoader minHeight={120} />
                 ) : owingCategories.length === 0 ? (
                   <p className="text-sm text-gray-500">No fee categories to show.</p>
                 ) : (
@@ -3033,7 +3058,7 @@ ${popMotionCss('[data-sis-finance-menu]')}
 
           {breakdownError && <p className="text-sm" style={{ color: '#B91C1C' }}>{breakdownError}</p>}
           {breakdownLoading ? (
-            <p className="text-sm text-gray-500">Loading marks...</p>
+            <ContentLoader minHeight={160} />
           ) : !breakdown || breakdown.length === 0 ? (
             <p className="text-sm text-gray-500">
               No sequence tests or exams recorded for {marksYear} {formatTermLabel(marksTerm)}.

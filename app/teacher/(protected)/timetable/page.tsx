@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { api } from "@/lib/api";
+import { ContentLoader } from "@/components/ContentLoader";
 
 interface TimetableEntry {
   id: string;
@@ -59,7 +60,7 @@ export default function TeacherTimetablePage() {
       </div>
 
       {loading ? (
-        <Card className="p-6 text-gray-500">Loading...</Card>
+        <Card><ContentLoader minHeight={200} /></Card>
       ) : error ? (
         <Card className="p-6 text-red-600 text-sm">
           Couldn't load your timetable. Please refresh and try again.

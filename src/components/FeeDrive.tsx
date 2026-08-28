@@ -7,6 +7,7 @@ import { formatTermLabel } from '../utils/academicTerm';
 import { generateFeeDriveNotices } from '../utils/pdfGenerator';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
+import { TableLoader } from './ContentLoader';
 
 /**
  * THE FEE DRIVE: every student who still owes money, and a stack of letters to
@@ -492,9 +493,7 @@ export function FeeDrive({ onBack, onViewStudent }: FeeDriveProps) {
           <p style={{ padding: '1.5rem', color: '#B91C1C', fontSize: '0.875rem' }}>{error}</p>
         )}
 
-        {loading ? (
-          <p className="p-6 text-gray-500">Loading...</p>
-        ) : rows.length === 0 && !error ? (
+        {!loading && rows.length === 0 && !error ? (
           <p className="p-6 text-gray-500">
             {activeFilterCount > 0
               ? 'No students match these filters.'
@@ -513,7 +512,8 @@ export function FeeDrive({ onBack, onViewStudent }: FeeDriveProps) {
                 </tr>
               </thead>
               <tbody>
-                {rows.map((r) => (
+                {loading && <TableLoader colSpan={5} />}
+                {!loading && rows.map((r) => (
                   // The whole row is the link, since every cell on it is about
                   // the same student. tabIndex + the Enter/Space handler keep it
                   // reachable without a keyboard trap, which a bare onClick on a

@@ -5,6 +5,7 @@ import { api } from '@/lib/api';
 import { Button } from './ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { toast } from 'sonner';
+import { ContentLoader } from './ContentLoader';
 
 /**
  * "Notify parents" — the panel that sends a WhatsApp absence notice to the
@@ -274,7 +275,7 @@ export function AbsenceNoticesDialog({
             body scroll is locked, so they cannot be reached. */}
         <div style={{ flex: '1 1 0', minHeight: 0, overflowY: 'auto' }}>
           {loading ? (
-            <p className="text-sm text-gray-500" style={{ padding: '1rem 0' }}>Loading…</p>
+            <ContentLoader minHeight={140} />
           ) : error ? (
             <p className="text-sm" style={{ color: RED, padding: '0.5rem 0' }}>{error}</p>
           ) : rows.length === 0 ? (

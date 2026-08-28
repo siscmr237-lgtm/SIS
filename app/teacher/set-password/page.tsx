@@ -6,6 +6,7 @@ import { Suspense, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { PasswordHints } from "@/components/PasswordHints";
 import { api } from "@/lib/api";
+import { ContentLoader } from "@/components/ContentLoader";
 
 // Deliberately OUTSIDE app/teacher/(protected): this page is opened from an
 // email invite, so there is no session yet and the teacher auth gate would
@@ -319,7 +320,7 @@ export default function TeacherSetPasswordPage() {
   // has to sit under a Suspense boundary or `next build` fails outright.
   return (
     <Shell>
-      <Suspense fallback={<p className="text-sm text-gray-600">Loading…</p>}>
+      <Suspense fallback={<ContentLoader minHeight={220} />}>
         <SetPasswordForm />
       </Suspense>
     </Shell>

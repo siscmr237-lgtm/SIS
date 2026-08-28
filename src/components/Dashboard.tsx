@@ -11,6 +11,7 @@ import { NavigationPage } from '../App';
 import { useEffect, useState } from "react";
 import { api, BASE_URL } from "../../src/lib/api";
 import { useCachedResource, useSisCache } from "../../src/lib/SisCache";
+import { ValueLoader } from "./ContentLoader";
 import { formatTermLabel, resolveSchoolTerm } from "../../src/utils/academicTerm";
 import { computeSchoolAbbreviation } from "../../src/utils/schoolAbbreviation";
 import { Card } from "./ui/card";
@@ -149,10 +150,6 @@ export function Dashboard({ onNavigate }: { onNavigate?: (page: NavigationPage) 
     },
   ];
 
-  if (loading) {
-    return <div className="p-4 md:p-8">Loading dashboard...</div>;
-  }
-
   return (
     <div className="p-4 md:p-8">
       {/* School Header */}
@@ -288,7 +285,7 @@ export function Dashboard({ onNavigate }: { onNavigate?: (page: NavigationPage) 
                       }}
                       title={stat.unit ? `${stat.value} ${stat.unit}` : String(stat.value)}
                     >
-                      {stat.value}
+                      {loading ? <ValueLoader /> : stat.value}
                     </span>
                     {/* The one place a break is allowed. FCFA sits beside the
                         number when there is room and drops beneath it when there
@@ -334,28 +331,40 @@ export function Dashboard({ onNavigate }: { onNavigate?: (page: NavigationPage) 
             <div className="flex justify-between py-2 border-b">
               <span className="text-gray-600">Total Income</span>
               <span className="text-green-600">
-                {(
-                  dashboardData?.financialSummary?.totalIncome ?? 0
-                ).toLocaleString()}{" "}
-                FCFA
+                {loading ? (
+                  <ValueLoader size={16} />
+                ) : (
+                  <>
+                    {(dashboardData?.financialSummary?.totalIncome ?? 0).toLocaleString()}{" "}
+                    FCFA
+                  </>
+                )}
               </span>
             </div>
             <div className="flex justify-between py-2 border-b">
               <span className="text-gray-600">Total Expenses</span>
               <span className="text-red-600">
-                {(
-                  dashboardData?.financialSummary?.totalExpenses ?? 0
-                ).toLocaleString()}{" "}
-                FCFA
+                {loading ? (
+                  <ValueLoader size={16} />
+                ) : (
+                  <>
+                    {(dashboardData?.financialSummary?.totalExpenses ?? 0).toLocaleString()}{" "}
+                    FCFA
+                  </>
+                )}
               </span>
             </div>
             <div className="flex justify-between py-2">
               <span>Net Balance</span>
               <span className="text-blue-600">
-                {(
-                  dashboardData?.financialSummary?.netBalance ?? 0
-                ).toLocaleString()}{" "}
-                FCFA
+                {loading ? (
+                  <ValueLoader size={16} />
+                ) : (
+                  <>
+                    {(dashboardData?.financialSummary?.netBalance ?? 0).toLocaleString()}{" "}
+                    FCFA
+                  </>
+                )}
               </span>
             </div>
           </div>

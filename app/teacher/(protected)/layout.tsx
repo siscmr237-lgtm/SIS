@@ -6,6 +6,7 @@ import { TeacherSidebar } from "@/components/TeacherSidebar";
 import { MOBILE_DRAWER_CSS } from "@/components/mobileDrawerCss";
 import { PageFade } from "@/components/PageFade";
 import { useTeacherAuthGate } from "@/lib/teacherAuthGate";
+import { ContentLoader } from "@/components/ContentLoader";
 
 // Shell for the teacher section, mirroring app/(app)/layout.tsx.
 //
@@ -18,7 +19,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   if (status !== "ready") {
-    return <div className="p-6 text-sm text-gray-600">Loading...</div>;
+    return <ContentLoader minHeight={"100vh"} />;
   }
 
   return (

@@ -32,7 +32,7 @@ export const viewport = {
 import '../src/index.css';
 import { Toaster } from '../src/components/ui/sonner';
 import { SupportButton } from '../src/components/SupportButton';
-import { PageLoader } from '../src/components/PageLoader';
+import { CONTENT_LOADER_CSS } from '../src/components/ui/loaderCss';
 import { BUTTON_PRESS_CSS } from '../src/components/ui/buttonPressCss';
 import { OVERLAY_MOTION_CSS } from '../src/components/ui/motionCss';
 
@@ -135,19 +135,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             unmount the panel on the spot. src/components/ui/motionCss.ts sets
             this out in full. */}
         <style>{OVERLAY_MOTION_CSS}</style>
+        {/* The in-place loader used by every region of every page that is
+            waiting on the database. Mounted here, once, for the same reason
+            as the two blocks above: a screen like Finance shows several at a
+            time, and a stylesheet inside the component would be one copy per
+            region. See src/components/ui/loaderCss.ts. */}
+        <style>{CONTENT_LOADER_CSS}</style>
         {children}
-        {/* The full-screen spinner every page opens behind, and the reason it
-            is HERE rather than in the four shells: this is the only ancestor
-            shared by the marketing page, the school app, the teacher app, the
-            admin console and all six login screens, so mounting it once covers
-            every route there is -- including any route added later.
-
-            After {children} so the veil is painted over the page rather than
-            under it on the first paint, and before the Toaster so a toast is
-            never buried by a screen that is still loading. It carries its own
-            z-index, so neither ordering is load-bearing on its own -- but both
-            match the stack it declares. See PageLoader.tsx. */}
-        <PageLoader />
         {/* Moved off sonner's bottom-right default, which is now the support
             button's corner. Without this the two overlap on every toast. */}
         <Toaster position="top-right" />

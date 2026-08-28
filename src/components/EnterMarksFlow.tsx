@@ -8,6 +8,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { toast } from 'sonner';
+import { ContentLoader } from './ContentLoader';
 
 /**
  * The mark-entry flow, shared by the admin dialog and the teacher portal so the
@@ -734,7 +735,7 @@ export function EnterMarksFlow({
               selection's rows — on a slow connection they would sit there looking
               like the new selection's data. */}
           {loadingRoster ? (
-            <p className="text-sm text-gray-400">Fetching the roster and any marks already entered...</p>
+            <ContentLoader minHeight={160} />
           ) : roster.length === 0 ? (
             <p className="text-sm text-gray-500">No students enrolled in {section?.name ?? 'this class'}.</p>
           ) : (

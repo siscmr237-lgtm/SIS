@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { EnterMarksFlow } from "@/components/EnterMarksFlow";
 import { useAcademicYear } from "@/lib/academicYear";
+import { ContentLoader } from "@/components/ContentLoader";
 
 /**
  * The teacher's mark entry.
@@ -38,7 +39,7 @@ export default function TeacherMarksPage() {
         {academicYear ? (
           <EnterMarksFlow audience="teacher" academicYear={academicYear} />
         ) : (
-          <p className="text-sm text-gray-500">Loading...</p>
+          <ContentLoader minHeight={140} />
         )}
       </Card>
     </div>

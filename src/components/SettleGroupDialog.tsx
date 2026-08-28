@@ -10,6 +10,7 @@ import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { ThreePartDateInput } from './ThreePartDateInput';
 import { PAYMENT_METHODS } from '../utils/paymentMethods';
+import { ContentLoader } from './ContentLoader';
 
 /**
  * Settle every outstanding category in one fee group, in one action.
@@ -133,7 +134,7 @@ export function SettleGroupDialog({
         </DialogHeader>
 
         {loading ? (
-          <p className="text-sm text-gray-500">Working out what is outstanding...</p>
+          <ContentLoader minHeight={140} />
         ) : nothing ? (
           <div>
             <p className="text-sm" style={{ color: '#05603d', fontWeight: 500 }}>

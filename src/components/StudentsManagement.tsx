@@ -94,6 +94,7 @@ import {
   TableHeader,
   TableRow,
 } from "./ui/table";
+import { TableLoader } from "./ContentLoader";
 
 export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManagementProps) {
   const cache = useSisCache();
@@ -131,6 +132,7 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
   // is fetched fresh under a null key so it never lands in the store.
   const {
     data: studentsData,
+    loading,
     revalidating,
     error: studentsError,
     refresh: refreshStudents,
@@ -684,7 +686,11 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredStudents.map((student, index) => (
+            {/* Only the ROWS wait. The column headings above are already on
+                screen and stay there, so the table keeps its shape while the
+                roster arrives. */}
+            {loading && <TableLoader colSpan={8} />}
+            {!loading && filteredStudents.map((student, index) => (
               <TableRow key={student.id} data-sis-row="" style={rowStaggerStyle(index)}>
                 <TableCell style={{ color: '#6B7280' }}>{index + 1}</TableCell>
                 <TableCell>

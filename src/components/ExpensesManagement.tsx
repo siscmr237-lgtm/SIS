@@ -7,6 +7,7 @@ import { Label } from './ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogClose } from './ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
+import { TableLoader } from './ContentLoader';
 import { Download, FileText, Plus, Search } from 'lucide-react';
 import { generateExpenseInvoice, generateExpenseRecords } from '../utils/pdfGenerator';
 import { api } from '@/lib/api';
@@ -71,7 +72,7 @@ export function ExpensesManagement() {
   const categories = ['Utilities', 'Supplies', 'Maintenance', 'Salaries', 'Transportation', 'Damage', 'Other'];
 
   // Money: fetched fresh on every visit, never stored.
-  const { data: expensesData, refresh: refreshExpenses } = useCachedResource<any[]>(
+  const { data: expensesData, loading: expensesLoading, refresh: refreshExpenses } = useCachedResource<any[]>(
     null,
     () => {
       const params = new URLSearchParams();
@@ -511,7 +512,9 @@ export function ExpensesManagement() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredExpenses.map((expense) => (
+            {/* The headings stay; only the rows wait. */}
+            {expensesLoading && <TableLoader colSpan={8} />}
+            {!expensesLoading && filteredExpenses.map((expense) => (
               <TableRow key={expense.id}>
                 <TableCell>{dateOnly(expense.date)}</TableCell>
                 <TableCell>{expense.invoiceNumber}</TableCell>

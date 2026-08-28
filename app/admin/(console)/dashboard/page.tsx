@@ -19,6 +19,7 @@ import {
 } from "recharts";
 import { platformApi } from "@/lib/platformApi";
 import { statValueFontSize } from "@/utils/statFigure";
+import { ContentLoader } from "@/components/ContentLoader";
 
 /**
  * The console's home page: what the whole platform adds up to.
@@ -325,7 +326,15 @@ export default function DashboardPage() {
   }
 
   if (!data) {
-    return <p style={{ fontSize: "0.875rem", color: "#64748B" }}>Loading...</p>;
+    return (
+      <div style={{ maxWidth: 1100 }}>
+        <h1 style={{ fontWeight: 600, color: "#0F172A", margin: "0 0 4px" }}>Dashboard</h1>
+        <p style={{ fontSize: "0.8125rem", color: "#64748B", margin: "0 0 18px" }}>
+          Every school on the platform, added together.
+        </p>
+        <ContentLoader minHeight={260} />
+      </div>
+    );
   }
 
   const t = data.totals;

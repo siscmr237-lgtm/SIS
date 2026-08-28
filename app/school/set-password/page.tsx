@@ -6,6 +6,7 @@ import { Suspense, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { PasswordHints } from "@/components/PasswordHints";
 import { api } from "@/lib/api";
+import { ContentLoader } from "@/components/ContentLoader";
 
 // Where an invited ADMINISTRATOR chooses their password and becomes able to
 // sign in. Reached from the link in POST /admins/invite.
@@ -329,7 +330,7 @@ export default function AdminSetPasswordPage() {
   // has to sit under a Suspense boundary or `next build` fails outright.
   return (
     <Shell>
-      <Suspense fallback={<p className="text-sm text-gray-600">Loading…</p>}>
+      <Suspense fallback={<ContentLoader minHeight={220} />}>
         <SetPasswordForm />
       </Suspense>
     </Shell>

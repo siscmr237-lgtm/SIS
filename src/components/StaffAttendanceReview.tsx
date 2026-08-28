@@ -10,6 +10,7 @@ import {
 import { toast } from 'sonner';
 import { useAdminRole } from '@/lib/adminRole';
 import { StatusBadge } from './TeacherAttendanceSubmit';
+import { ContentLoader } from './ContentLoader';
 
 /**
  * WHAT THE SCHOOL DOES WITH A TEACHER'S SUBMISSION.
@@ -211,7 +212,7 @@ export function StaffAttendanceReview() {
       </div>
 
       {error && <p className="text-sm text-red-600">{error}</p>}
-      {!error && rows === null && <p className="text-sm text-gray-500">Loading…</p>}
+      {!error && rows === null && <ContentLoader minHeight={140} />}
       {rows && rows.length === 0 && (
         <p className="text-sm text-gray-500">No staff attendance has been submitted yet.</p>
       )}
@@ -332,7 +333,7 @@ export function StaffAttendanceReview() {
             </DialogDescription>
           </DialogHeader>
 
-          {students === null && !editError && <p className="text-sm text-gray-500">Loading…</p>}
+          {students === null && !editError && <ContentLoader minHeight={140} />}
           {students && students.length === 0 && (
             <p className="text-sm text-gray-500">
               This staff member is not the class teacher of any class, so there is no register.

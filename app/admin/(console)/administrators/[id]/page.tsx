@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { platformApi } from "@/lib/platformApi";
 import { PasswordField } from "@/components/platform/PasswordField";
 import { PasswordHints } from "@/components/PasswordHints";
+import { ContentLoader } from "@/components/ContentLoader";
 
 /**
  * One administrator's details, with a password reset.
@@ -92,7 +93,21 @@ export default function AdministratorDetailPage() {
   };
 
   if (error) return <p style={{ fontSize: "0.875rem", color: "#DC2626" }}>{error}</p>;
-  if (!admin) return <p style={{ fontSize: "0.875rem", color: "#64748B" }}>Loading...</p>;
+  // The name in the heading below is the administrator's, so it cannot be
+  // shown yet; the way back always can.
+  if (!admin) {
+    return (
+      <div style={{ maxWidth: 560 }}>
+        <button
+          onClick={() => router.push("/admin/administrators")}
+          style={{ background: "none", border: "none", color: "#64748B", fontSize: "0.8125rem", cursor: "pointer", padding: 0, marginBottom: 12 }}
+        >
+          ← Administrators
+        </button>
+        <ContentLoader minHeight={220} />
+      </div>
+    );
+  }
 
   return (
     <div style={{ maxWidth: 560 }}>

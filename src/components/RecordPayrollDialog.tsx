@@ -22,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from './ui/select';
+import { ContentLoader } from './ContentLoader';
 
 /**
  * Record Payroll — one month's pay for one staff member.
@@ -227,7 +228,7 @@ export function RecordPayrollDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {loading && <p className="text-sm text-gray-500">Loading payroll details…</p>}
+        {loading && <ContentLoader minHeight={140} />}
         {loadError && <p className="text-sm" style={{ color: '#e0552e' }}>{loadError}</p>}
 
         {data && !loading && (

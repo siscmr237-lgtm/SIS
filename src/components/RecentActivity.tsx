@@ -4,6 +4,7 @@ import { ArrowDownLeft, ArrowUpRight, Wallet } from 'lucide-react';
 import { api } from '../lib/api';
 import { useCachedResource } from '../lib/SisCache';
 import { Card } from './ui/card';
+import { ContentLoader } from './ContentLoader';
 
 /**
  * The last five times money actually MOVED.
@@ -89,7 +90,7 @@ export function RecentActivity({ onOpen }: Props) {
       <h2 className="text-xl mb-4">Recent Activity</h2>
 
       {loading ? (
-        <p className="text-sm" style={{ color: MUTED }}>Loading recent activity...</p>
+        <ContentLoader minHeight={140} />
       ) : error ? (
         // Stated rather than shown as an empty list: "no activity" and "we could
         // not load the activity" are different facts and must not look alike.

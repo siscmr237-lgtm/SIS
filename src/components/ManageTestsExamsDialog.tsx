@@ -18,6 +18,7 @@ import { Label } from './ui/label';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from './ui/select';
+import { ContentLoader } from './ContentLoader';
 
 /**
  * Setting up a class level's assessments for a term, and what each subject is
@@ -612,7 +613,7 @@ export function ManageTestsExamsDialog({
         <div style={{ flex: '1 1 auto', minHeight: 0, overflowY: 'auto' }}>
           {!openExam ? (
             loadingStructure ? (
-              <p className="text-sm text-gray-500">Loading...</p>
+              <ContentLoader minHeight={140} />
             ) : !academicYear ? (
               <p className="text-sm text-gray-500">
                 Set the school&rsquo;s academic year in Settings first — an assessment belongs to one.
@@ -646,7 +647,7 @@ export function ManageTestsExamsDialog({
               </>
             )
           ) : loadingSubjects ? (
-            <p className="text-sm text-gray-500">Loading subjects...</p>
+            <ContentLoader minHeight={140} />
           ) : subjects.length === 0 ? (
             <p className="text-sm text-gray-500">This class level has no subjects configured.</p>
           ) : (

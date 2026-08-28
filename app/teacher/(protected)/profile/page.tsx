@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { PhoneInput } from "@/components/PhoneInput";
 import { PasswordHints } from "@/components/PasswordHints";
 import { api } from "@/lib/api";
+import { ContentLoader } from "@/components/ContentLoader";
 
 interface StaffMe {
   code?: string;
@@ -133,7 +134,7 @@ export default function TeacherProfilePage() {
       </div>
 
       {loading ? (
-        <Card className="p-6 text-gray-500">Loading...</Card>
+        <Card><ContentLoader minHeight={200} /></Card>
       ) : loadError ? (
         <Card className="p-6 text-red-600 text-sm">
           Couldn't load your profile. Please refresh and try again.

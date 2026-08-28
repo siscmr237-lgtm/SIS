@@ -1,7 +1,5 @@
 'use client';
 
-import { beginRead, endRead, isRead } from './pageLoading';
-
 /**
  * The console's own API client and session store.
  *
@@ -64,23 +62,7 @@ export class PlatformApiError extends Error {
   }
 }
 
-/**
- * Wrapped for the same reason as its twin in src/lib/api.ts: PageLoader needs
- * to know when the console page it is covering has finished fetching. Reads
- * only, and the count is released in a `finally` so the redirect-on-401 path
- * and every throw below clear it without having to remember to.
- */
 async function request(path: string, init?: RequestInit) {
-  if (!isRead(init)) return sendRequest(path, init);
-  beginRead();
-  try {
-    return await sendRequest(path, init);
-  } finally {
-    endRead();
-  }
-}
-
-async function sendRequest(path: string, init?: RequestInit) {
   const token = getPlatformToken();
   const { headers: callerHeaders, ...rest } = init ?? {};
   const headers: Record<string, string> = {
