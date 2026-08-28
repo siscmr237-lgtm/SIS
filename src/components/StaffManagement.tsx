@@ -65,15 +65,31 @@ export function StaffManagement({ onNavigate, onViewStaff }: StaffManagementProp
     staffId: '',
   });
 
-  const filteredStaff = staff.filter(member => {
-    const searchLower = searchTerm.toLowerCase();
-    return (
-      member.firstName.toLowerCase().includes(searchLower) ||
-      member.lastName.toLowerCase().includes(searchLower) ||
-      member.code.toLowerCase().includes(searchLower) ||
-      member.role.toLowerCase().includes(searchLower)
+  // Sorted alphabetically by the name as it is DISPLAYED — "First Last", the
+  // same string the cell renders — because the # column beside it is a count
+  // down the visible list. A number that counts one order while the eye reads
+  // another is worse than no number at all. Same arrangement as the students
+  // table; see src/components/StudentsManagement.tsx.
+  //
+  // sensitivity: 'base' so case and accents do not split the alphabet, and
+  // numeric so a name carrying a digit sorts 2 before 10.
+  const filteredStaff = staff
+    .filter(member => {
+      const searchLower = searchTerm.toLowerCase();
+      return (
+        member.firstName.toLowerCase().includes(searchLower) ||
+        member.lastName.toLowerCase().includes(searchLower) ||
+        member.code.toLowerCase().includes(searchLower) ||
+        member.role.toLowerCase().includes(searchLower)
+      );
+    })
+    .sort((a, b) =>
+      `${a.firstName} ${a.lastName}`.localeCompare(
+        `${b.firstName} ${b.lastName}`,
+        undefined,
+        { sensitivity: 'base', numeric: true },
+      ),
     );
-  });
 
   return (
     <div className="p-4 md:p-8">
@@ -129,6 +145,10 @@ export function StaffManagement({ onNavigate, onViewStaff }: StaffManagementProp
             <Table>
               <TableHeader>
                 <TableRow>
+                  {/* A row number, not a staff ID — it follows the alphabetical
+                      sort and so renumbers whenever the search narrows the
+                      list. The staff code lives on the detail page. */}
+                  <TableHead style={{ width: 56 }}>#</TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Phone</TableHead>
@@ -138,9 +158,10 @@ export function StaffManagement({ onNavigate, onViewStaff }: StaffManagementProp
               </TableHeader>
               <TableBody>
                 {/* The headings stay; only the rows wait. */}
-                {staffLoading && <TableLoader colSpan={5} />}
+                {staffLoading && <TableLoader colSpan={6} />}
                 {!staffLoading && filteredStaff.map((member, index) => (
                   <TableRow key={member.id} data-sis-row="" style={rowStaggerStyle(index)}>
+                    <TableCell style={{ color: '#6B7280' }}>{index + 1}</TableCell>
                     <TableCell>
                       <button
                         onClick={() => onViewStaff?.(member)}
