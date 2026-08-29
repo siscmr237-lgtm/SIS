@@ -32,7 +32,7 @@ import {
 } from './ui/dialog';
 import { Input } from './ui/input';
 import { ThreePartDateInput } from './ThreePartDateInput';
-import { PaymentConfirmationDialog } from './PaymentConfirmationDialog';
+import { PaymentConfirmationDialog, paymentConfirmationReason } from './PaymentConfirmationDialog';
 import { PayFeesDialog, PayFeesSubmission } from './PayFeesDialog';
 import { DoneBy } from './DoneBy';
 import { Label } from './ui/label';
@@ -59,6 +59,20 @@ interface LedgerEntry {
    * own. Issued once and never reissued, so this is what a parent quotes.
    */
   receiptNumber?: string | null;
+  /**
+   * Present ONLY on the anchor row of a submission whose parent receipt was
+   * requested and never reached Twilio. Absent everywhere else — which is
+   * almost everywhere.
+   */
+  confirmationRetry?: {
+    paymentBatchId: string;
+    /** The whole submission's total, not this row's amount. */
+    total: number;
+    rowCount: number;
+    status: string;
+    errorCode: string | null;
+    errorMessage: string | null;
+  } | null;
   category?: { name: string } | null;
   /**
    * True on the one charge that bills a fee from the student's fee structure —
@@ -767,7 +781,7 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
    * Rows left empty are skipped, and so are rows already settled: `owing <= 0`
    * disables the input, so a fully-paid fee cannot contribute an amount at all.
    */
-  const handlePaymentSubmit = async ({ entries, entryDate, paymentMethod, total }: PayFeesSubmission) => {
+  const handlePaymentSubmit = async ({ entries, entryDate, paymentMethod, total, informParent }: PayFeesSubmission) => {
     setSubmitError(null);
 
     if (entries.length === 0) {
@@ -822,16 +836,36 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
       // Settle Registration button showing for a group that no longer owed
       // anything, since that button reads the same list.
       await Promise.all([refreshLedger(), loadOwing()]);
-      // NOT OFFERED AT PRESENT. The payment-confirmation endpoint is switched
-      // off behind WHATSAPP_PAYMENT_CONFIRMATION_ENABLED — it still sends free
-      // text, which WhatsApp refuses for a message a business starts, and the
-      // fee_payment_received template that would replace it is still pending
-      // approval. Prompting here would open a dialog whose only outcome is a
-      // 503, immediately after somebody recorded money.
+      // ─── THE PARENT'S RECEIPT, AFTER THE MONEY IS SAFE ──────────────────
       //
-      // Deliberately left as a call site rather than deleted, so turning the
-      // feature on is one line here and one environment variable.
-      if (PAYMENT_RECEIPT_ENABLED && canWhatsApp) scheduleReceiptPrompt(paidTotal);
+      // A SEPARATE REQUEST, made only once the payment has committed and been
+      // reported. Recording money must never roll back, block, or appear to fail
+      // because WhatsApp is unreachable — the success toast above has already
+      // fired and the ledger has already refreshed by the time this runs.
+      //
+      // ONE message for the whole submission, addressed by the batch id the
+      // server just handed back. Three fees paid together are one receipt
+      // quoting all three receipt numbers, because that is what the family
+      // experienced: one hand-over of money.
+      //
+      // Its failure is reported QUIETLY and never as a payment failure. The
+      // money is recorded either way, and a retry affordance appears on the
+      // submission's own row for anyone who wants to try again.
+      if (informParent && res?.paymentBatchId) {
+        try {
+          const conf: any = await api.post('/whatsapp/payment-confirmation', {
+            paymentBatchId: res.paymentBatchId,
+          });
+          if (!conf?.sent) {
+            toast.error(`Payment recorded. Parent not notified — ${paymentConfirmationReason(conf?.reason, conf, conf?.errorMessage)}`);
+          }
+        } catch (e: any) {
+          toast.error(`Payment recorded. Parent not notified — ${paymentConfirmationReason(e?.code, null, e?.message)}`);
+        }
+        // Re-read so the retry affordance appears on the anchor row when the
+        // send did not land.
+        await refreshLedger();
+      }
     } catch (e: any) {
       setSubmitError(e.message || 'Failed to record payment');
     } finally {
@@ -908,6 +942,30 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
    * the dialled form is the one worth checking against the child's name.
    */
   const waDialled = feeEligRow?.phone ?? null;
+
+  /**
+   * WHETHER THE PAY FEES DIALOG MAY OFFER TO INFORM THE PARENT.
+   *
+   * Decided here rather than in the dialog because the guardian's consent and
+   * number live on this screen's displayInfo, which is kept current as the
+   * General tab is edited — a number added while this page is open makes the box
+   * tickable without a reload.
+   *
+   * The reason is a sentence, not a code, because it is read by whoever is
+   * standing at the counter taking the money.
+   */
+  const informParentState = useMemo(() => {
+    if (!displayInfo.parentName && !displayInfo.parentPhone) {
+      return { blockedReason: 'No guardian is on file for this student.' };
+    }
+    if (!displayInfo.parentWhatsappConsent) {
+      return { blockedReason: 'This guardian has not agreed to WhatsApp messages.' };
+    }
+    if (!String(displayInfo.parentPhone ?? '').trim()) {
+      return { blockedReason: 'This guardian has no phone number on file.' };
+    }
+    return { blockedReason: null };
+  }, [displayInfo.parentName, displayInfo.parentPhone, displayInfo.parentWhatsappConsent]);
 
   const openWhatsAppReminder = () => {
     setWaError(null);
@@ -2473,28 +2531,39 @@ ${popMotionCss('[data-sis-finance-menu]')}
                                 pre-compiled Tailwind build, so a colour utility
                                 that isn't already in it renders as nothing. */}
                             <td className="px-4 py-3">
-                              {/* SEND RECEIPT. Payments only, and only when the
-                                  row actually has a receipt number to quote —
-                                  the message is built around that number, so
-                                  offering it on a row without one would open a
-                                  dialog whose only outcome is a refusal.
+                              {/* RETRY, AND ONLY ON A FAILURE.
+                                  The receipt is sent from the Pay Fees dialog
+                                  now, so the ordinary payment needs no control
+                                  here at all — a button on every row was three
+                                  buttons for one submission and clutter on the
+                                  99% of rows where nothing went wrong.
 
-                                  Admin-triggered from here, deliberately: the
-                                  payment-recording path must never appear to
-                                  fail because WhatsApp is down. */}
-                              {entry.type === 'PAYMENT' && entry.receiptNumber && (
+                                  This appears only where a confirmation was
+                                  ASKED FOR and did not reach Twilio, and only on
+                                  the submission's anchor row, so three fees paid
+                                  together offer one retry. It names the
+                                  SUBMISSION total rather than this row's amount,
+                                  because that is what the parent would be told.
+
+                                  Kept because removing the manual trigger
+                                  outright would mean a receipt that failed could
+                                  never be sent — and a failure is the one case
+                                  where somebody definitely wants to try again. */}
+                              {entry.confirmationRetry && (
                                 <button
                                   type="button"
-                                  title="Send a WhatsApp receipt for this payment"
-                                  aria-label={`Send a WhatsApp receipt for ${entry.description}, ${entry.amount.toLocaleString()} FCFA`}
+                                  title={`The parent was not notified about this payment of ${entry.confirmationRetry.total.toLocaleString()} FCFA. Try again.`}
+                                  aria-label={`Retry notifying the parent about ${entry.confirmationRetry.total.toLocaleString()} FCFA`}
                                   onClick={() => setReceiptFor(entry.id)}
                                   style={{
-                                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                                    padding: 4, borderRadius: 6, border: 'none', background: 'transparent',
-                                    color: '#0f2345', cursor: 'pointer', marginRight: 2,
+                                    display: 'inline-flex', alignItems: 'center', gap: 4,
+                                    padding: '2px 6px', borderRadius: 6, border: '1px solid #DC2626',
+                                    background: 'transparent', color: '#DC2626', cursor: 'pointer',
+                                    marginRight: 4, fontSize: '0.75rem', whiteSpace: 'nowrap',
                                   }}
                                 >
-                                  <MessageCircle size={15} />
+                                  <MessageCircle size={13} />
+                                  Parent not notified — retry
                                 </button>
                               )}
                               <button
@@ -2885,6 +2954,7 @@ ${popMotionCss('[data-sis-finance-menu]')}
             submitting={submitting}
             error={submitError}
             methods={PAYMENT_METHODS}
+            informParent={informParentState}
             onSubmit={handlePaymentSubmit}
           />
 

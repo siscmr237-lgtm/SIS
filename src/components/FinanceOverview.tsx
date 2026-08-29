@@ -45,6 +45,18 @@ interface StudentTransactionRow {
   paymentMethod: string | null;
   /** "2026/2027-0042". Payments only; null on every charge. */
   receiptNumber: string | null;
+  /**
+   * Present only on the anchor row of a submission whose parent receipt was
+   * requested and never reached Twilio.
+   */
+  confirmationRetry?: {
+    paymentBatchId: string;
+    total: number;
+    rowCount: number;
+    status: string;
+    errorCode: string | null;
+    errorMessage: string | null;
+  } | null;
 }
 
 /**
@@ -877,28 +889,34 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
                           because it gets read digit by digit against something
                           a parent is holding. */}
                       <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
-                        {/* The number doubles as the trigger for its own WhatsApp
-                            receipt — the thing an admin wants to do from this row
-                            is send the parent the number they are looking at, and
-                            a separate icon column for it would cost a seventh
-                            column on a table already wide enough to scroll.
+                        {/* PLAIN TEXT AGAIN. The receipt is sent from the Pay
+                            Fees dialog now, as part of taking the money, so this
+                            column is back to being something to read rather than
+                            something to press.
 
-                            A charge has no number and never will, so the dash is
-                            plain text rather than a dead button. */}
+                            The one exception is below: a submission whose parent
+                            receipt never sent carries a retry, once, on its
+                            anchor row. */}
                         {t.receiptNumber ? (
+                          <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>
+                            {t.receiptNumber}
+                          </span>
+                        ) : '—'}
+                        {t.confirmationRetry && (
                           <button
                             type="button"
                             onClick={() => setReceiptFor(t.id)}
-                            title="Send a WhatsApp receipt for this payment"
+                            title={`The parent was not notified about this payment of ${t.confirmationRetry.total.toLocaleString()} FCFA. Try again.`}
                             style={{
-                              fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-                              background: 'none', border: 0, padding: 0, cursor: 'pointer',
-                              color: '#0f2345', textDecoration: 'underline',
+                              display: 'block', marginTop: 3, padding: '1px 5px',
+                              borderRadius: 6, border: '1px solid #DC2626', background: 'transparent',
+                              color: '#DC2626', cursor: 'pointer', fontSize: '0.7rem',
+                              whiteSpace: 'nowrap',
                             }}
                           >
-                            {t.receiptNumber}
+                            Parent not notified — retry
                           </button>
-                        ) : '—'}
+                        )}
                       </td>
                     </tr>
                   );

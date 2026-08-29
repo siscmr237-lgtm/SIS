@@ -50,6 +50,14 @@ export interface PayFeesSubmission {
   entryDate: string;
   paymentMethod: string;
   total: number;
+  /** Whether to send the guardian ONE WhatsApp receipt for this submission. */
+  informParent: boolean;
+}
+
+/** Why the Inform parent box cannot be ticked, or null when it can. */
+export interface InformParentState {
+  /** Null when the guardian can be messaged. */
+  blockedReason: string | null;
 }
 
 /**
@@ -141,6 +149,7 @@ export function PayFeesDialog({
   submitting,
   error,
   methods,
+  informParent,
   onSubmit,
 }: {
   open: boolean;
@@ -150,6 +159,11 @@ export function PayFeesDialog({
   submitting: boolean;
   error: string | null;
   methods: readonly string[];
+  /**
+   * Whether the guardian can be sent a receipt, and if not, why in plain words.
+   * Decided by the caller, which knows the guardian's consent and phone.
+   */
+  informParent: InformParentState;
   onSubmit: (submission: PayFeesSubmission) => void;
 }) {
   /**
@@ -194,12 +208,31 @@ export function PayFeesDialog({
     [categories, amounts],
   );
 
+  /**
+   * ONE RECEIPT FOR THE WHOLE SUBMISSION, not one per fee.
+   *
+   * DEFAULTS ON when the guardian can actually be messaged. Telling a parent
+   * their money arrived is the ordinary, courteous thing to do, and the cashier
+   * has to opt OUT of it rather than remember to opt in. It defaults off when
+   * they cannot be messaged, where the box is disabled anyway.
+   */
+  const [inform, setInform] = useState(informParent.blockedReason === null);
+  // Re-synced when the dialog opens: a guardian's consent or number may have been
+  // edited on another tab since this component last mounted.
+  useEffect(() => {
+    if (open) setInform(informParent.blockedReason === null);
+  }, [open, informParent.blockedReason]);
+
   const submit = () => {
     const entries = categories
       .filter((c) => c.payable && c.owing > 0)
       .map((c) => ({ feeKey: c.key, amount: Math.round(Number(amounts[c.key])) }))
       .filter((e) => Number.isFinite(e.amount) && e.amount > 0);
-    onSubmit({ entries, entryDate, paymentMethod, total });
+    onSubmit({
+      entries, entryDate, paymentMethod, total,
+      // Never true when it could not be honoured, whatever the box says.
+      informParent: inform && informParent.blockedReason === null,
+    });
   };
 
   return (
@@ -362,6 +395,39 @@ export function PayFeesDialog({
               </Select>
             </div>
           </div>
+
+          {/* INFORM PARENT — one WhatsApp receipt covering this whole
+              submission, however many fees it settles.
+
+              DISABLED WITH THE REASON rather than hidden or silently inert. A
+              tickable box that does nothing is worse than no box: the cashier
+              believes the family was told. Native input rather than
+              ui/checkbox, whose classes were never compiled into the frozen
+              stylesheet. */}
+          <label
+            style={{
+              display: 'flex', alignItems: 'flex-start', gap: '0.5rem',
+              marginTop: '0.75rem',
+              cursor: informParent.blockedReason ? 'default' : 'pointer',
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={inform}
+              disabled={informParent.blockedReason !== null || submitting}
+              onChange={(e) => setInform(e.target.checked)}
+              style={{ marginTop: 3 }}
+            />
+            <span>
+              <span style={{ color: informParent.blockedReason ? '#9CA3AF' : '#0f2345' }}>
+                Inform parent
+              </span>
+              <span className="text-xs text-gray-500" style={{ display: 'block', marginTop: 2 }}>
+                {informParent.blockedReason
+                  ?? 'One WhatsApp receipt covering everything paid here, sent after the payment is recorded.'}
+              </span>
+            </span>
+          </label>
 
           {error && (
             <p className="text-sm" style={{ color: '#B91C1C', marginTop: '0.6rem' }}>{error}</p>
