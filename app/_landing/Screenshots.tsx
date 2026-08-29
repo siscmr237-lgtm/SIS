@@ -10,7 +10,7 @@
  * does not render this component, so there is no "no screenshots yet" state to
  * design: the section is absent, heading and all.
  *
- * Like MobileMenu, it carries no CSS of its own -- every class is defined in
+ * Like LandingNav, it carries no CSS of its own -- every class is defined in
  * LANDING_CSS in app/page.tsx.
  */
 

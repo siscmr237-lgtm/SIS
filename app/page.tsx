@@ -29,21 +29,72 @@
  * ordinary CSS in the one <style> block below, and every class name carries a
  * lewa-lp- prefix so none of it can reach, or be reached by, the app.
  *
+ * That is also why the design this page was rebuilt from could not simply be
+ * dropped in. It arrived as a Vite project whose every rule was a Tailwind
+ * utility compiled at dev time; here the same layout, spacing, type scale and
+ * palette are transcribed by hand into the stylesheet below. The numbers are
+ * the design's numbers -- 1280px container, 24px gutter, #0b1735 navy, #059669
+ * green -- written as CSS rather than as class names.
+ *
  * For the same reason nothing is imported from src/components/ui: those
  * components are styled with the same frozen utilities.
+ *
+ * lucide-react IS imported, and that is not a contradiction. It ships SVG path
+ * data, not Tailwind classes, and this file is a server component -- the icons
+ * are rendered to markup on the server and the library itself never reaches the
+ * browser.
  */
+
 import fs from "node:fs";
 import path from "node:path";
 import type { ReactNode } from "react";
 import Image from "next/image";
-
+import { Plus_Jakarta_Sans } from "next/font/google";
+import {
+  ArrowRight,
+  BookOpen,
+  Calendar,
+  Check,
+  ClipboardList,
+  Clock,
+  DollarSign,
+  Download,
+  FileText,
+  Globe,
+  MessageCircle,
+  Receipt,
+  Settings,
+  Shield,
+  Users,
+  Zap,
+} from "lucide-react";
 import {
   SUPPORT_PHONE_DISPLAY,
   phoneSupportLink,
   whatsappLink,
 } from "../src/lib/supportContact";
-import { MobileMenu, type MenuLink } from "./_landing/MobileMenu";
+import { LandingNav, type MenuLink } from "./_landing/LandingNav";
 import { Screenshots, type Shot, type ShotGroup } from "./_landing/Screenshots";
+
+/**
+ * The design's typeface.
+ *
+ * next/font, not a <link> to fonts.googleapis.com: it downloads the faces at
+ * BUILD time and serves them from our own origin, so a visitor's browser makes
+ * no request to Google at all and there is no third-party round trip in front
+ * of the first paint. It also emits a size-adjusted local fallback, which is
+ * what stops the headline reflowing when the real face arrives.
+ *
+ * Exposed as a custom property rather than a className on <body> because the
+ * app's own screens deliberately use system fonts -- this variable is set on the
+ * landing page's root div and inherits no further than that.
+ */
+const jakarta = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+  display: "swap",
+  variable: "--lewa-lp-font",
+});
 
 const OG_DESCRIPTION =
   "Lewa keeps students, fees, marks, attendance and payroll for your school in one system, on any phone or computer.";
@@ -64,73 +115,258 @@ export const metadata = {
   },
 };
 
-/** Where the two doors are. Written once each so the copy cannot drift. */
+/**
+ * Where the doors are. Written once each so the copy cannot drift.
+ *
+ * SIGN_IN_PATH is the one addition the redesign makes to this page's link set.
+ * The page it replaced offered signup and the teacher door only -- a school
+ * admin coming back to log in had to know /school/login by heart. The design
+ * has a "Sign In" control in the header, so it now points somewhere real.
+ * /admin/login stays unlinked, as it always has been: that door is for the
+ * internal team and nothing on a marketing page should advertise it.
+ */
 const SIGNUP_PATH = "/school/signup";
+const SIGN_IN_PATH = "/school/login";
 const TEACHER_LOGIN_PATH = "/teacher/login";
 
-type Stats = { schools: number; students: number } | null;
+/**
+ * Every figure the stats band can show, and where each one comes from.
+ *
+ * `schools`, `students` and `staff` are read live from the API. `pdfs` is not a
+ * number at all -- see PDFS_GENERATED below.
+ */
+type Stats = { schools: number; students: number; staff: number | null } | null;
 
 /**
+ * NOT A NUMBER, AND NOT PRETENDING TO BE ONE.
+ *
+ * The design this page was rebuilt from carried "10,000+ PDFs Generated" in the
+ * stats band. Nothing anywhere counts that. Every PDF this product makes is
+ * built in the visitor's own browser by src/utils/pdfGenerator.ts and handed
+ * straight to the download; no request is made, no row is written, nothing is
+ * incremented. The figure was invented by the design tool.
+ *
+ * So it is rendered as four zeroes -- a visible placeholder, obviously not a
+ * measurement, which is the honest thing to put where a number we do not have
+ * would go. If this ever needs to be a real figure, the counting has to happen
+ * first, at the point the PDF is produced.
+ */
+const PDFS_GENERATED = "0000";
+
+/**
+ * THE WHOLE PAGE'S STYLESHEET, mounted once by the component at the bottom.
+ *
  * Every class name is prefixed lewa-lp-, and every selector is a class or a
  * descendant of one. Nothing here can match an element the app renders, and no
  * app rule can reach in, which is what makes a page-scoped stylesheet safe to
  * mount from inside a component.
  *
- * The grid rules at the bottom are the only responsive logic on the page, and
- * they go the same way each time: three columns to one, two to one.
+ * HOW TO READ IT AGAINST THE DESIGN. The design was authored in Tailwind, so
+ * its spacing is on Tailwind's 4px scale and its containers are Tailwind's
+ * named widths. Those are written out here as the pixel values they compile to:
+ * max-w-7xl is 1280px, max-w-6xl 1152px, max-w-5xl 1024px, max-w-3xl 768px,
+ * px-6 is 24px, py-24 is 96px, gap-16 is 64px, rounded-2xl is 16px. The three
+ * breakpoints are Tailwind's own -- sm 640px, md 768px, lg 1024px -- so a
+ * "hidden md:flex" in the design becomes a rule in the 768px block below.
  *
- * As it happens this CSS also contains no quote, ampersand or angle bracket.
- * That is not load-bearing -- React treats <style> as a raw-text element and
- * passes its child through unescaped, which is verifiable on any page in this
- * app: BUTTON_PRESS_CSS ships [aria-disabled="true"] and it arrives with its
- * quotes intact. It is simply that nothing here needed one: the logo is an
- * <img> so the crop can be expressed in px, and the step numbers are real text
- * rather than generated content, both of which are better anyway.
+ * React treats <style> as a raw-text element and passes its child through
+ * unescaped, so the quotes and > in the selectors here arrive intact. That is
+ * verifiable anywhere in this app: BUTTON_PRESS_CSS in the root layout ships
+ * [aria-disabled="true"] and it reaches the browser unmangled.
  */
 const LANDING_CSS = `
+  /* ---- PAGE, CONTAINERS, TYPE RESET -------------------------------------- */
+
   .lewa-lp-page {
     background: #ffffff;
     color: #334155;
-    font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+    font-family: var(--lewa-lp-font), system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
+    /* The hero's decorative glows are pushed outside their own box before being
+       clipped by it. This is the second line of defence, so nothing anywhere on
+       the page can give the document a horizontal scrollbar. */
+    overflow-x: hidden;
   }
 
-  /* 1100px of content with a 20px gutter either side. Every band on the page
-     shares it, which is what keeps the left edge of the logo, the headline, the
-     cards and the footer on one line. */
+  /* Four container widths, matching the four the design uses. Each carries the
+     same 24px gutter, which is what keeps the left edge of the logo, the
+     headline, the cards and the footer on one line. */
   .lewa-lp-wrap {
-    max-width: 1100px;
+    max-width: 1280px;
     margin-left: auto;
     margin-right: auto;
-    padding-left: 20px;
-    padding-right: 20px;
+    padding-left: 24px;
+    padding-right: 24px;
   }
+
+  .lewa-lp-wrap-6 { max-width: 1152px; }
+  .lewa-lp-wrap-5 { max-width: 1024px; }
+  .lewa-lp-wrap-3 { max-width: 768px; }
 
   .lewa-lp-page p,
   .lewa-lp-page h1,
   .lewa-lp-page h2,
-  .lewa-lp-page h3 {
+  .lewa-lp-page h3,
+  .lewa-lp-page ul {
     margin: 0;
     /* So a long word cannot push the page wider than a 360px viewport. */
     overflow-wrap: break-word;
   }
 
-  /* ---- HEADER ------------------------------------------------------------ */
+  .lewa-lp-page ul { padding: 0; list-style: none; }
 
-  .lewa-lp-header {
-    position: sticky;
-    top: 0;
-    z-index: 30;
-    background: #ffffff;
-    border-bottom: 1px solid rgba(30, 58, 138, 0.1);
+  /* ---- SHARED SECTION FURNITURE ------------------------------------------ */
+
+  /* py-24 on every band the design sets at that rhythm. */
+  .lewa-lp-band { padding-top: 96px; padding-bottom: 96px; }
+  .lewa-lp-band-light { background: #f4f7fe; }
+  .lewa-lp-band-navy { background: #0b1735; }
+
+  .lewa-lp-sectionhead { text-align: center; margin-bottom: 56px; }
+
+  /* The small uppercase capsule above a section heading. Three of these on the
+     page; each says what the section is, and none of them asserts a fact about
+     the world, which is why they survived the content audit. */
+  .lewa-lp-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-bottom: 16px;
   }
 
-  .lewa-lp-headerbar {
+  .lewa-lp-pill-navy { background: rgba(30, 58, 138, 0.08); color: #1e3a8a; }
+  .lewa-lp-pill-green { background: rgba(5, 150, 105, 0.08); color: #059669; }
+  .lewa-lp-pill-ongreen {
+    background: rgba(5, 150, 105, 0.15);
+    border-color: rgba(5, 150, 105, 0.3);
+    color: #34d399;
+  }
+
+  .lewa-lp-h2 {
+    font-size: 30px;
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: -0.025em;
+    color: #0c1a3d;
+  }
+
+  .lewa-lp-h2-onnavy { color: #ffffff; }
+
+  .lewa-lp-sectionlede {
+    margin-top: 16px;
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 512px;
+    color: #6b7fa3;
+    font-size: 16px;
+    line-height: 1.625;
+  }
+
+  /* ---- BUTTONS ------------------------------------------------------------ */
+
+  /* 44px tall, on every one of them. Anything a thumb has to find on a phone is
+     at least that -- which the design's own py-2.5 controls were not. */
+  .lewa-lp-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-height: 44px;
+    padding: 12px 24px;
+    border-radius: 12px;
+    border: 1px solid transparent;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.2;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s, transform 0.2s, box-shadow 0.2s;
+  }
+
+  .lewa-lp-btn-green {
+    background: #059669;
+    color: #ffffff;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  }
+
+  .lewa-lp-btn-green:hover {
+    background: #047857;
+    transform: translateY(-2px);
+    box-shadow: 0 20px 25px -5px rgba(5, 150, 105, 0.3);
+  }
+
+  /* The secondary on navy: an outline that borrows the background rather than
+     painting over it. */
+  .lewa-lp-btn-outline-light {
+    border-color: rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.75);
+    background: transparent;
+  }
+
+  .lewa-lp-btn-outline-light:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: #ffffff;
+  }
+
+  .lewa-lp-btn-outline-navy {
+    border-color: #1e3a8a;
+    color: #1e3a8a;
+    background: #ffffff;
+  }
+
+  .lewa-lp-btn-outline-navy:hover { background: #eef2fd; }
+
+  .lewa-lp-btn-block { width: 100%; }
+
+  .lewa-lp-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .lewa-lp-actions-center { justify-content: center; }
+
+  /* ---- HEADER ------------------------------------------------------------- */
+
+  /* Fixed, not sticky: it starts life transparent over the navy hero, so it has
+     to sit ON the hero rather than above it. The scrolled state is applied by
+     app/_landing/LandingNav.tsx, which is the only thing on this page that
+     needs to know how far down the visitor is. */
+  .lewa-lp-nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 50;
+    background: transparent;
+    border-bottom: 1px solid transparent;
+    transition: background-color 0.3s, border-color 0.3s, box-shadow 0.3s;
+  }
+
+  .lewa-lp-nav-scrolled {
+    background: rgba(255, 255, 255, 0.95);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    border-bottom-color: #dce6f7;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  }
+
+  .lewa-lp-navbar {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    min-height: 64px;
+    padding-top: 16px;
+    padding-bottom: 16px;
   }
 
   .lewa-lp-brand {
@@ -146,8 +382,9 @@ const LANDING_CSS = `
      public/images/lewa-logo.png is a 2000x2000 canvas on which the artwork
      occupies very little: the glyph sits at x 718-1281, y 637-1069, and the
      LEWA wordmark below it at y 1158-1239. Drawn whole at header size the glyph
-     would come out about 9px across -- a smudge. So the tile below is 38px, the
-     image inside it is scaled to 120px, and the offsets put the glyph in the
+     would come out about 9px across -- a smudge, which is exactly what the
+     design's h-10 w-auto would have produced. So the tile below is 40px, the
+     image inside it is scaled to 126px, and the offsets put the glyph in the
      middle of the tile with the wordmark pushed just past the bottom edge (it
      would be illegible at this size, and the word Lewa is already set beside it
      in type).
@@ -157,19 +394,19 @@ const LANDING_CSS = `
     position: relative;
     display: block;
     flex: none;
-    width: 38px;
-    height: 38px;
-    border-radius: 9px;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
     overflow: hidden;
     background: #eff8ff;
   }
 
   .lewa-lp-logo {
     position: absolute;
-    left: -41px;
-    top: -31px;
-    width: 120px;
-    height: 120px;
+    left: -43px;
+    top: -33px;
+    width: 126px;
+    height: 126px;
     /* Tailwind preflight in the frozen index.css sets img { max-width: 100% },
        which would shrink this back into the tile and undo the crop. */
     max-width: none;
@@ -177,58 +414,88 @@ const LANDING_CSS = `
 
   .lewa-lp-brandname {
     font-size: 19px;
-    font-weight: 700;
-    color: #1e3a8a;
+    font-weight: 800;
     letter-spacing: -0.01em;
+    color: #ffffff;
+    transition: color 0.3s;
   }
 
-  .lewa-lp-headernav {
-    display: flex;
+  .lewa-lp-nav-scrolled .lewa-lp-brandname { color: #1e3a8a; }
+
+  .lewa-lp-navlinks {
+    display: none;
     align-items: center;
-    gap: 6px;
+    gap: 28px;
   }
 
-  /* The in-page anchors. Their own class rather than .lewa-lp-textlink so the
-     phone breakpoint can take these away without also taking away Teacher
-     login, which is a different kind of link and leaves by a different route. */
   .lewa-lp-navlink {
     display: inline-flex;
     align-items: center;
     min-height: 44px;
-    padding: 10px 12px;
-    color: #334155;
-    font-size: 15px;
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 14px;
     font-weight: 500;
     text-decoration: none;
+    transition: color 0.2s;
   }
 
-  .lewa-lp-navlink:hover {
-    color: #1e3a8a;
-  }
+  .lewa-lp-navlink:hover { color: #ffffff; }
+  .lewa-lp-nav-scrolled .lewa-lp-navlink { color: #4a6080; }
+  .lewa-lp-nav-scrolled .lewa-lp-navlink:hover { color: #1e3a8a; }
 
-  /* ---- THE PHONE MENU ---------------------------------------------------- */
-
-  /* Hidden here and shown in the phone block at the bottom, which is the same
-     switch the desktop nav makes in the opposite direction: exactly one of the
-     two is on screen at any width. */
-  .lewa-lp-menubtn {
+  .lewa-lp-navctas {
     display: none;
+    align-items: center;
+    gap: 12px;
+  }
+
+  /* Sign in: a text control beside a filled one, which is how the design
+     distinguishes "come back in" from "start here". */
+  .lewa-lp-navsignin {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 4px;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+
+  .lewa-lp-navsignin:hover { color: #ffffff; }
+  .lewa-lp-nav-scrolled .lewa-lp-navsignin { color: #1e3a8a; }
+  .lewa-lp-nav-scrolled .lewa-lp-navsignin:hover { color: #0c1a3d; }
+
+  .lewa-lp-navcta { padding: 10px 20px; min-height: 42px; }
+
+  /* ---- THE PHONE MENU ----------------------------------------------------- */
+
+  /* Shown here and hidden in the 768px block below, which is the same switch the
+     desktop nav makes in the opposite direction: exactly one of the two is on
+     screen at any width. */
+  .lewa-lp-menubtn {
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     width: 44px;
     height: 44px;
     padding: 0;
-    border: 1px solid rgba(30, 58, 138, 0.1);
-    border-radius: 9px;
-    background: #ffffff;
-    color: #1e3a8a;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.06);
+    color: #ffffff;
     cursor: pointer;
+    transition: color 0.3s, border-color 0.3s, background-color 0.3s;
   }
 
-  .lewa-lp-menuicon {
-    width: 22px;
-    height: 22px;
+  .lewa-lp-nav-scrolled .lewa-lp-menubtn {
+    color: #0c1a3d;
+    border-color: #dce6f7;
+    background: #ffffff;
   }
+
+  .lewa-lp-menuicon { width: 22px; height: 22px; }
 
   /* position: fixed, so the sheet covers the viewport rather than the header it
      is rendered inside. inset 0 plus its own background is the whole effect --
@@ -242,7 +509,7 @@ const LANDING_CSS = `
     z-index: 60;
     display: flex;
     flex-direction: column;
-    padding: 12px 20px 28px;
+    padding: 12px 24px 32px;
     background: #ffffff;
     /* If the sheet is ever taller than a small phone in landscape, it scrolls
        itself rather than trapping the visitor with an unreachable button. */
@@ -253,7 +520,15 @@ const LANDING_CSS = `
     display: flex;
     align-items: center;
     justify-content: space-between;
-    min-height: 52px;
+    min-height: 56px;
+  }
+
+  .lewa-lp-sheetbrand { font-size: 19px; font-weight: 800; color: #1e3a8a; }
+
+  .lewa-lp-sheet .lewa-lp-menubtn {
+    color: #0c1a3d;
+    border-color: #dce6f7;
+    background: #ffffff;
   }
 
   .lewa-lp-sheetnav {
@@ -266,351 +541,419 @@ const LANDING_CSS = `
     display: flex;
     align-items: center;
     min-height: 56px;
-    border-bottom: 1px solid rgba(30, 58, 138, 0.1);
+    border-bottom: 1px solid #dce6f7;
     color: #1e3a8a;
     font-size: 18px;
     font-weight: 600;
     text-decoration: none;
   }
 
-  .lewa-lp-sheetcta {
+  .lewa-lp-sheetctas {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
     margin-top: 24px;
   }
 
-  /* ---- BUTTONS AND LINKS ------------------------------------------------- */
-
-  /* 44px tall, on every one of them. Anything a thumb has to find on a phone is
-     at least that. */
-  .lewa-lp-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 44px;
-    padding: 10px 20px;
-    border-radius: 8px;
-    border: 1px solid transparent;
-    font-size: 15px;
-    font-weight: 600;
-    line-height: 1.2;
-    text-align: center;
-    text-decoration: none;
-    cursor: pointer;
-  }
-
-  .lewa-lp-btn-filled {
-    background: #1e3a8a;
-    color: #ffffff;
-  }
-
-  .lewa-lp-btn-outline {
-    background: #ffffff;
-    color: #1e3a8a;
-    border-color: #1e3a8a;
-  }
-
-  /* For the closing band, where the page is already navy and a navy button
-     would disappear into it. */
-  .lewa-lp-btn-invert {
-    background: #ffffff;
-    color: #1e3a8a;
-  }
-
-  .lewa-lp-btn-ghost {
-    background: transparent;
-    color: #ffffff;
-    border-color: #ffffff;
-  }
-
-  .lewa-lp-textlink {
-    display: inline-flex;
-    align-items: center;
-    min-height: 44px;
-    padding: 10px;
-    color: #1e3a8a;
-    font-size: 15px;
-    font-weight: 600;
-    text-decoration: none;
-  }
-
-  /* The phone number, which now sits on the light contact band rather than on
-     navy, so it takes the ordinary navy link colour with an underline to mark
-     it as the one piece of body text that is clickable. */
-  .lewa-lp-textlink-underlined {
-    text-decoration: underline;
-  }
-
-  /* ---- HERO -------------------------------------------------------------- */
+  /* ---- HERO --------------------------------------------------------------- */
 
   .lewa-lp-hero {
-    background: #ffffff;
-    padding-top: 56px;
-    padding-bottom: 64px;
-  }
-
-  /* TWO COLUMNS ONLY WHEN THERE IS SOMETHING IN THE SECOND ONE.
-     This class is applied by the server component only when hero.png was found
-     on disk at build time. With no image the hero keeps its original single
-     block and there is no empty column, no reserved gap and no placeholder --
-     the page looks exactly as it did before the image support existed. */
-  .lewa-lp-herogrid {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 48px;
-    align-items: center;
-  }
-
-  .lewa-lp-heroshot {
-    display: block;
-    width: 100%;
-    height: auto;
-    border-radius: 14px;
-  }
-
-  /* clamp rather than a breakpoint: the headline shrinks smoothly instead of
-     stepping, and the 30px floor is what keeps it readable at 360px. */
-  .lewa-lp-h1 {
-    font-size: clamp(30px, 6vw, 52px);
-    line-height: 1.1;
-    font-weight: 700;
-    letter-spacing: -0.02em;
-    color: #1e3a8a;
-    max-width: 18em;
-  }
-
-  .lewa-lp-lede {
-    margin-top: 18px;
-    max-width: 640px;
-    font-size: 17px;
-    line-height: 1.6;
-    color: #334155;
-  }
-
-  .lewa-lp-actions {
+    position: relative;
+    min-height: 100vh;
     display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-    margin-top: 30px;
+    flex-direction: column;
+    justify-content: center;
+    background: #0b1735;
+    /* Holds the two glows and the wave, all of which are drawn outside this
+       box's bounds on purpose. */
+    overflow: hidden;
   }
 
-  /* ---- STATS BAND -------------------------------------------------------- */
-
-  /* THE NAVY IS A BLOCK INSIDE THE PAGE, NOT A BAND ACROSS IT.
-     The section itself is plain, and the colour is carried by the box below,
-     which sits in the ordinary container -- so its left and right edges land
-     exactly where every heading and paragraph on the page starts rather than
-     running out to the window. Full-bleed again on phones, where a 20px margin
-     either side of a coloured block only makes the screen feel narrower; the
-     rule for that is in the phone block at the bottom. */
-  .lewa-lp-stats {
-    background: #ffffff;
-    padding-top: 20px;
-    padding-bottom: 20px;
+  /* Two soft colour washes behind the content, both decorative and both
+     pointer-events: none so neither can swallow a tap meant for a button. */
+  .lewa-lp-glow {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(64px);
+    pointer-events: none;
   }
 
-  .lewa-lp-statband {
-    background: #1e3a8a;
-    color: #ffffff;
-    border-radius: 16px;
-    padding: 44px 32px;
+  .lewa-lp-glow-a {
+    top: 0;
+    right: 0;
+    width: 700px;
+    height: 700px;
+    background: rgba(30, 58, 138, 0.25);
+    transform: translate(25%, -33%);
   }
 
-  /* Two equal columns with the contents centred in each, so the gap between the
-     pair and the space outside them read as one even rhythm across the block.
-     It stays two columns at every width -- the phone block narrows the type
-     rather than stacking these, because a single number per row turns a compact
-     figure into a tall one. */
-  .lewa-lp-statgrid {
+  .lewa-lp-glow-b {
+    bottom: 0;
+    left: 0;
+    width: 500px;
+    height: 500px;
+    background: rgba(5, 150, 105, 0.12);
+    transform: translate(-25%, 50%);
+  }
+
+  .lewa-lp-dots {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    opacity: 0.03;
+    background-image: radial-gradient(circle, #fff 1px, transparent 1px);
+    background-size: 32px 32px;
+    pointer-events: none;
+  }
+
+  /* position: relative so the copy sits above the three decorative layers
+     without any of them needing a z-index. */
+  .lewa-lp-herogrid {
+    position: relative;
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 28px;
+    grid-template-columns: 1fr;
+    gap: 64px;
+    align-items: center;
+    padding-top: 144px;
+    padding-bottom: 96px;
+  }
+
+  .lewa-lp-herobadge { margin-bottom: 28px; }
+
+  /* The pulsing dot in the hero capsule. Reduced-motion is honoured at the
+     bottom of this stylesheet, where the animation is switched off entirely. */
+  .lewa-lp-pulse {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #34d399;
+    animation: lewa-lp-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  @keyframes lewa-lp-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
+  }
+
+  .lewa-lp-h1 {
+    font-size: 44px;
+    font-weight: 800;
+    line-height: 1.08;
+    letter-spacing: -0.025em;
+    color: #ffffff;
+    margin-bottom: 24px;
+  }
+
+  .lewa-lp-h1-accent { color: #34d399; }
+
+  .lewa-lp-herolede {
+    max-width: 448px;
+    margin-bottom: 40px;
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 18px;
+    line-height: 1.625;
+  }
+
+  /* ---- HERO: THE DASHBOARD ILLUSTRATION ----------------------------------- */
+
+  /* AN ILLUSTRATION, NOT A SCREENSHOT, AND NOT A CLAIM.
+     Everything inside it -- the three names, the counts, the bar widths -- came
+     from the design and is kept at the owner's explicit instruction. None of it
+     is read from the database and none of it describes a real school. If real
+     screenshots are ever dropped into public/images/lewa, the section further
+     down this page shows them, and that is where a visitor sees the product as
+     it actually is. */
+  .lewa-lp-mockcol {
+    position: relative;
+    display: flex;
+    justify-content: center;
+  }
+
+  .lewa-lp-mock {
+    position: relative;
+    width: 100%;
+    max-width: 480px;
+  }
+
+  .lewa-lp-mockpanel {
+    background: #162348;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    box-shadow: 0 32px 80px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+  }
+
+  .lewa-lp-mockbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: #0f1b3a;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .lewa-lp-mockdotr { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+
+  .lewa-lp-mocktitle {
+    margin-left: 12px;
+    color: rgba(255, 255, 255, 0.25);
+    font-size: 11px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .lewa-lp-mockbody {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 20px;
+  }
+
+  .lewa-lp-kpirow { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+
+  .lewa-lp-kpi { background: rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 12px; }
+  .lewa-lp-kpival { font-size: 20px; font-weight: 800; color: #ffffff; margin-bottom: 2px; }
+  .lewa-lp-kpilabel { font-size: 10px; font-weight: 500; color: rgba(255, 255, 255, 0.35); }
+  .lewa-lp-kpitrack {
+    margin-top: 10px;
+    height: 4px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+  }
+  .lewa-lp-kpifill { height: 100%; border-radius: 999px; }
+
+  .lewa-lp-mocklist { background: rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 16px; }
+
+  .lewa-lp-mocklisthead {
+    margin-bottom: 12px;
+    color: rgba(255, 255, 255, 0.35);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .lewa-lp-mockrow {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .lewa-lp-mockrow:last-child { border-bottom: none; padding-bottom: 0; }
+
+  .lewa-lp-mockbullet {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    margin-top: 6px;
+    flex: none;
+  }
+
+  .lewa-lp-mockname { color: rgba(255, 255, 255, 0.8); font-size: 12px; font-weight: 600; }
+  .lewa-lp-mockaction { color: rgba(255, 255, 255, 0.3); font-size: 11px; }
+
+  .lewa-lp-mockquick { display: flex; gap: 8px; }
+
+  /* A <span>, not a <button>. It is part of a picture, and a real button here
+     would be reachable by Tab and by a screen reader and would then do nothing.
+     aria-hidden on the whole illustration keeps it out of the accessible tree;
+     the alternative text for what it depicts is the headline beside it. */
+  .lewa-lp-quick {
+    flex: 1;
+    padding: 8px 0;
+    border-radius: 8px;
+    background: rgba(5, 150, 105, 0.18);
+    color: #34d399;
+    font-size: 11px;
+    font-weight: 700;
     text-align: center;
   }
 
+  .lewa-lp-badge {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: #ffffff;
+    border: 1px solid #e8eef8;
+    border-radius: 16px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+  }
+
+  .lewa-lp-badge-bl { bottom: -16px; left: -20px; }
+  .lewa-lp-badge-tr { top: -16px; right: -16px; }
+
+  .lewa-lp-badgeicon {
+    width: 36px;
+    height: 36px;
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+  }
+
+  .lewa-lp-badgetitle { font-size: 12px; font-weight: 700; color: #0c1a3d; white-space: nowrap; }
+  .lewa-lp-badgesub { font-size: 11px; color: #9ca3af; white-space: nowrap; }
+
+  .lewa-lp-badgecheck {
+    width: 20px;
+    height: 20px;
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 4px;
+    border-radius: 50%;
+    background: #059669;
+    color: #ffffff;
+  }
+
+  /* The white curve the hero sits on, so the navy meets the stats band on a
+     shape rather than a straight edge. preserveAspectRatio="none" on the svg
+     lets it stretch to any width. */
+  .lewa-lp-wave {
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    right: 0;
+    line-height: 0;
+    pointer-events: none;
+  }
+
+  .lewa-lp-wave svg { display: block; width: 100%; height: 64px; }
+
+  /* ---- STATS BAND --------------------------------------------------------- */
+
+  .lewa-lp-stats { padding-top: 64px; padding-bottom: 64px; background: #ffffff; }
+
+  .lewa-lp-statgrid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 32px;
+  }
+
+  .lewa-lp-stat { text-align: center; }
+
   .lewa-lp-statnum {
-    font-size: clamp(38px, 8vw, 60px);
-    font-weight: 700;
-    line-height: 1;
-    letter-spacing: -0.02em;
-    color: #ffffff;
+    font-size: 36px;
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    color: #0c1a3d;
+    margin-bottom: 4px;
   }
 
-  .lewa-lp-statlabel {
-    margin-top: 10px;
-    font-size: 15px;
-    color: #eff8ff;
-  }
+  /* The placeholder figure, set apart from the three measured ones so it does
+     not read as a count. See PDFS_GENERATED. */
+  .lewa-lp-statnum-placeholder { color: #b9c6dd; }
 
-  /* ---- FEATURES ---------------------------------------------------------- */
+  .lewa-lp-statlabel { font-size: 14px; font-weight: 500; color: #7a93bb; }
 
-  .lewa-lp-features {
-    background: #eff8ff;
-    padding-top: 64px;
-    padding-bottom: 64px;
-  }
+  /* ---- FEATURES ----------------------------------------------------------- */
 
-  .lewa-lp-h2 {
-    font-size: clamp(24px, 4.4vw, 34px);
-    line-height: 1.2;
-    font-weight: 700;
-    letter-spacing: -0.015em;
-    color: #1e3a8a;
-  }
-
-  .lewa-lp-h2-onnavy {
-    color: #ffffff;
-  }
-
-  .lewa-lp-sectionlede {
-    margin-top: 12px;
-    max-width: 620px;
-    font-size: 16px;
-    line-height: 1.6;
-    color: #64748b;
-  }
-
-  /* Four across on a desktop, two on a tablet, one on a phone -- the two steps
-     down are in the media queries at the bottom. Eight cards divide evenly by
-     four and by two, so no row is ever left with a single orphan card in it. */
   .lewa-lp-cardgrid {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 18px;
-    margin-top: 36px;
+    grid-template-columns: 1fr;
+    gap: 20px;
   }
 
   .lewa-lp-card {
     background: #ffffff;
-    border: 1px solid rgba(30, 58, 138, 0.1);
-    border-radius: 12px;
-    padding: 22px;
+    border: 1px solid #e4ecfa;
+    border-radius: 16px;
+    padding: 24px;
+    transition: border-color 0.25s, box-shadow 0.25s;
   }
 
-  /* The icons are inline SVG written into the component, not files and not a
-     package: eight line drawings are smaller as markup than as any request
-     that would fetch them, and they inherit this colour through currentColor,
-     so there is no second place where the palette is written down. */
+  .lewa-lp-card:hover {
+    border-color: rgba(30, 58, 138, 0.4);
+    box-shadow: 0 20px 25px -5px rgba(30, 58, 138, 0.08);
+  }
+
   .lewa-lp-cardicon {
-    display: block;
-    width: 26px;
-    height: 26px;
-    margin-bottom: 14px;
-    color: #1e3a8a;
-  }
-
-  .lewa-lp-cardtitle {
-    font-size: 17px;
-    font-weight: 700;
-    color: #1e3a8a;
-  }
-
-  .lewa-lp-cardbody {
-    margin-top: 8px;
-    font-size: 15px;
-    line-height: 1.6;
-    color: #334155;
-  }
-
-  /* ---- HOW IT WORKS ------------------------------------------------------ */
-
-  .lewa-lp-how {
-    background: #ffffff;
-    padding-top: 64px;
-    padding-bottom: 64px;
-  }
-
-  .lewa-lp-stepgrid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 28px;
-    margin-top: 36px;
-  }
-
-  .lewa-lp-stepnum {
-    display: inline-flex;
+    width: 44px;
+    height: 44px;
+    display: flex;
     align-items: center;
     justify-content: center;
-    width: 40px;
-    height: 40px;
-    border-radius: 999px;
-    background: #1e3a8a;
-    color: #ffffff;
-    font-size: 17px;
-    font-weight: 700;
-  }
-
-  .lewa-lp-steptitle {
-    margin-top: 16px;
-    font-size: 17px;
-    font-weight: 700;
+    margin-bottom: 16px;
+    border-radius: 12px;
+    background: #eef2fd;
     color: #1e3a8a;
+    transition: background-color 0.2s, color 0.2s;
   }
 
-  /* ---- SCREENSHOTS ------------------------------------------------------- */
+  .lewa-lp-card:hover .lewa-lp-cardicon { background: #1e3a8a; color: #ffffff; }
 
-  .lewa-lp-shots {
-    background: #ffffff;
-    padding-top: 64px;
-    padding-bottom: 64px;
+  .lewa-lp-cardtitle {
+    font-size: 15px;
+    font-weight: 700;
+    color: #0c1a3d;
+    margin-bottom: 8px;
   }
 
-  .lewa-lp-shotswrap {
-    margin-top: 32px;
-  }
+  .lewa-lp-cardbody { font-size: 13px; line-height: 1.625; color: #7a93bb; }
 
-  /* Two options in a pill, the selected one filled. The same shape as the
-     light/dark switch this section is modelled on. */
+  /* ---- SCREENSHOTS -------------------------------------------------------- */
+
+  /* Carried over unchanged from the page this one replaces, because the
+     machinery behind it is unchanged: public/images/lewa is checked in empty,
+     and dropping admin-1.png or teacher-1.png into it is all it takes to make
+     this section appear. These are the class names app/_landing/Screenshots.tsx
+     asks for; that component carries no CSS of its own. */
+  .lewa-lp-shotswrap { margin-top: 32px; }
+
   .lewa-lp-toggle {
     display: inline-flex;
+    gap: 4px;
     padding: 4px;
-    border: 1px solid rgba(30, 58, 138, 0.1);
+    margin-bottom: 20px;
     border-radius: 999px;
-    background: #eff8ff;
+    background: #eef2fd;
   }
 
   .lewa-lp-toggleopt {
-    min-height: 44px;
-    padding: 10px 22px;
-    border: 0;
+    min-height: 40px;
+    padding: 8px 18px;
+    border: none;
     border-radius: 999px;
     background: transparent;
-    color: #1e3a8a;
-    font-size: 15px;
+    color: #4a6080;
+    font-family: inherit;
+    font-size: 14px;
     font-weight: 600;
     cursor: pointer;
   }
 
-  .lewa-lp-toggleopt-on {
-    background: #1e3a8a;
-    color: #ffffff;
+  .lewa-lp-toggleopt[aria-selected="true"] {
+    background: #ffffff;
+    color: #1e3a8a;
+    box-shadow: 0 1px 2px rgba(12, 26, 61, 0.12);
   }
 
   .lewa-lp-shotstage {
-    margin-top: 24px;
-    padding: 20px;
-    border: 1px solid rgba(30, 58, 138, 0.1);
+    position: relative;
+    border: 1px solid #e4ecfa;
     border-radius: 16px;
-    background: #eff8ff;
-    text-align: center;
+    background: #ffffff;
+    overflow: hidden;
   }
 
-  .lewa-lp-shot {
-    display: inline-block;
-    width: auto;
-    max-width: 100%;
-    /* Tall phone screenshots and wide desktop ones share this stage, so the
-       height is capped and the width follows, rather than the other way
-       round -- otherwise a portrait screenshot would run off the page. */
-    max-height: 560px;
-    height: auto;
-    border-radius: 10px;
-  }
+  .lewa-lp-shot { display: block; width: 100%; height: auto; }
 
   .lewa-lp-shotnav {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 18px;
-    margin-top: 18px;
+    gap: 12px;
+    margin-top: 16px;
   }
 
   .lewa-lp-shotbtn {
@@ -620,348 +963,619 @@ const LANDING_CSS = `
     width: 44px;
     height: 44px;
     padding: 0;
-    border: 1px solid #1e3a8a;
-    border-radius: 999px;
+    border: 1px solid #dce6f7;
+    border-radius: 10px;
     background: #ffffff;
     color: #1e3a8a;
     cursor: pointer;
   }
 
-  .lewa-lp-shotcount {
-    min-width: 56px;
-    font-size: 15px;
-    font-weight: 600;
-    color: #64748b;
+  .lewa-lp-shotbtn:hover { background: #eef2fd; }
+
+  .lewa-lp-shotcount { font-size: 14px; font-weight: 600; color: #7a93bb; }
+
+  /* ---- HOW IT WORKS ------------------------------------------------------- */
+
+  .lewa-lp-stepgrid {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+
+  .lewa-lp-step { display: flex; flex-direction: column; align-items: center; text-align: center; }
+
+  .lewa-lp-stepnum {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 80px;
+    height: 80px;
+    margin-bottom: 24px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #1e3a8a, #0c1a3d);
+    color: #ffffff;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 24px;
+    font-weight: 800;
+    box-shadow: 0 10px 15px -3px rgba(12, 26, 61, 0.25);
+  }
+
+  .lewa-lp-stepnum-green { background: linear-gradient(135deg, #059669, #047857); }
+
+  .lewa-lp-steptitle { font-size: 18px; font-weight: 700; color: #0c1a3d; margin-bottom: 12px; }
+
+  .lewa-lp-stepbody { max-width: 320px; font-size: 14px; line-height: 1.625; color: #7a93bb; }
+
+  /* The hairline joining the three tiles. Hidden below the point at which the
+     steps stop being a row, because a horizontal connector across a vertical
+     stack joins nothing. */
+  .lewa-lp-stepline { display: none; }
+
+  /* ---- PDF SPOTLIGHT ------------------------------------------------------ */
+
+  .lewa-lp-splitgrid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 64px;
+    align-items: center;
+  }
+
+  .lewa-lp-h2-split { margin-bottom: 20px; }
+
+  .lewa-lp-splitlede {
+    margin-bottom: 32px;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 16px;
+    line-height: 1.625;
+  }
+
+  .lewa-lp-checklist { display: flex; flex-direction: column; gap: 12px; }
+
+  .lewa-lp-checkitem {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: rgba(255, 255, 255, 0.65);
+    font-size: 14px;
+  }
+
+  .lewa-lp-checkmark {
+    width: 20px;
+    height: 20px;
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(5, 150, 105, 0.2);
+    color: #34d399;
+  }
+
+  /* ---- PDF SPOTLIGHT: THE REPORT CARD ILLUSTRATION ------------------------ */
+
+  /* The same standing as the dashboard illustration above: kept from the design
+     at the owner's instruction, describing no real student. */
+  .lewa-lp-rc {
+    background: #ffffff;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
+  }
+
+  .lewa-lp-rchead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 20px 24px;
+    background: #1e3a8a;
+  }
+
+  .lewa-lp-rcheadleft { display: flex; align-items: center; gap: 12px; min-width: 0; }
+
+  .lewa-lp-rcicon {
+    width: 36px;
+    height: 36px;
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.15);
+    color: #ffffff;
+  }
+
+  .lewa-lp-rctitle { font-size: 14px; font-weight: 700; color: #ffffff; }
+  .lewa-lp-rcsub { font-size: 12px; color: rgba(255, 255, 255, 0.45); }
+
+  .lewa-lp-rcpdf {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex: none;
+    padding: 6px 12px;
+    border-radius: 8px;
+    background: #059669;
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .lewa-lp-rcstudent {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 20px 24px;
+    border-bottom: 1px solid #f3f4f6;
+  }
+
+  .lewa-lp-rcavatar {
+    position: relative;
+    width: 56px;
+    height: 56px;
+    flex: none;
+    border-radius: 50%;
+    background: #eff8ff;
+    overflow: hidden;
+  }
+
+  /* The same crop as the header lockup, at avatar size. */
+  .lewa-lp-rcavatar .lewa-lp-logo { left: -60px; top: -46px; width: 176px; height: 176px; }
+
+  .lewa-lp-rcname { font-size: 16px; font-weight: 800; color: #0c1a3d; }
+  .lewa-lp-rcmeta { margin-top: 2px; font-size: 14px; color: #9ca3af; }
+
+  .lewa-lp-rcbody { padding: 20px 24px; }
+
+  .lewa-lp-rcgrid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .lewa-lp-rccell {
+    padding: 12px 6px;
+    border: 1px solid #e8eef8;
+    border-radius: 12px;
+    background: #f8faff;
     text-align: center;
   }
 
-  /* ---- CONTACT ----------------------------------------------------------- */
+  .lewa-lp-rcsubject { font-size: 10px; font-weight: 500; color: #7a93bb; margin-bottom: 6px; }
+  .lewa-lp-rcscore { font-size: 14px; font-weight: 800; color: #0c1a3d; }
+  .lewa-lp-rcgrade { margin-top: 2px; font-size: 11px; font-weight: 700; color: #059669; }
 
-  /* Light, not navy. The closing call to action below it is the navy band now,
-     and two full-width navy slabs stacked on each other read as one very tall
-     band with a seam in the middle rather than as two sections. */
-  .lewa-lp-contactsec {
-    background: #eff8ff;
-    padding-top: 64px;
-    padding-bottom: 64px;
+  .lewa-lp-rcavg {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 16px;
+    border: 1px solid #bbf7d0;
+    border-radius: 12px;
+    background: #f0fdf4;
   }
 
-  .lewa-lp-contact {
-    margin-top: 24px;
-    font-size: 15px;
-    line-height: 1.7;
-    color: #334155;
+  .lewa-lp-rcavglabel { font-size: 14px; color: #374151; }
+  .lewa-lp-rcavgval { font-size: 14px; font-weight: 800; color: #059669; text-align: right; }
+
+  /* ---- BENEFITS ----------------------------------------------------------- */
+
+  .lewa-lp-benefitgrid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 24px;
   }
 
-  /* ---- CLOSING BAND ------------------------------------------------------ */
+  .lewa-lp-benefit {
+    padding: 32px;
+    border: 1px solid #e4ecfa;
+    border-radius: 16px;
+    background: #ffffff;
+    transition: box-shadow 0.2s;
+  }
 
-  .lewa-lp-cta {
-    background: #1e3a8a;
+  .lewa-lp-benefit:hover { box-shadow: 0 10px 15px -3px rgba(12, 26, 61, 0.1); }
+
+  .lewa-lp-benefiticon {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+    border-radius: 16px;
+    background: #0c1a3d;
     color: #ffffff;
-    padding-top: 64px;
-    padding-bottom: 64px;
   }
+
+  .lewa-lp-benefittitle { font-size: 20px; font-weight: 700; color: #0c1a3d; margin-bottom: 12px; }
+  .lewa-lp-benefitbody { font-size: 14px; line-height: 1.625; color: #7a93bb; }
+
+  /* The WhatsApp card, in WhatsApp's own colours -- which is the point of it
+     being a different card rather than a fifth of the same one. */
+  .lewa-lp-benefit-wa {
+    position: relative;
+    overflow: hidden;
+    border-color: #064e45;
+    background: #075e54;
+  }
+
+  .lewa-lp-benefit-wa:hover { box-shadow: 0 20px 25px -5px rgba(7, 94, 84, 0.3); }
+
+  .lewa-lp-waglow {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    background: rgba(37, 211, 102, 0.15);
+    filter: blur(40px);
+    pointer-events: none;
+  }
+
+  .lewa-lp-wainner { position: relative; }
+
+  .lewa-lp-waicon {
+    background: #25d366;
+    box-shadow: 0 10px 15px -3px rgba(37, 211, 102, 0.3);
+  }
+
+  .lewa-lp-watitlerow {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .lewa-lp-benefit-wa .lewa-lp-benefittitle { color: #ffffff; margin-bottom: 0; }
+  .lewa-lp-benefit-wa .lewa-lp-benefitbody { color: rgba(255, 255, 255, 0.65); }
+
+  .lewa-lp-watag {
+    padding: 2px 8px;
+    border: 1px solid rgba(37, 211, 102, 0.3);
+    border-radius: 999px;
+    background: rgba(37, 211, 102, 0.2);
+    color: #25d366;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .lewa-lp-wachips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+
+  .lewa-lp-wachip {
+    padding: 4px 10px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  /* ---- CONTACT ------------------------------------------------------------ */
+
+  /* NOT IN THE DESIGN. The design's only "Contact" was a footer link pointing at
+     "#", beside a Privacy and a Terms that pointed at the same nowhere. The page
+     this one replaces had a real contact section carrying the support number, so
+     it is kept -- and it is now what the nav's Contact link resolves to. */
+  .lewa-lp-contactsec { padding-top: 96px; padding-bottom: 96px; background: #ffffff; }
+
+  .lewa-lp-contactline { margin-top: 20px; font-size: 15px; color: #6b7fa3; }
+
+  .lewa-lp-textlink { color: #1e3a8a; font-weight: 600; text-decoration: underline; }
+
+  /* ---- CLOSING CTA -------------------------------------------------------- */
+
+  .lewa-lp-ctacard {
+    position: relative;
+    overflow: hidden;
+    padding: 48px 24px;
+    border-radius: 24px;
+    background: linear-gradient(135deg, #0b1735, #1a2f6a 55%, #0c2447);
+    text-align: center;
+  }
+
+  .lewa-lp-ctaglow-a {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 256px;
+    height: 256px;
+    border-radius: 50%;
+    background: rgba(5, 150, 105, 0.1);
+    filter: blur(64px);
+    transform: translate(50%, -50%);
+    pointer-events: none;
+  }
+
+  .lewa-lp-ctaglow-b {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 192px;
+    height: 192px;
+    border-radius: 50%;
+    background: rgba(59, 130, 246, 0.08);
+    filter: blur(40px);
+    transform: translate(-50%, 50%);
+    pointer-events: none;
+  }
+
+  .lewa-lp-ctainner { position: relative; }
 
   .lewa-lp-ctalede {
-    margin-top: 14px;
-    max-width: 620px;
-    font-size: 17px;
-    line-height: 1.6;
-    color: #eff8ff;
+    max-width: 448px;
+    margin: 16px auto 32px;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 16px;
+    line-height: 1.625;
   }
 
-  /* ---- FOOTER ------------------------------------------------------------ */
+  /* ---- FOOTER ------------------------------------------------------------- */
 
   .lewa-lp-footer {
-    background: #ffffff;
-    border-top: 1px solid rgba(30, 58, 138, 0.1);
-    padding-top: 24px;
-    padding-bottom: 24px;
+    padding-top: 48px;
+    padding-bottom: 48px;
+    background: #0b1735;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
   }
 
   .lewa-lp-footerbar {
     display: flex;
-    flex-wrap: wrap;
+    flex-direction: column;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
+    gap: 24px;
   }
 
   .lewa-lp-footermeta {
-    font-size: 14px;
-    color: #64748b;
+    color: rgba(255, 255, 255, 0.35);
+    font-size: 12px;
+    text-align: center;
   }
 
-  .lewa-lp-footerbrand {
+  .lewa-lp-footerlinks {
     display: flex;
     align-items: center;
-    gap: 14px;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 24px;
   }
 
-  /* ---- ANCHOR TARGETS ---------------------------------------------------- */
-
-  /* The header is sticky, so a section scrolled to by its id would otherwise
-     arrive with its heading underneath the header. scroll-margin-top on the
-     targets themselves keeps that correction on the prefixed classes, rather
-     than putting scroll-padding on the document. */
-  .lewa-lp-features,
-  .lewa-lp-shots,
-  .lewa-lp-contactsec {
-    scroll-margin-top: 76px;
+  .lewa-lp-footerlink {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 12px;
+    font-weight: 500;
+    text-decoration: none;
   }
 
-  /* THE ONE NON-PREFIXED SELECTOR ON THE PAGE, and the only way to get smooth
-     scrolling in CSS: the property has to sit on the scrolling element, which
-     is the document, not on any box inside it. It is scoped in practice by this
-     stylesheet existing only on this route -- every link off this page is a
-     plain anchor, so a full navigation tears the rule down with the page.
-     Anyone who has asked their system not to animate is left alone. */
-  @media (prefers-reduced-motion: no-preference) {
-    html {
-      scroll-behavior: smooth;
-    }
+  .lewa-lp-footerlink:hover { color: #ffffff; }
+
+  .lewa-lp-footerrule {
+    margin-top: 32px;
+    padding-top: 24px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.25);
+    font-size: 12px;
+    text-align: center;
   }
 
-  /* ---- TABLETS ----------------------------------------------------------- */
+  /* ---- RESPONSIVE --------------------------------------------------------- */
 
-  @media (max-width: 1024px) {
-    .lewa-lp-cardgrid {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    /* The hero image drops below the words before the cards drop to one column:
-       at this width the two hero columns are already too narrow to read. */
-    .lewa-lp-herogrid {
-      grid-template-columns: minmax(0, 1fr);
-      gap: 32px;
-    }
+  /* Tailwind's sm. Two-up for the things that were one-up, and the phone
+     illustration gets its badges back at full size. */
+  @media (min-width: 640px) {
+    .lewa-lp-cardgrid { grid-template-columns: repeat(2, 1fr); }
+    .lewa-lp-benefitgrid { grid-template-columns: repeat(2, 1fr); }
+    .lewa-lp-ctacard { padding: 48px; }
   }
 
-  /* ---- PHONES ------------------------------------------------------------ */
+  /* Tailwind's md. THE HEADER SWAPS HERE: the hamburger goes and the desktop
+     nav arrives, which is the one place on the page where two blocks have to
+     agree exactly, or the header ends up with both or neither. */
+  @media (min-width: 768px) {
+    .lewa-lp-menubtn { display: none; }
+    .lewa-lp-navlinks { display: flex; }
+    .lewa-lp-navctas { display: flex; }
 
-  @media (max-width: 720px) {
-    /* Everything in the desktop header goes; the hamburger takes its place and
-       the sheet it opens carries all of it, Teacher login and Get started
-       included. */
-    .lewa-lp-headerlink,
-    .lewa-lp-navlink,
-    .lewa-lp-headercta {
-      display: none;
+    .lewa-lp-h1 { font-size: 60px; }
+    .lewa-lp-h2 { font-size: 36px; }
+
+    .lewa-lp-statgrid { grid-template-columns: repeat(4, 1fr); }
+    .lewa-lp-stepgrid { grid-template-columns: repeat(3, 1fr); }
+
+    /* Drawn only now that the steps are actually side by side. It stops short of
+       both outer tiles so it reads as a join between them, not a rule across
+       the section. */
+    .lewa-lp-stepline {
+      display: block;
+      position: absolute;
+      top: 40px;
+      left: calc(33.33% + 32px);
+      right: calc(33.33% + 32px);
+      height: 1px;
+      background: linear-gradient(to right, rgba(30, 58, 138, 0.2), rgba(5, 150, 105, 0.5), rgba(30, 58, 138, 0.2));
     }
 
-    .lewa-lp-menubtn {
-      display: inline-flex;
-    }
+    .lewa-lp-footerbar { flex-direction: row; }
+    .lewa-lp-footermeta { text-align: left; }
+  }
 
-    /* .lewa-lp-statgrid is deliberately NOT in this list. The two counts stay
-       side by side on a phone -- they are four characters between them, and
-       stacking them would make the shortest block on the page the tallest. */
-    .lewa-lp-cardgrid,
-    .lewa-lp-stepgrid {
-      grid-template-columns: minmax(0, 1fr);
-    }
+  /* Tailwind's lg. The two big split layouts become two columns. */
+  @media (min-width: 1024px) {
+    .lewa-lp-herogrid { grid-template-columns: 1fr 1fr; }
+    .lewa-lp-splitgrid { grid-template-columns: 1fr 1fr; }
+    .lewa-lp-cardgrid { grid-template-columns: repeat(4, 1fr); }
+    .lewa-lp-mockcol { justify-content: flex-end; }
+  }
 
-    /* THE ONE FULL-BLEED BLOCK. The container is stripped of its width limit
-       and its side padding just here, so the navy reaches both edges of the
-       screen; the padding it loses is given back inside the band, which is
-       where it belongs when the block is the full width of the display. */
-    .lewa-lp-statwrap {
-      max-width: none;
-      padding-left: 0;
-      padding-right: 0;
-    }
+  /* Under a small phone the two floating badges are wider than the space either
+     side of the panel, so they come in over it rather than hanging off it. */
+  @media (max-width: 479px) {
+    .lewa-lp-badge { padding: 10px 12px; gap: 8px; border-radius: 12px; }
+    .lewa-lp-badge-bl { left: -8px; bottom: -14px; }
+    .lewa-lp-badge-tr { right: -8px; top: -14px; }
+    .lewa-lp-badgeicon { width: 30px; height: 30px; border-radius: 10px; }
+    .lewa-lp-badgetitle { font-size: 11px; }
+    .lewa-lp-badgesub { font-size: 10px; }
+    .lewa-lp-h1 { font-size: 38px; }
+    .lewa-lp-rcgrid { gap: 6px; }
+    .lewa-lp-rcstudent, .lewa-lp-rchead, .lewa-lp-rcbody { padding-left: 16px; padding-right: 16px; }
+  }
 
-    .lewa-lp-stats {
-      padding-top: 0;
-      padding-bottom: 0;
-    }
-
-    .lewa-lp-statband {
-      border-radius: 0;
-      padding: 34px 20px;
-    }
-
-    .lewa-lp-statgrid {
-      gap: 14px;
-    }
-
-    /* Both labels have to sit on one line inside half a 360px screen.
-       "Students managed" is the long one and this is what keeps it there. */
-    .lewa-lp-statlabel {
-      font-size: 14px;
-    }
-
-    /* Stacked and full width, rather than two half-width buttons squeezed side
-       by side. */
-    .lewa-lp-actions {
-      flex-direction: column;
-      align-items: stretch;
-    }
-
-    .lewa-lp-hero {
-      padding-top: 40px;
-      padding-bottom: 48px;
-    }
-
-    .lewa-lp-features,
-    .lewa-lp-how,
-    .lewa-lp-shots,
-    .lewa-lp-contactsec,
-    .lewa-lp-cta {
-      padding-top: 48px;
-      padding-bottom: 48px;
-    }
-
-    .lewa-lp-shotstage {
-      padding: 12px;
-    }
-
-    .lewa-lp-shot {
-      max-height: 420px;
-    }
-
-    /* Both options still have to fit one line at 360px. */
-    .lewa-lp-toggleopt {
-      padding: 10px 16px;
-      font-size: 14px;
-    }
-
-    .lewa-lp-footerbar {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 12px;
-    }
+  /* The pulsing dot is decoration; anyone who has asked for less motion gets a
+     steady one instead of no dot. */
+  @media (prefers-reduced-motion: reduce) {
+    .lewa-lp-pulse { animation: none; }
+    .lewa-lp-btn { transition: none; }
+    .lewa-lp-btn-green:hover { transform: none; }
   }
 `;
 
-/**
- * One 24x24 stroke drawing, shared by all eight cards so the weight, the cap
- * and the colour are decided once. Colour comes through currentColor from
- * .lewa-lp-cardicon, which is the only place the navy is written.
+/* ---- CONTENT --------------------------------------------------------------
  *
- * aria-hidden because every icon sits directly above a heading that says the
- * same thing in words; announcing it would just be that heading twice.
+ * EVERY CLAIM BELOW WAS CHECKED AGAINST THE PRODUCT BEFORE IT WAS WRITTEN HERE.
+ * The design this page was rebuilt from was generated, and a generator will
+ * write a plausible sentence about a feature that does not exist as readily as
+ * one about a feature that does. So each of the eight cards was matched to a
+ * real route under app/school, each of the six documents to a real exported
+ * function in src/utils/pdfGenerator.ts, and each WhatsApp message type to a
+ * real route in the API. Two of the design's claims did not survive that check;
+ * both are noted where they were changed.
  */
-function Icon({ children }: { children: ReactNode }) {
-  return (
-    <svg
-      className="lewa-lp-cardicon"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.75}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      focusable="false"
-    >
-      {children}
-    </svg>
-  );
-}
 
 const FEATURES: { title: string; body: string; icon: ReactNode }[] = [
   {
-    title: "Students and classes",
-    body: "Enrol students, organise them into classes and keep every record in one place.",
-    icon: (
-      <Icon>
-        <circle cx="9" cy="8" r="3.2" />
-        <path d="M3.5 19.5c0-3 2.5-4.8 5.5-4.8s5.5 1.8 5.5 4.8" />
-        <path d="M16.5 6.2a3 3 0 0 1 0 5.6" />
-        <path d="M18 14.9c1.7.6 2.9 2 2.9 4.1" />
-      </Icon>
-    ),
+    title: "Fees Management",
+    body: "Track payments, generate invoices, manage outstanding balances per student.",
+    icon: <DollarSign size={19} aria-hidden="true" />,
   },
   {
-    title: "Fees and payments",
-    body: "Set fees by level, record each payment and see at a glance who still owes what.",
-    icon: (
-      <Icon>
-        <rect x="2.6" y="5.6" width="18.8" height="12.8" rx="2.4" />
-        <circle cx="12" cy="12" r="2.6" />
-        <path d="M6.2 12h.01M17.8 12h.01" />
-      </Icon>
-    ),
+    title: "Report Cards",
+    body: "Print-ready report cards in pedagogic format with subject averages and rankings.",
+    icon: <FileText size={19} aria-hidden="true" />,
   },
   {
-    title: "Marks and exams",
-    body: "Enter marks for sequences, tests and exams, and let the averages work themselves out.",
-    icon: (
-      <Icon>
-        <path d="M8 4.5h8a2 2 0 0 1 2 2v13a1 1 0 0 1-1.5.9L12 18l-4.5 2.4A1 1 0 0 1 6 19.5v-13a2 2 0 0 1 2-2Z" />
-        <path d="M9.4 10.2l1.9 1.9 3.3-3.4" />
-      </Icon>
-    ),
+    title: "Student Records",
+    body: "Complete student profiles with academic history, enrollment, and matricule numbers.",
+    icon: <Users size={19} aria-hidden="true" />,
   },
   {
-    title: "Report cards",
-    body: "Produce termly report cards with class ranks and averages, ready to print.",
-    icon: (
-      <Icon>
-        <path d="M6 3.2h8.2L19 8v12.8H6Z" />
-        <path d="M14 3.2V8h5" />
-        <path d="M9 12.4h7M9 16h5" />
-      </Icon>
-    ),
+    title: "Staff Management",
+    body: "Staff profiles, record of work logs, and performance documentation.",
+    icon: <ClipboardList size={19} aria-hidden="true" />,
   },
   {
-    title: "Attendance",
-    body: "Take attendance class by class and follow it across the whole term.",
-    icon: (
-      <Icon>
-        <rect x="3.2" y="5" width="17.6" height="15.6" rx="2.4" />
-        <path d="M3.2 9.6h17.6M8 3.2v3.4M16 3.2v3.4" />
-        <path d="M9.2 14.6l2 2 3.6-3.8" />
-      </Icon>
-    ),
+    title: "Attendance Tracking",
+    body: "Daily attendance registers for students and staff with exportable sheets.",
+    icon: <Calendar size={19} aria-hidden="true" />,
+  },
+  {
+    title: "Expense Invoices",
+    body: "Log school expenses and generate itemized PDF expense invoices.",
+    icon: <Receipt size={19} aria-hidden="true" />,
   },
   {
     title: "Timetable",
-    body: "Lay out the week per class and per teacher, with no two lessons in one slot.",
-    icon: (
-      <Icon>
-        <rect x="3.2" y="4.4" width="17.6" height="16.2" rx="2.4" />
-        <path d="M3.2 9.6h17.6M9.4 9.6v11M15 9.6v11" />
-      </Icon>
-    ),
+    body: "Build and export class timetables as formatted printable PDFs.",
+    icon: <Clock size={19} aria-hidden="true" />,
   },
   {
-    title: "Staff and payroll",
-    body: "Keep staff records, track who worked and prepare the salaries for the month.",
-    icon: (
-      <Icon>
-        <rect x="2.8" y="6.6" width="18.4" height="13" rx="2.4" />
-        <path d="M8.6 6.6V5.2a2 2 0 0 1 2-2h2.8a2 2 0 0 1 2 2v1.4" />
-        <path d="M2.8 12.2h18.4M11.4 12.2v2.2h1.2v-2.2" />
-      </Icon>
-    ),
-  },
-  {
-    title: "Teacher portal",
-    body: "Teachers sign in to their own classes to enter marks and take attendance.",
-    icon: (
-      <Icon>
-        <rect x="3" y="4.2" width="18" height="12" rx="2" />
-        <path d="M12 16.2v4M8.4 20.4h7.2" />
-        <path d="M8 11.6l2.4-2.6 2 2.1 1.8-2.3 2 2.6" />
-      </Icon>
-    ),
+    title: "School Settings",
+    body: "Customize name, logo, colors, subjects per class, and matricule format.",
+    icon: <Settings size={19} aria-hidden="true" />,
   },
 ];
 
 const STEPS = [
   {
-    title: "Create your school account",
-    body: "Sign up with your school details and send them in for approval.",
+    num: "01",
+    title: "Create Your School Account",
+    body: "Register and configure your school: name, logo, academic year, and class structure.",
   },
   {
-    title: "Add your classes and students",
-    body: "Set up your levels and classes, then enrol your students into them.",
+    num: "02",
+    title: "Load Your Data",
+    body: "Add students, enroll staff, set fee structures, and build your timetable with an intuitive interface.",
   },
   {
-    title: "Start recording fees, marks and attendance",
-    body: "Everything you enter feeds the dashboard, the fee balances and the report cards.",
+    num: "03",
+    title: "Manage & Export",
+    body: "Run daily operations and generate professional PDF documents for any school record instantly.",
+  },
+];
+
+/**
+ * All six exist. In order: generateTransactionInvoice, generateReportCard,
+ * generateClassAttendanceSheet / generateStudentAttendanceSheet,
+ * generateTimetable, generateExpenseInvoice, generateWorkRecord -- every one an
+ * export of src/utils/pdfGenerator.ts.
+ */
+const PDF_DOCUMENTS = [
+  "School fees invoices per student",
+  "Pedagogic-format report cards",
+  "Attendance sheets for staff & students",
+  "Class timetable exports",
+  "Expense tracking invoices",
+  "Staff record of work documents",
+];
+
+const BENEFITS: {
+  title: string;
+  body: string;
+  icon: ReactNode;
+  whatsapp?: boolean;
+  chips?: string[];
+  tag?: string;
+}[] = [
+  {
+    title: "Built for Cameroon",
+    body: "FCFA currency, Cameroonian name formats, local academic year structure — designed for how your school actually operates.",
+    icon: <Shield size={21} aria-hidden="true" />,
+  },
+  {
+    /**
+     * CORRECTED. The design listed "Fee reminders, Report card alerts,
+     * Announcements, Staff notices". Only the first of those four is real. What
+     * the API can actually send, one route each, is a fee reminder
+     * (routes/whatsappFeeReminder.js), an absence notice
+     * (routes/whatsappAbsence.js) and a payment confirmation
+     * (routes/whatsappPaymentConfirmation.js). There is no announcement
+     * broadcast, no report card alert and no staff notice, so those three are
+     * gone and the real third one is in.
+     */
+    title: "WhatsApp Communication",
+    body: "Send fee reminders, absence notices and payment confirmations straight to parents on WhatsApp — from inside the platform, with no copying of numbers.",
+    icon: <MessageCircle size={22} aria-hidden="true" />,
+    whatsapp: true,
+    tag: "via WhatsApp",
+    chips: ["Fee reminders", "Absence notices", "Payment confirmations"],
+  },
+  {
+    title: "Everything in Seconds",
+    body: "Generate any document on the spot. Search any student record as you type. Fast, responsive, and always to hand.",
+    icon: <Zap size={21} aria-hidden="true" />,
+  },
+  {
+    /**
+     * CORRECTED. The design said "PC-First Design — optimized for desktop staff
+     * use", which is not what this product is: it ships a web app manifest, a
+     * full set of installable icons and a service worker, and every screen in it
+     * is built to a phone width. Claiming the opposite on the front door would
+     * be the first thing a visitor disproved by opening the page on a phone.
+     */
+    title: "The office PC, or a phone",
+    body: "Full sidebar navigation on the school computer, and the same screens on a phone — it installs to the home screen like an app.",
+    icon: <Globe size={21} aria-hidden="true" />,
   },
 ];
 
@@ -977,6 +1591,11 @@ const STEPS = [
  * generated, so what fs sees during `next build` is what ships. That is the
  * point: nothing is ever rendered pointing at a file that is not there, so
  * there is no broken-image icon and no reserved empty box to fall back to.
+ *
+ * hero.png has one extra job in this design. The hero's right-hand column is
+ * otherwise a drawn illustration of a dashboard; if a real screenshot is
+ * present it takes that slot instead, because a photograph of the product beats
+ * a drawing of it every time.
  */
 
 const LEWA_IMAGE_DIR = path.join(process.cwd(), "public", "images", "lewa");
@@ -1042,10 +1661,10 @@ function findSeries(prefix: string, count: number): Shot[] {
 }
 
 /**
- * Reads the two public counts, and is allowed to fail.
+ * Reads the public counts, and is allowed to fail.
  *
  * This page is the front door: it has to render whether or not the API answers.
- * So every path out of here that is not a clean pair of numbers returns null,
+ * So every path out of here that is not a usable set of numbers returns null,
  * and null means the stats band is not rendered at all -- a page with one band
  * fewer, never a page with a blank space or an error in it.
  *
@@ -1056,6 +1675,12 @@ function findSeries(prefix: string, count: number): Shot[] {
  * `schools === 0` is treated as a failure on purpose. Zero is a real answer the
  * endpoint can give -- a fresh database, or a replica that has not caught up --
  * and "0 schools on Lewa" is worse on a marketing page than no band at all.
+ *
+ * `staff` IS ALLOWED TO BE MISSING, and the other two are not. It was added to
+ * /public/stats for this redesign, so a deployment where the web app is ahead of
+ * the API will answer without it. That case drops one tile from the band rather
+ * than the whole band, which is the difference between a stat this build knows
+ * about and a stat this build depends on.
  */
 async function loadStats(): Promise<Stats> {
   const base = process.env.NEXT_PUBLIC_API_URL;
@@ -1079,7 +1704,7 @@ async function loadStats(): Promise<Stats> {
     if (schools === null || students === null) return null;
     if (schools === 0) return null;
 
-    return { schools, students };
+    return { schools, students, staff: readCount(data, "staff") };
   } catch {
     // A timeout, a refused connection, a body that is not JSON, or the nulls the
     // endpoint returns from its own failure path. All the same answer here:
@@ -1109,10 +1734,30 @@ function formatCount(value: number): string {
   return value.toLocaleString("en-US");
 }
 
+/** The brand lockup, identical in the header, the sheet and the footer. */
+function BrandMark({ href = "/" }: { href?: string }) {
+  return (
+    <a className="lewa-lp-brand" href={href}>
+      {/* alt is empty on purpose: the word Lewa sits beside it inside the same
+          link, so a description here would have a screen reader say the name
+          twice. Sized entirely in CSS -- see .lewa-lp-logobox. */}
+      <span className="lewa-lp-logobox">
+        <img
+          className="lewa-lp-logo"
+          src="/images/lewa-logo.png"
+          alt=""
+          width={2000}
+          height={2000}
+        />
+      </span>
+      <span className="lewa-lp-brandname">Lewa</span>
+    </a>
+  );
+}
+
 export default async function LewaLandingPage() {
   const stats = await loadStats();
   const year = new Date().getFullYear();
-
   const hero = findShot("hero.png");
 
   /**
@@ -1140,148 +1785,249 @@ export default async function LewaLandingPage() {
   const navLinks: MenuLink[] = [
     { href: "#features", label: "Features" },
     ...(hasShots ? [{ href: "#screenshots", label: "Screenshots" }] : []),
+    { href: "#how-it-works", label: "How It Works" },
+    { href: "#benefits", label: "Benefits" },
     { href: "#contact", label: "Contact" },
   ];
 
+  /**
+   * The band's tiles, assembled rather than written out, so a stat the API did
+   * not send simply is not there. Three of these are counts; the fourth is a
+   * placeholder and says so in its own class. See PDFS_GENERATED.
+   */
+  const statTiles = stats
+    ? [
+        { value: formatCount(stats.schools), label: "Schools Enrolled", placeholder: false },
+        { value: formatCount(stats.students), label: "Students Managed", placeholder: false },
+        ...(stats.staff !== null
+          ? [{ value: formatCount(stats.staff), label: "Staff Records", placeholder: false }]
+          : []),
+        { value: PDFS_GENERATED, label: "PDFs Generated", placeholder: true },
+      ]
+    : [];
+
   return (
-    <div className="lewa-lp-page">
+    <div className={`lewa-lp-page ${jakarta.variable}`}>
       <style>{LANDING_CSS}</style>
 
       {/* ---- a. HEADER ---------------------------------------------------- */}
-      <header className="lewa-lp-header">
-        <div className="lewa-lp-wrap lewa-lp-headerbar">
-          <a className="lewa-lp-brand" href="/">
-            {/* alt is empty on purpose: the word Lewa sits beside it inside the
-                same link, so a description here would have a screen reader say
-                the name twice. Sized entirely in CSS -- see .lewa-lp-logobox. */}
-            <span className="lewa-lp-logobox">
-              <img
-                className="lewa-lp-logo"
-                src="/images/lewa-logo.png"
-                alt=""
-                width={2000}
-                height={2000}
-              />
-            </span>
-            <span className="lewa-lp-brandname">Lewa</span>
-          </a>
-          {/* Everything in here is hidden below 720px and replaced by the
-              hamburger, which is the last child and the only one that shows
-              there. The sheet it opens carries the same links, so nothing in
-              this nav is unreachable on a phone. */}
-          <nav className="lewa-lp-headernav">
-            {navLinks.map((link) => (
-              <a className="lewa-lp-navlink" href={link.href} key={link.href}>
-                {link.label}
-              </a>
-            ))}
-            <a
-              className="lewa-lp-textlink lewa-lp-headerlink"
-              href={TEACHER_LOGIN_PATH}
-            >
-              Teacher login
-            </a>
-            <a
-              className="lewa-lp-btn lewa-lp-btn-filled lewa-lp-headercta"
-              href={SIGNUP_PATH}
-            >
-              Get started
-            </a>
-            <MobileMenu
-              links={navLinks}
-              signupPath={SIGNUP_PATH}
-              teacherLoginPath={TEACHER_LOGIN_PATH}
-            />
-          </nav>
-        </div>
-      </header>
+      {/* The page's only client boundary. It owns the scrolled state and the
+          phone sheet; every word it renders is passed in from here, so the
+          markup is still decided by this server component. */}
+      <LandingNav
+        links={navLinks}
+        signupPath={SIGNUP_PATH}
+        signInPath={SIGN_IN_PATH}
+        teacherLoginPath={TEACHER_LOGIN_PATH}
+        brand={<BrandMark />}
+      />
 
       <main>
         {/* ---- b. HERO ---------------------------------------------------- */}
         <section className="lewa-lp-hero">
-          {/* The second column only exists when there is an image to put in it.
-              With public/images/lewa empty this is the plain container it has
-              always been, so the hero keeps its full width and there is no gap
-              where a picture would have gone. */}
-          <div
-            className={
-              hero ? "lewa-lp-wrap lewa-lp-herogrid" : "lewa-lp-wrap"
-            }
-          >
+          {/* Three decorative layers, none of which is in the accessible tree
+              and none of which can intercept a tap. */}
+          <div className="lewa-lp-glow lewa-lp-glow-a" aria-hidden="true" />
+          <div className="lewa-lp-glow lewa-lp-glow-b" aria-hidden="true" />
+          <div className="lewa-lp-dots" aria-hidden="true" />
+
+          <div className="lewa-lp-wrap lewa-lp-herogrid">
             <div>
+              <span className="lewa-lp-pill lewa-lp-pill-ongreen lewa-lp-herobadge">
+                <span className="lewa-lp-pulse" aria-hidden="true" />
+                Designed for Cameroon Schools
+              </span>
               <h1 className="lewa-lp-h1">
-                Run your whole school from one place.
+                Complete School
+                <br />
+                <span className="lewa-lp-h1-accent">Management</span>
+                <br />
+                System
               </h1>
-              <p className="lewa-lp-lede">
-                Lewa keeps students, fees, marks, attendance and payroll in a
-                single system built for Cameroonian schools, on any phone or
-                computer.
+              <p className="lewa-lp-herolede">
+                Fees, report cards, attendance, staff records, and PDF generation
+                — all in one platform built for nursery and primary schools.
               </p>
+              {/* The design put a "Start Free Trial" and a "View Demo" here.
+                  There is no trial in this product -- no billing, no
+                  subscription, nothing in the schema -- and no demo to view, so
+                  neither survived. What replaces them is the pair of doors this
+                  page has always opened with. */}
               <div className="lewa-lp-actions">
-                <a className="lewa-lp-btn lewa-lp-btn-filled" href={SIGNUP_PATH}>
+                <a className="lewa-lp-btn lewa-lp-btn-green" href={SIGNUP_PATH}>
                   Get your school account
+                  <ArrowRight size={17} aria-hidden="true" />
                 </a>
                 <a
-                  className="lewa-lp-btn lewa-lp-btn-outline"
+                  className="lewa-lp-btn lewa-lp-btn-outline-light"
                   href={TEACHER_LOGIN_PATH}
                 >
                   Teacher login
                 </a>
               </div>
             </div>
+
+            {/* A real screenshot if one has been dropped in; otherwise the
+                design's drawn dashboard. */}
             {hero ? (
-              <Image
-                className="lewa-lp-heroshot"
-                src={hero.src}
-                alt="Lewa on screen"
-                width={hero.width}
-                height={hero.height}
-                // The largest thing above the fold, so it is fetched with the
-                // page rather than after it.
-                priority
+              <div className="lewa-lp-mockcol">
+                <div className="lewa-lp-mock">
+                  <Image
+                    className="lewa-lp-shot"
+                    src={hero.src}
+                    alt="Lewa on screen"
+                    width={hero.width}
+                    height={hero.height}
+                    // The largest thing above the fold, so it is fetched with
+                    // the page rather than after it.
+                    priority
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="lewa-lp-mockcol" aria-hidden="true">
+                <div className="lewa-lp-mock">
+                  <div className="lewa-lp-mockpanel">
+                    <div className="lewa-lp-mockbar">
+                      <span className="lewa-lp-mockdotr" style={{ background: "rgba(248,113,113,0.6)" }} />
+                      <span className="lewa-lp-mockdotr" style={{ background: "rgba(250,204,21,0.6)" }} />
+                      <span className="lewa-lp-mockdotr" style={{ background: "rgba(74,222,128,0.6)" }} />
+                      <span className="lewa-lp-mocktitle">Lewa — Dashboard</span>
+                    </div>
+                    <div className="lewa-lp-mockbody">
+                      <div className="lewa-lp-kpirow">
+                        {[
+                          { label: "Students", value: "248", pct: 78, color: "#3b82f6" },
+                          { label: "Staff", value: "32", pct: 55, color: "#059669" },
+                          { label: "Fees Due", value: "18", pct: 30, color: "#f59e0b" },
+                        ].map((tile) => (
+                          <div className="lewa-lp-kpi" key={tile.label}>
+                            <div className="lewa-lp-kpival">{tile.value}</div>
+                            <div className="lewa-lp-kpilabel">{tile.label}</div>
+                            <div className="lewa-lp-kpitrack">
+                              <div
+                                className="lewa-lp-kpifill"
+                                style={{ width: `${tile.pct}%`, background: tile.color }}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="lewa-lp-mocklist">
+                        <div className="lewa-lp-mocklisthead">Recent Activity</div>
+                        {[
+                          { name: "MBARGA Jean Paul", action: "Fee payment — 25,000 FCFA", color: "#059669" },
+                          { name: "EKWA Marie Claire", action: "Report card generated", color: "#3b82f6" },
+                          { name: "NKOMO Thomas", action: "Absent — noted", color: "#f59e0b" },
+                        ].map((row) => (
+                          <div className="lewa-lp-mockrow" key={row.name}>
+                            <span className="lewa-lp-mockbullet" style={{ background: row.color }} />
+                            <div>
+                              <div className="lewa-lp-mockname">{row.name}</div>
+                              <div className="lewa-lp-mockaction">{row.action}</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="lewa-lp-mockquick">
+                        {["Generate PDF", "Attendance", "Add Student"].map((label) => (
+                          <span className="lewa-lp-quick" key={label}>
+                            {label}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="lewa-lp-badge lewa-lp-badge-bl">
+                    <span
+                      className="lewa-lp-badgeicon"
+                      style={{ background: "rgba(5,150,105,0.1)", color: "#059669" }}
+                    >
+                      <FileText size={17} />
+                    </span>
+                    <span>
+                      <span className="lewa-lp-badgetitle" style={{ display: "block" }}>
+                        PDF Generated
+                      </span>
+                      <span className="lewa-lp-badgesub">Report Card · CM2A</span>
+                    </span>
+                    <span className="lewa-lp-badgecheck">
+                      <Check size={11} strokeWidth={3} />
+                    </span>
+                  </div>
+
+                  <div className="lewa-lp-badge lewa-lp-badge-tr">
+                    <span
+                      className="lewa-lp-badgeicon"
+                      style={{ background: "rgba(30,58,138,0.1)", color: "#1e3a8a" }}
+                    >
+                      <Users size={16} />
+                    </span>
+                    <span>
+                      <span className="lewa-lp-badgetitle" style={{ display: "block" }}>
+                        248 Students
+                      </span>
+                      <span className="lewa-lp-badgesub">Enrolled 2024–25</span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="lewa-lp-wave" aria-hidden="true">
+            <svg viewBox="0 0 1440 64" fill="none" preserveAspectRatio="none">
+              <path
+                d="M0 64L1440 64L1440 24C1200 56 960 8 720 32C480 56 240 8 0 24L0 64Z"
+                fill="#ffffff"
               />
-            ) : null}
+            </svg>
           </div>
         </section>
 
         {/* ---- c. STATS BAND ---------------------------------------------- */}
         {/* Omitted in full when the counts did not arrive. See loadStats. */}
-        {stats !== null ? (
+        {statTiles.length > 0 ? (
           <section className="lewa-lp-stats">
-            <div className="lewa-lp-wrap lewa-lp-statwrap">
-              <div className="lewa-lp-statband">
-                <div className="lewa-lp-statgrid">
-                  <div>
-                    <div className="lewa-lp-statnum">
-                      {formatCount(stats.schools)}
+            <div className="lewa-lp-wrap lewa-lp-wrap-5">
+              <div className="lewa-lp-statgrid">
+                {statTiles.map((tile) => (
+                  <div className="lewa-lp-stat" key={tile.label}>
+                    <div
+                      className={
+                        tile.placeholder
+                          ? "lewa-lp-statnum lewa-lp-statnum-placeholder"
+                          : "lewa-lp-statnum"
+                      }
+                    >
+                      {tile.value}
                     </div>
-                    <p className="lewa-lp-statlabel">Schools on Lewa</p>
+                    <p className="lewa-lp-statlabel">{tile.label}</p>
                   </div>
-                  <div>
-                    <div className="lewa-lp-statnum">
-                      {formatCount(stats.students)}
-                    </div>
-                    <p className="lewa-lp-statlabel">Students managed</p>
-                  </div>
-                </div>
+                ))}
               </div>
             </div>
           </section>
         ) : null}
 
         {/* ---- d. FEATURES ------------------------------------------------ */}
-        <section className="lewa-lp-features" id="features">
+        <section className="lewa-lp-band lewa-lp-band-light" id="features">
           <div className="lewa-lp-wrap">
-            <h2 className="lewa-lp-h2">Everything a school office runs on</h2>
-            <p className="lewa-lp-sectionlede">
-              Eight parts of one system, so a payment recorded at the desk shows
-              up on the fee balance, the dashboard and the report card without
-              anyone copying it over.
-            </p>
+            <div className="lewa-lp-sectionhead">
+              <span className="lewa-lp-pill lewa-lp-pill-navy">All Modules Included</span>
+              <h2 className="lewa-lp-h2">One Platform for Everything</h2>
+              <p className="lewa-lp-sectionlede">
+                No more spreadsheets or scattered paper records. Lewa gives you
+                every management tool your school needs in one clean interface.
+              </p>
+            </div>
             <div className="lewa-lp-cardgrid">
               {FEATURES.map((feature) => (
                 <div className="lewa-lp-card" key={feature.title}>
-                  {feature.icon}
+                  <span className="lewa-lp-cardicon">{feature.icon}</span>
                   <h3 className="lewa-lp-cardtitle">{feature.title}</h3>
                   <p className="lewa-lp-cardbody">{feature.body}</p>
                 </div>
@@ -1296,125 +2042,290 @@ export default async function LewaLandingPage() {
             over it would be worse than no section, because it would read as
             something that failed to load. */}
         {hasShots ? (
-          <section className="lewa-lp-shots" id="screenshots">
+          <section className="lewa-lp-band" id="screenshots">
             <div className="lewa-lp-wrap">
-              <h2 className="lewa-lp-h2">See it before you sign up</h2>
-              <p className="lewa-lp-sectionlede">
-                The same screens your office and your teachers will use every
-                day.
-              </p>
+              <div className="lewa-lp-sectionhead">
+                <h2 className="lewa-lp-h2">See it before you sign up</h2>
+                <p className="lewa-lp-sectionlede">
+                  The same screens your office and your teachers will use every
+                  day.
+                </p>
+              </div>
               <Screenshots groups={shotGroups} />
             </div>
           </section>
         ) : null}
 
         {/* ---- e. HOW IT WORKS -------------------------------------------- */}
-        <section className="lewa-lp-how">
-          <div className="lewa-lp-wrap">
-            <h2 className="lewa-lp-h2">How it works</h2>
+        <section className="lewa-lp-band" id="how-it-works">
+          <div className="lewa-lp-wrap lewa-lp-wrap-6">
+            <div className="lewa-lp-sectionhead">
+              <span className="lewa-lp-pill lewa-lp-pill-green">Simple Setup</span>
+              <h2 className="lewa-lp-h2">Up and Running in Minutes</h2>
+            </div>
             <div className="lewa-lp-stepgrid">
+              <span className="lewa-lp-stepline" aria-hidden="true" />
               {STEPS.map((step, index) => (
-                <div key={step.title}>
-                  <div className="lewa-lp-stepnum">{index + 1}</div>
+                <div className="lewa-lp-step" key={step.num}>
+                  <div
+                    className={
+                      index === 1
+                        ? "lewa-lp-stepnum lewa-lp-stepnum-green"
+                        : "lewa-lp-stepnum"
+                    }
+                    aria-hidden="true"
+                  >
+                    {step.num}
+                  </div>
                   <h3 className="lewa-lp-steptitle">{step.title}</h3>
-                  <p className="lewa-lp-cardbody">{step.body}</p>
+                  <p className="lewa-lp-stepbody">{step.body}</p>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        {/* ---- f. CONTACT -------------------------------------------------- */}
-        {/* On #eff8ff rather than navy, which it used to be. The closing band
-            below is now the navy one, and two navy bands touching read as one
-            very tall band with a seam rather than as two sections. */}
-        <section className="lewa-lp-contactsec" id="contact">
+        {/* ---- f. PDF SPOTLIGHT ------------------------------------------- */}
+        <section className="lewa-lp-band lewa-lp-band-navy">
+          <div className="lewa-lp-wrap lewa-lp-splitgrid">
+            <div>
+              <span className="lewa-lp-pill lewa-lp-pill-ongreen">PDF Generation</span>
+              <h2 className="lewa-lp-h2 lewa-lp-h2-onnavy lewa-lp-h2-split">
+                Professional Documents,
+                <br />
+                <span className="lewa-lp-h1-accent">Ready to Print</span>
+              </h2>
+              <p className="lewa-lp-splitlede">
+                Every major school document is a single click away — formatted,
+                professional, and ready to hand to parents or file in your
+                records.
+              </p>
+              <ul className="lewa-lp-checklist">
+                {PDF_DOCUMENTS.map((item) => (
+                  <li className="lewa-lp-checkitem" key={item}>
+                    <span className="lewa-lp-checkmark" aria-hidden="true">
+                      <Check size={11} strokeWidth={3} />
+                    </span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* An illustration of a report card, on the same footing as the
+                hero's dashboard: kept from the design, describing no real
+                student, and out of the accessible tree. */}
+            <div aria-hidden="true">
+              <div className="lewa-lp-rc">
+                <div className="lewa-lp-rchead">
+                  <div className="lewa-lp-rcheadleft">
+                    <span className="lewa-lp-rcicon">
+                      <BookOpen size={16} />
+                    </span>
+                    <div>
+                      <div className="lewa-lp-rctitle">School Report Card</div>
+                      <div className="lewa-lp-rcsub">
+                        Academic Year 2024–2025 · Term 2
+                      </div>
+                    </div>
+                  </div>
+                  <span className="lewa-lp-rcpdf">
+                    <Download size={11} />
+                    PDF
+                  </span>
+                </div>
+
+                <div className="lewa-lp-rcstudent">
+                  <span className="lewa-lp-rcavatar">
+                    <img
+                      className="lewa-lp-logo"
+                      src="/images/lewa-logo.png"
+                      alt=""
+                      width={2000}
+                      height={2000}
+                    />
+                  </span>
+                  <div>
+                    <div className="lewa-lp-rcname">MBARGA Jean Paul</div>
+                    <div className="lewa-lp-rcmeta">Class: CM2A · Mat: NN-2025-0142</div>
+                  </div>
+                </div>
+
+                <div className="lewa-lp-rcbody">
+                  <div className="lewa-lp-rcgrid">
+                    {[
+                      { sub: "Mathematics", score: "18/20", grade: "A" },
+                      { sub: "French", score: "15/20", grade: "B+" },
+                      { sub: "English", score: "16/20", grade: "B+" },
+                      { sub: "Sciences", score: "17/20", grade: "A−" },
+                      { sub: "History", score: "14/20", grade: "B" },
+                      { sub: "Arts & Craft", score: "19/20", grade: "A+" },
+                    ].map((cell) => (
+                      <div className="lewa-lp-rccell" key={cell.sub}>
+                        <div className="lewa-lp-rcsubject">{cell.sub}</div>
+                        <div className="lewa-lp-rcscore">{cell.score}</div>
+                        <div className="lewa-lp-rcgrade">{cell.grade}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="lewa-lp-rcavg">
+                    <span className="lewa-lp-rcavglabel">Class Average</span>
+                    <span className="lewa-lp-rcavgval">16.5 / 20 — Excellent</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ---- g. BENEFITS ------------------------------------------------ */}
+        <section className="lewa-lp-band lewa-lp-band-light" id="benefits">
           <div className="lewa-lp-wrap">
-            <h2 className="lewa-lp-h2">Questions first?</h2>
-            <p className="lewa-lp-sectionlede">
-              Tell us about your school and we will tell you whether Lewa fits,
-              before you sign up for anything.
-            </p>
-            <div className="lewa-lp-actions">
+            <div className="lewa-lp-sectionhead">
+              <h2 className="lewa-lp-h2">Why Schools Choose Lewa</h2>
+            </div>
+            <div className="lewa-lp-benefitgrid">
+              {BENEFITS.map((benefit) =>
+                benefit.whatsapp ? (
+                  <div className="lewa-lp-benefit lewa-lp-benefit-wa" key={benefit.title}>
+                    <span className="lewa-lp-waglow" aria-hidden="true" />
+                    <div className="lewa-lp-wainner">
+                      <span className="lewa-lp-benefiticon lewa-lp-waicon">
+                        {benefit.icon}
+                      </span>
+                      <div className="lewa-lp-watitlerow">
+                        <h3 className="lewa-lp-benefittitle">{benefit.title}</h3>
+                        {benefit.tag ? (
+                          <span className="lewa-lp-watag">{benefit.tag}</span>
+                        ) : null}
+                      </div>
+                      <p className="lewa-lp-benefitbody">{benefit.body}</p>
+                      {benefit.chips ? (
+                        <div className="lewa-lp-wachips">
+                          {benefit.chips.map((chip) => (
+                            <span className="lewa-lp-wachip" key={chip}>
+                              {chip}
+                            </span>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="lewa-lp-benefit" key={benefit.title}>
+                    <span className="lewa-lp-benefiticon">{benefit.icon}</span>
+                    <h3 className="lewa-lp-benefittitle">{benefit.title}</h3>
+                    <p className="lewa-lp-benefitbody">{benefit.body}</p>
+                  </div>
+                ),
+              )}
+            </div>
+          </div>
+        </section>
+
+        {/* ---- h. CONTACT -------------------------------------------------- */}
+        <section className="lewa-lp-contactsec" id="contact">
+          <div className="lewa-lp-wrap lewa-lp-wrap-3">
+            <div className="lewa-lp-sectionhead" style={{ marginBottom: 32 }}>
+              <h2 className="lewa-lp-h2">Questions first?</h2>
+              <p className="lewa-lp-sectionlede">
+                Tell us about your school and we will tell you whether Lewa fits,
+                before you sign up for anything.
+              </p>
+            </div>
+            <div className="lewa-lp-actions lewa-lp-actions-center">
               {/* The same number the floating support button offers, read from
                   the one file that holds it -- src/lib/supportContact.ts -- so
                   there is never a second number to keep in step. */}
               <a
-                className="lewa-lp-btn lewa-lp-btn-filled"
+                className="lewa-lp-btn lewa-lp-btn-green"
                 href={whatsappLink()}
                 target="_blank"
                 rel="noreferrer noopener"
               >
+                <MessageCircle size={17} aria-hidden="true" />
                 Chat on WhatsApp
               </a>
             </div>
-            <p className="lewa-lp-contact">
+            <p className="lewa-lp-contactline" style={{ textAlign: "center" }}>
               Or call us on{" "}
-              <a
-                className="lewa-lp-textlink lewa-lp-textlink-underlined"
-                href={phoneSupportLink()}
-              >
+              <a className="lewa-lp-textlink" href={phoneSupportLink()}>
                 {SUPPORT_PHONE_DISPLAY}
               </a>
             </p>
           </div>
         </section>
 
-        {/* ---- g. CLOSING CTA --------------------------------------------- */}
-        {/* The last thing before the footer, and the same pair of doors the
-            hero opens with -- someone who has read the whole page should not
-            have to scroll back up to act on it. */}
-        <section className="lewa-lp-cta">
-          <div className="lewa-lp-wrap">
-            <h2 className="lewa-lp-h2 lewa-lp-h2-onnavy">
-              Get your school on Lewa
-            </h2>
-            <p className="lewa-lp-ctalede">
-              Create the account today and start with your classes and students.
-              We will help you get the first term in.
-            </p>
-            <div className="lewa-lp-actions">
-              <a className="lewa-lp-btn lewa-lp-btn-invert" href={SIGNUP_PATH}>
-                Get your school account
-              </a>
-              <a
-                className="lewa-lp-btn lewa-lp-btn-ghost"
-                href={TEACHER_LOGIN_PATH}
-              >
-                Teacher login
-              </a>
+        {/* ---- i. CLOSING CTA --------------------------------------------- */}
+        {/* The design had an "Free 30-Day Trial" award badge at the top of this
+            card and a "No credit card · No setup fees · Cancel anytime" line
+            under the button. This product has no billing of any kind, so all of
+            it is gone rather than restated. */}
+        <section className="lewa-lp-band" style={{ paddingTop: 0 }}>
+          <div className="lewa-lp-wrap lewa-lp-wrap-3">
+            <div className="lewa-lp-ctacard">
+              <span className="lewa-lp-ctaglow-a" aria-hidden="true" />
+              <span className="lewa-lp-ctaglow-b" aria-hidden="true" />
+              <div className="lewa-lp-ctainner">
+                <h2 className="lewa-lp-h2 lewa-lp-h2-onnavy">
+                  Ready to Modernize
+                  <br />
+                  Your School?
+                </h2>
+                <p className="lewa-lp-ctalede">
+                  Create the account today and start with your classes and
+                  students. We will help you get the first term in.
+                </p>
+                <div className="lewa-lp-actions lewa-lp-actions-center">
+                  <a className="lewa-lp-btn lewa-lp-btn-green" href={SIGNUP_PATH}>
+                    Get your school account
+                    <ArrowRight size={19} aria-hidden="true" />
+                  </a>
+                  <a
+                    className="lewa-lp-btn lewa-lp-btn-outline-light"
+                    href={TEACHER_LOGIN_PATH}
+                  >
+                    Teacher login
+                  </a>
+                </div>
+              </div>
             </div>
           </div>
         </section>
       </main>
 
-      {/* ---- h. FOOTER ---------------------------------------------------- */}
+      {/* ---- j. FOOTER ---------------------------------------------------- */}
+      {/* The design's footer offered Privacy, Terms and Contact, all three
+          pointing at "#", and put a domain name beside them. None of those
+          pages exists and the domain is not something this repo knows, so what
+          is here instead is three links that go somewhere real. */}
       <footer className="lewa-lp-footer">
-        <div className="lewa-lp-wrap lewa-lp-footerbar">
-          {/* The identical lockup the header uses -- same .lewa-lp-brand, same
-              .lewa-lp-logobox crop, same markup. The crop is measured from the
-              asset and written down once in the stylesheet; there is no second
-              copy of those offsets to get wrong. */}
-          <div className="lewa-lp-footerbrand">
-            <a className="lewa-lp-brand" href="/">
-              <span className="lewa-lp-logobox">
-                <img
-                  className="lewa-lp-logo"
-                  src="/images/lewa-logo.png"
-                  alt=""
-                  width={2000}
-                  height={2000}
-                />
-              </span>
-              <span className="lewa-lp-brandname">Lewa</span>
-            </a>
+        <div className="lewa-lp-wrap">
+          <div className="lewa-lp-footerbar">
+            <BrandMark />
+            <p className="lewa-lp-footermeta">
+              School management for nursery and primary schools in Cameroon
+            </p>
+            <div className="lewa-lp-footerlinks">
+              <a className="lewa-lp-footerlink" href={SIGN_IN_PATH}>
+                School sign in
+              </a>
+              <a className="lewa-lp-footerlink" href={TEACHER_LOGIN_PATH}>
+                Teacher login
+              </a>
+              <a
+                className="lewa-lp-footerlink"
+                href={whatsappLink()}
+                target="_blank"
+                rel="noreferrer noopener"
+              >
+                WhatsApp
+              </a>
+            </div>
           </div>
-          <p className="lewa-lp-footermeta">
-            &copy; {year} Lewa &middot; School management for Cameroonian schools
-          </p>
-          <a className="lewa-lp-textlink" href={TEACHER_LOGIN_PATH}>
-            Teacher login
-          </a>
+          <div className="lewa-lp-footerrule">
+            &copy; {year} Lewa. All rights reserved.
+          </div>
         </div>
       </footer>
     </div>
