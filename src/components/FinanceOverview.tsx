@@ -19,6 +19,7 @@ import { DateFilterInput } from './DateFilterInput';
 import { ThreePartDateInput } from './ThreePartDateInput';
 import { statValueFontSize } from '../utils/statFigure';
 import { PAYMENT_METHODS } from '../utils/paymentMethods';
+import { PaymentConfirmationDialog } from './PaymentConfirmationDialog';
 import { generateTransactionInvoice } from '../utils/pdfGenerator';
 
 interface FinanceOverviewProps {
@@ -168,6 +169,8 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
     page: 1, search: '', classFilter: 'all', dateFrom: '', dateTo: '', academicYear: 'all', term: 'all',
   });
   const [studentTxRows, setStudentTxRows] = useState<StudentTransactionRow[]>([]);
+  /** The payment whose WhatsApp receipt is being confirmed, or null. */
+  const [receiptFor, setReceiptFor] = useState<string | null>(null);
   const [studentLoading, setStudentLoading] = useState(true);
   const [studentTotalPages, setStudentTotalPages] = useState(1);
   // The filters start collapsed behind their own button. The height the panel
@@ -472,6 +475,14 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
 
   return (
     <div className="p-4 md:p-8">
+      {/* Radix portals this out of the subtree, so it is safe anywhere inside
+          the root element and cannot be clipped by an overflow-hidden
+          ancestor. Kept at the top so it is not buried in the table markup. */}
+      <PaymentConfirmationDialog
+        open={receiptFor !== null}
+        onOpenChange={(v) => { if (!v) setReceiptFor(null); }}
+        ledgerEntryId={receiptFor}
+      />
       <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-8">
         <div className="flex-1">
           <h1 className="text-3xl mb-2">Finance</h1>
@@ -865,11 +876,29 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
                           half the table, not a gap in the data. Monospaced
                           because it gets read digit by digit against something
                           a parent is holding. */}
-                      <td
-                        className="px-4 py-3 text-gray-600 whitespace-nowrap"
-                        style={t.receiptNumber ? { fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' } : undefined}
-                      >
-                        {t.receiptNumber ?? '—'}
+                      <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
+                        {/* The number doubles as the trigger for its own WhatsApp
+                            receipt — the thing an admin wants to do from this row
+                            is send the parent the number they are looking at, and
+                            a separate icon column for it would cost a seventh
+                            column on a table already wide enough to scroll.
+
+                            A charge has no number and never will, so the dash is
+                            plain text rather than a dead button. */}
+                        {t.receiptNumber ? (
+                          <button
+                            type="button"
+                            onClick={() => setReceiptFor(t.id)}
+                            title="Send a WhatsApp receipt for this payment"
+                            style={{
+                              fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+                              background: 'none', border: 0, padding: 0, cursor: 'pointer',
+                              color: '#0f2345', textDecoration: 'underline',
+                            }}
+                          >
+                            {t.receiptNumber}
+                          </button>
+                        ) : '—'}
                       </td>
                     </tr>
                   );

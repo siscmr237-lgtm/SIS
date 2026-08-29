@@ -32,6 +32,7 @@ import {
 } from './ui/dialog';
 import { Input } from './ui/input';
 import { ThreePartDateInput } from './ThreePartDateInput';
+import { PaymentConfirmationDialog } from './PaymentConfirmationDialog';
 import { PayFeesDialog, PayFeesSubmission } from './PayFeesDialog';
 import { DoneBy } from './DoneBy';
 import { Label } from './ui/label';
@@ -398,6 +399,8 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
    * date stored anywhere, so the person sending has to supply the one they know.
    */
   const [feeDriveDate, setFeeDriveDate] = useState('');
+  /** The payment whose WhatsApp receipt is being confirmed, or null. */
+  const [receiptFor, setReceiptFor] = useState<string | null>(null);
   const waPromptTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => {
     if (waPromptTimer.current) clearTimeout(waPromptTimer.current);
@@ -1428,6 +1431,17 @@ ${popMotionCss('[data-sis-finance-menu]')}
         </Popover.Root>
         </div>
 
+      {/* TOP LEVEL, not inside a tab. The trigger lives on the finance tab's
+          ledger rows, so a dialog mounted inside another tab's block would
+          never exist at the moment it is opened. Radix portals it out of this
+          subtree anyway, so layout.tsx's overflow-hidden cannot clip it. */}
+      <PaymentConfirmationDialog
+        open={receiptFor !== null}
+        onOpenChange={(v) => { if (!v) setReceiptFor(null); }}
+        ledgerEntryId={receiptFor}
+        onSent={() => { void refreshLedger(); }}
+      />
+
         {/* The mobile action menu, moved up here from inside the Finance tab
             where it sat in a right-aligned row of its own above the summary
             cards. That row is gone rather than emptied, so nothing is left
@@ -1771,6 +1785,7 @@ ${popMotionCss('[data-sis-finance-menu]')}
           </Card>
 
           {/* Add Pickup Contact dialog */}
+
           <Dialog
             open={showAddContact}
             onOpenChange={(open) => { setShowAddContact(open); if (!open) setContactError(null); }}
@@ -2458,6 +2473,30 @@ ${popMotionCss('[data-sis-finance-menu]')}
                                 pre-compiled Tailwind build, so a colour utility
                                 that isn't already in it renders as nothing. */}
                             <td className="px-4 py-3">
+                              {/* SEND RECEIPT. Payments only, and only when the
+                                  row actually has a receipt number to quote —
+                                  the message is built around that number, so
+                                  offering it on a row without one would open a
+                                  dialog whose only outcome is a refusal.
+
+                                  Admin-triggered from here, deliberately: the
+                                  payment-recording path must never appear to
+                                  fail because WhatsApp is down. */}
+                              {entry.type === 'PAYMENT' && entry.receiptNumber && (
+                                <button
+                                  type="button"
+                                  title="Send a WhatsApp receipt for this payment"
+                                  aria-label={`Send a WhatsApp receipt for ${entry.description}, ${entry.amount.toLocaleString()} FCFA`}
+                                  onClick={() => setReceiptFor(entry.id)}
+                                  style={{
+                                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                    padding: 4, borderRadius: 6, border: 'none', background: 'transparent',
+                                    color: '#0f2345', cursor: 'pointer', marginRight: 2,
+                                  }}
+                                >
+                                  <MessageCircle size={15} />
+                                </button>
+                              )}
                               <button
                                 type="button"
                                 title={`Delete this ${entry.type === 'CHARGE' ? 'charge' : 'payment'}`}
