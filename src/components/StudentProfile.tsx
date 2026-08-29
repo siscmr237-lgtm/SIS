@@ -2492,23 +2492,51 @@ ${popMotionCss('[data-sis-finance-menu]')}
                                 {entry.type === 'CHARGE' ? 'Charge' : 'Payment'}
                               </span>
                             </td>
+                            {/* THE FEE THIS ROW IS FOR, resolved server-side.
+                                feeName FIRST, and that is the fix: a fee payment
+                                is tagged through classLevelFeeId /
+                                studentFeeOverrideId / settlesEntryId and carries
+                                categoryId: null, so reading category?.name alone
+                                printed a dash down this whole column while the
+                                fee's name sat in Description instead. The same
+                                field the financial-sheet PDF's Fee column reads.
+
+                                category?.name is still the fallback, for a row
+                                tagged the old way, and the dash for a genuinely
+                                untagged legacy payment. */}
                             <td className="px-4 py-3 text-gray-600">
-                              {entry.category?.name ?? '—'}
+                              {entry.feeName ?? entry.category?.name ?? '—'}
                             </td>
                             <td className="px-4 py-3 text-gray-900">
-                              {entry.description}
+                              {/* Only when it SAYS something the Category column
+                                  does not. A fee payment's description defaults
+                                  to the fee's own name, so with that name now in
+                                  its proper column the two read as the same word
+                                  twice; a note somebody actually typed still
+                                  shows. */}
+                              {entry.description
+                                && entry.description !== (entry.feeName ?? entry.category?.name)
+                                ? entry.description
+                                : null}
                               {/* THE RECEIPT NUMBER, on payments only.
-                                  Under the description rather than in a column
-                                  of its own: this table is already six wide and
-                                  a seventh would wrap on a phone, and the number
-                                  is part of what this row IS rather than
-                                  something to scan down. Monospaced because it
-                                  gets checked digit by digit against a slip a
-                                  parent is holding. */}
+                                  Under the description rather than in a column of
+                                  its own: this table is already six wide and a
+                                  seventh would wrap on a phone, and the number is
+                                  part of what this row IS rather than something to
+                                  scan down.
+
+                                  ONE LINE, never wrapped. Monospaced and read
+                                  digit by digit against a slip a parent is
+                                  holding, and a number broken across two lines is
+                                  exactly what gets misread back over the phone. */}
                               {entry.receiptNumber && (
                                 <span
                                   className="text-xs text-gray-500"
-                                  style={{ display: 'block', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}
+                                  style={{
+                                    display: 'block',
+                                    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+                                    whiteSpace: 'nowrap',
+                                  }}
                                 >
                                   Receipt {entry.receiptNumber}
                                 </span>
