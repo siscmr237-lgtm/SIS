@@ -233,6 +233,8 @@ interface LedgerPdfEntry {
   amount: number;
   entryDate: string;
   paymentMethod?: string | null;
+  /** "2026/2027-0042". Payments only; null on every charge. */
+  receiptNumber?: string | null;
   category?: { name: string } | null;
   /**
    * WHICH FEE this row is for, resolved server-side.
@@ -492,8 +494,15 @@ export async function generateFinancialSheet(
       // 95 was chosen when a three-line student block ended at y=84. That block
       // is one line at y=62 now, so the table starts where it used to leave a gap.
       startY: 74,
-      head: [['Date', 'Fee', 'Payment Type', 'Amount (FCFA)']],
+      // RECEIPT FIRST. This sheet is what the office hands over or emails, and
+      // the number is the thing a parent will later be asked to quote — so it
+      // leads the row rather than trailing four columns behind the date.
+      head: [['Receipt', 'Date', 'Fee', 'Payment Type', 'Amount (FCFA)']],
       body: payments.map((entry) => [
+        // Every row here is a payment, so a dash means a payment recorded before
+        // numbering existed and never backfilled — worth showing as absent
+        // rather than blank, so nobody reads it as a printing fault.
+        entry.receiptNumber ?? '—',
         new Date(entry.entryDate).toLocaleDateString('en-GB'),
         // feeName, NOT category?.name — see LedgerPdfEntry.feeName for why the
         // latter was null on every payment and printed a dash down the column.
@@ -508,10 +517,14 @@ export async function generateFinancialSheet(
       styles: { fontSize: 9 },
       margin: { left: 15, right: 15 },
       columnStyles: {
-        0: { cellWidth: 30 },
-        1: { cellWidth: 60 },
-        2: { cellWidth: 50 },
-        3: { cellWidth: 40, halign: 'right' },
+        // 180mm of content width, shared out again now there are five columns:
+        // the receipt number needs 34 for "2026/2027-0042" without wrapping, and
+        // Fee and Payment Type give it up because both are short in practice.
+        0: { cellWidth: 34 },
+        1: { cellWidth: 26 },
+        2: { cellWidth: 48 },
+        3: { cellWidth: 38 },
+        4: { cellWidth: 34, halign: 'right' },
       },
     });
     cursorY = (doc as any).lastAutoTable.finalY;

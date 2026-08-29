@@ -52,6 +52,12 @@ interface LedgerEntry {
   amount: number;
   entryDate: string;
   paymentMethod?: string | null;
+  /**
+   * The receipt number, "2026/2027-0042". Payments only — null on every charge,
+   * for good, since payments are LedgerEntry rows rather than a table of their
+   * own. Issued once and never reissued, so this is what a parent quotes.
+   */
+  receiptNumber?: string | null;
   category?: { name: string } | null;
   /**
    * True on the one charge that bills a fee from the student's fee structure —
@@ -2418,6 +2424,22 @@ ${popMotionCss('[data-sis-finance-menu]')}
                             </td>
                             <td className="px-4 py-3 text-gray-900">
                               {entry.description}
+                              {/* THE RECEIPT NUMBER, on payments only.
+                                  Under the description rather than in a column
+                                  of its own: this table is already six wide and
+                                  a seventh would wrap on a phone, and the number
+                                  is part of what this row IS rather than
+                                  something to scan down. Monospaced because it
+                                  gets checked digit by digit against a slip a
+                                  parent is holding. */}
+                              {entry.receiptNumber && (
+                                <span
+                                  className="text-xs text-gray-500"
+                                  style={{ display: 'block', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}
+                                >
+                                  Receipt {entry.receiptNumber}
+                                </span>
+                              )}
                               {/* Per row, not per table: a ledger row IS the
                                   record here, and a single footer under the
                                   whole table would be answering a question

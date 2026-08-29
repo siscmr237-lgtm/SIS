@@ -42,6 +42,8 @@ interface StudentTransactionRow {
   amount: number;
   entryDate: string;
   paymentMethod: string | null;
+  /** "2026/2027-0042". Payments only; null on every charge. */
+  receiptNumber: string | null;
 }
 
 /**
@@ -773,7 +775,7 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
           <div className="relative max-w-sm">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
             <Input
-              placeholder="Search by name, ID, or class..."
+              placeholder="Search by name, ID, class, or receipt no..."
               value={searchInput}
               onChange={e => setSearchInput(e.target.value)}
               className="pl-10"
@@ -801,14 +803,19 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
                   <th className="px-4 py-3 font-medium">Category</th>
                   <th className="px-4 py-3 font-medium text-right">Amount</th>
                   <th className="px-4 py-3 font-medium">Payment Method</th>
+                  {/* The number a parent reads out over the phone. Last, because
+                      it is looked UP rather than scanned down — the search box
+                      above matches it, so this column is for confirming you have
+                      the right row once you land on it. */}
+                  <th className="px-4 py-3 font-medium">Receipt</th>
                 </tr>
               </thead>
               <tbody>
                 {studentLoading ? (
-                  <TableLoader colSpan={6} />
+                  <TableLoader colSpan={7} />
                 ) : studentTxRows.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-6 text-center text-gray-500">
+                    <td colSpan={7} className="px-4 py-6 text-center text-gray-500">
                       No transactions found.
                     </td>
                   </tr>
@@ -853,6 +860,17 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
                           one, and a payment taken before the field was asked
                           for has none either. */}
                       <td className="px-4 py-3 text-gray-600">{t.paymentMethod ?? '—'}</td>
+                      {/* Payments only. A charge has no receipt number and never
+                          will — the dash is the ordinary state of this cell for
+                          half the table, not a gap in the data. Monospaced
+                          because it gets read digit by digit against something
+                          a parent is holding. */}
+                      <td
+                        className="px-4 py-3 text-gray-600 whitespace-nowrap"
+                        style={t.receiptNumber ? { fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' } : undefined}
+                      >
+                        {t.receiptNumber ?? '—'}
+                      </td>
                     </tr>
                   );
                 })}
