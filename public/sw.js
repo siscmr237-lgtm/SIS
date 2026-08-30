@@ -157,8 +157,26 @@ self.addEventListener('push', (event) => {
   event.waitUntil(
     self.registration.showNotification(data.title, {
       body: data.body,
-      icon: '/icons/icon-192.png',
-      badge: '/icons/icon-192.png',
+      /**
+       * BOTH ARE THE WHITE-SILHOUETTE ICON, not the coloured app icon.
+       *
+       * Android reads only the ALPHA channel of these and paints that shape in
+       * a colour of its own -- white in the status bar, the app accent in the
+       * shade. Every RGB value is thrown away. So icon-192.png, which is a
+       * fully opaque picture, was read as "every pixel is present" and drawn as
+       * a solid white square with no mark in it at all.
+       *
+       * notification-icon.png carries the mark in its alpha channel and nothing
+       * anywhere else, which is the only shape that survives that treatment.
+       * See scripts/generate-pwa-icons.mjs, where it is built and why.
+       *
+       * `badge` gets the same file deliberately. It is the small monochrome
+       * mark Android puts in the status bar when several notifications collapse,
+       * and it is subject to exactly the same alpha-only rule -- a coloured
+       * badge is the same white square, just smaller.
+       */
+      icon: '/icons/notification-icon.png',
+      badge: '/icons/notification-icon.png',
       data: { url: data.url },
     }),
   );
