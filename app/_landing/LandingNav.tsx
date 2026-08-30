@@ -40,6 +40,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 
 export type MenuLink = { href: string; label: string };
 
@@ -53,6 +54,15 @@ type Props = {
   /** The brand lockup, rendered by the server component so the logo crop and
    *  the markup around it live in one place rather than two. */
   brand: ReactNode;
+  /**
+   * next/font's variable class, the same one the page's root div carries.
+   *
+   * It has to be repeated on the sheet because the sheet is portalled to
+   * <body> and so is NOT inside that root div: the custom property the class
+   * defines is scoped to the subtree it is set on, and without this the menu
+   * would be the one part of the landing page set in the system font.
+   */
+  fontClassName: string;
 };
 
 /** How far down before the header stops being transparent. */
@@ -64,6 +74,7 @@ export function LandingNav({
   signInPath,
   teacherLoginPath,
   brand,
+  fontClassName,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -192,16 +203,31 @@ export function LandingNav({
         </button>
       </div>
 
-      {open ? (
+      {/* PORTALLED TO <body>, NOT RENDERED HERE.
+          The sheet is position: fixed and means it, but a fixed element is
+          positioned against the nearest ancestor with backdrop-filter, filter,
+          transform or perspective -- and the scrolled header two lines up has
+          backdrop-filter: blur(12px). Left inside it, the sheet resolved inset:
+          0 against a 76px header rather than the viewport, so it became a strip
+          across the top with its links clipped out of sight and taps falling
+          through to the page behind. It worked at the very top of the page,
+          where the blur has not been applied yet, and nowhere else.
+          Moving it to <body> puts it beyond the reach of that rule and of any
+          other one this page's markup might grow later. */}
+      {open && typeof document !== "undefined"
+        ? createPortal(
         <div
           id="lewa-lp-mobile-menu"
-          className="lewa-lp-sheet"
+          className={`lewa-lp-sheet ${fontClassName}`}
           role="dialog"
           aria-modal="true"
           aria-label="Menu"
         >
           <div className="lewa-lp-sheettop">
-            <span className="lewa-lp-sheetbrand">Lewa</span>
+            {/* The same lockup the header carries. Rendering the node twice is
+                fine -- it is an element description, not a mounted instance -- and
+                it keeps one definition of the crop rather than two. */}
+            {brand}
             <button
               ref={closeRef}
               type="button"
@@ -263,8 +289,10 @@ export function LandingNav({
               </a>
             </div>
           </nav>
-        </div>
-      ) : null}
+        </div>,
+            document.body,
+          )
+        : null}
     </header>
   );
 }

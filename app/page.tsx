@@ -379,34 +379,43 @@ const LANDING_CSS = `
   }
 
   /* THE LOGO IS A WINDOW ONTO THE ASSET, NOT THE WHOLE ASSET.
-     public/images/lewa-logo.png is a 2000x2000 canvas on which the artwork
-     occupies very little: the glyph sits at x 718-1281, y 637-1069, and the
-     LEWA wordmark below it at y 1158-1239. Drawn whole at header size the glyph
-     would come out about 9px across -- a smudge, which is exactly what the
-     design's h-10 w-auto would have produced. So the tile below is 40px, the
-     image inside it is scaled to 126px, and the offsets put the glyph in the
-     middle of the tile with the wordmark pushed just past the bottom edge (it
-     would be illegible at this size, and the word Lewa is already set beside it
-     in type).
-     The tile is filled with #eff8ff because that is the background colour of
-     the asset itself -- measured, not guessed -- so the crop has no seam. */
+     public/images/lewa-mark.png is a 2000x2000 canvas carrying the mark alone,
+     no wordmark. Every number below was measured off the file rather than
+     guessed: the artwork occupies x 501-1498, y 617-1383 -- 998 by 767, and
+     landscape, not square -- on a pure #ffffff ground, drawn in #1e3a8a, which
+     is the same navy the rest of this page is set in.
+
+     WHY THERE ARE NO OFFSETS HERE ANY MORE. The mark is centred in its canvas:
+     its bounding box runs 501..1498 horizontally and 617..1383 vertically, both
+     of which centre on exactly 1000. So centring the IMAGE in the window centres
+     the MARK in the window, and the crop needs no hand-computed left/top that
+     would have to be recalculated the next time the asset changes. Scale is the
+     only number that matters: the mark is 998/2000 of the asset wide, so an
+     image drawn at 100px puts the mark on screen at just under 50px across.
+
+     The window is landscape because the mark is, and it is filled #ffffff to
+     match the asset's own ground so the crop has no seam -- which also gives the
+     navy mark something to sit on over the navy header, where it would otherwise
+     be invisible. That white tile is the design's own answer to the same
+     problem; it wrapped the logo in a light box for exactly this reason. */
   .lewa-lp-logobox {
     position: relative;
     display: block;
     flex: none;
-    width: 40px;
-    height: 40px;
+    width: 58px;
+    height: 44px;
     border-radius: 10px;
     overflow: hidden;
-    background: #eff8ff;
+    background: #ffffff;
   }
 
   .lewa-lp-logo {
     position: absolute;
-    left: -43px;
-    top: -33px;
-    width: 126px;
-    height: 126px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 100px;
+    height: 100px;
     /* Tailwind preflight in the frozen index.css sets img { max-width: 100% },
        which would shrink this back into the tile and undo the crop. */
     max-width: none;
@@ -497,16 +506,37 @@ const LANDING_CSS = `
 
   .lewa-lp-menuicon { width: 22px; height: 22px; }
 
-  /* position: fixed, so the sheet covers the viewport rather than the header it
-     is rendered inside. inset 0 plus its own background is the whole effect --
-     there is no separate backdrop element to keep in step. */
+  /* position: fixed, so the sheet covers the viewport. inset 0 plus its own
+     background is the whole effect -- there is no separate backdrop element to
+     keep in step.
+
+     "FIXED TO THE VIEWPORT" IS A PROMISE THE HEADER COULD NOT KEEP, which is
+     why LandingNav portals this element to <body> instead of rendering it where
+     it sits in the markup. An ancestor with backdrop-filter, filter or transform
+     becomes the containing block for its fixed descendants, and the scrolled
+     header has backdrop-filter: blur(12px). Rendered inside it, this sheet
+     resolved inset: 0 against the 76px header rather than the viewport: it
+     collapsed to a strip, overflow-y hid the links, and taps went through to the
+     page behind. At the top of the page, where the blur is not yet applied, the
+     very same markup worked -- which is what made it look intermittent.
+
+     z-index 80, not 60, because SupportButton in the root layout is 60 and comes
+     later in the document. Two elements at 60 are resolved by document order, so
+     the support button would paint over a sheet that is meant to cover
+     everything. */
   .lewa-lp-sheet {
+    /* Stated again because the sheet is portalled to <body> and so inherits
+       from it, not from .lewa-lp-page. The variable comes with it on the class
+       LandingNav copies across; the stack after it is the same fallback the
+       page uses. */
+    font-family: var(--lewa-lp-font), system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+    color: #334155;
     position: fixed;
     top: 0;
     right: 0;
     bottom: 0;
     left: 0;
-    z-index: 60;
+    z-index: 80;
     display: flex;
     flex-direction: column;
     padding: 12px 24px 32px;
@@ -523,7 +553,11 @@ const LANDING_CSS = `
     min-height: 56px;
   }
 
-  .lewa-lp-sheetbrand { font-size: 19px; font-weight: 800; color: #1e3a8a; }
+  /* The brand name is white in the header, because the header starts life on
+     navy. The sheet is white, so the same element has to go navy inside it --
+     and the sheet is portalled out of .lewa-lp-nav, so the scrolled-header rule
+     that would otherwise do this cannot reach it. */
+  .lewa-lp-sheet .lewa-lp-brandname { color: #1e3a8a; }
 
   .lewa-lp-sheet .lewa-lp-menubtn {
     color: #0c1a3d;
@@ -1110,18 +1144,22 @@ const LANDING_CSS = `
     border-bottom: 1px solid #f3f4f6;
   }
 
+  /* White rather than tinted, because the mark's own ground is white and a
+     tinted disc behind a white-cornered crop shows the seam. The ring is what
+     keeps it reading as an avatar once the fill matches the card. */
   .lewa-lp-rcavatar {
     position: relative;
     width: 56px;
     height: 56px;
     flex: none;
     border-radius: 50%;
-    background: #eff8ff;
+    border: 1px solid #e8eef8;
+    background: #ffffff;
     overflow: hidden;
   }
 
-  /* The same crop as the header lockup, at avatar size. */
-  .lewa-lp-rcavatar .lewa-lp-logo { left: -60px; top: -46px; width: 176px; height: 176px; }
+  /* The same centred crop as the header lockup; only the scale differs. */
+  .lewa-lp-rcavatar .lewa-lp-logo { width: 74px; height: 74px; }
 
   .lewa-lp-rcname { font-size: 16px; font-weight: 800; color: #0c1a3d; }
   .lewa-lp-rcmeta { margin-top: 2px; font-size: 14px; color: #9ca3af; }
@@ -1744,7 +1782,7 @@ function BrandMark({ href = "/" }: { href?: string }) {
       <span className="lewa-lp-logobox">
         <img
           className="lewa-lp-logo"
-          src="/images/lewa-logo.png"
+          src="/images/lewa-mark.png"
           alt=""
           width={2000}
           height={2000}
@@ -1820,6 +1858,7 @@ export default async function LewaLandingPage() {
         signInPath={SIGN_IN_PATH}
         teacherLoginPath={TEACHER_LOGIN_PATH}
         brand={<BrandMark />}
+        fontClassName={jakarta.variable}
       />
 
       <main>
@@ -2139,7 +2178,7 @@ export default async function LewaLandingPage() {
                   <span className="lewa-lp-rcavatar">
                     <img
                       className="lewa-lp-logo"
-                      src="/images/lewa-logo.png"
+                      src="/images/lewa-mark.png"
                       alt=""
                       width={2000}
                       height={2000}
