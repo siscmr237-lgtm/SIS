@@ -123,3 +123,85 @@ self.addEventListener('fetch', (event) => {
     })(),
   );
 });
+
+/**
+ * PUSH NOTIFICATIONS.
+ *
+ * Separate from everything above, and deliberately so. The fetch handler exists
+ * to show an offline page and caches almost nothing; these two listeners are
+ * about a message arriving while no tab is open at all. They share this file
+ * because a page may only have ONE service worker per scope, not because they
+ * are related.
+ *
+ * The payload is written by src/utils/pushNotification.js on the backend and is
+ * always { title, body, url }.
+ */
+self.addEventListener('push', (event) => {
+  // A push with no body is legal — some services send one to wake a worker — and
+  // event.data.json() throws on it, which would reject the whole handler and be
+  // reported as a failed push. Nothing to show, so nothing is shown.
+  if (!event.data) return;
+
+  let data;
+  try {
+    data = event.data.json();
+  } catch {
+    // Not our payload. Better to say nothing than to show a notification whose
+    // text is a fragment of JSON.
+    return;
+  }
+
+  // waitUntil is load-bearing, not decoration: showNotification returns a
+  // promise, and without this the worker may be killed before the notification
+  // is actually posted, so it silently never appears.
+  event.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: '/icons/icon-192.png',
+      badge: '/icons/icon-192.png',
+      data: { url: data.url },
+    }),
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+
+  // The URL the backend attached, or the app root. A missing url must not become
+  // a navigation to the string "undefined", which is what openWindow(undefined)
+  // produces.
+  const target = event.notification.data?.url || '/';
+
+  event.waitUntil(
+    (async () => {
+      // FOCUS AN OPEN TAB BEFORE OPENING A NEW ONE. Without this, every tap
+      // opens another copy of the app, and someone who reads three reminders
+      // ends up with three tabs of the same dashboard. includeUncontrolled
+      // catches tabs loaded before this worker took over.
+      const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      for (const client of windows) {
+        // Same-origin only, and compared on pathname so a tab already on the
+        // target page is focused rather than navigated to where it already is.
+        const url = new URL(client.url);
+        if (url.origin === self.location.origin && url.pathname === target) {
+          return client.focus();
+        }
+      }
+
+      // A tab is open, but not on the right page: move it rather than opening a
+      // second one. navigate() can be refused (a cross-origin tab, a client the
+      // browser will not let us steer), and the fallback below is the answer.
+      const sameOrigin = windows.find((c) => new URL(c.url).origin === self.location.origin);
+      if (sameOrigin && 'navigate' in sameOrigin) {
+        try {
+          const navigated = await sameOrigin.navigate(target);
+          if (navigated) return navigated.focus();
+        } catch {
+          // Fall through to openWindow.
+        }
+      }
+
+      return self.clients.openWindow(target);
+    })(),
+  );
+});

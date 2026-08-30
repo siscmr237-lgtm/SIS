@@ -7,6 +7,7 @@ import { MOBILE_DRAWER_CSS } from "@/components/mobileDrawerCss";
 import { PageFade } from "@/components/PageFade";
 import { useTeacherAuthGate } from "@/lib/teacherAuthGate";
 import { ContentLoader } from "@/components/ContentLoader";
+import { PushNotificationSetup } from "@/components/PushNotificationSetup";
 
 // Shell for the teacher section, mirroring app/(app)/layout.tsx.
 //
@@ -47,6 +48,16 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
       />
       <TeacherSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <main className="flex-1 overflow-y-auto pt-14 md:pt-0">
+        {/* The one-time "enable notifications?" offer.
+
+            INSIDE <main>, above the page, rather than in the shell chrome: it
+            scrolls away with the content instead of holding a strip of the
+            viewport, which is what it deserves — it is an offer, not an alert.
+
+            It renders null in every case but one (unsupported browser, already
+            answered, dismissed this session), so this costs a mounted component
+            and no layout on nearly every load. See PushNotificationSetup.tsx. */}
+        <PushNotificationSetup />
         {/* Same arrival animation as the admin shell, from the same component so
             the two sections cannot drift. See src/components/PageFade.tsx. */}
         <PageFade>{children}</PageFade>

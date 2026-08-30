@@ -6,7 +6,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { Settings, Plus, Trash2, Edit, Save, X, Upload, KeyRound, EyeIcon, EyeOffIcon } from 'lucide-react';
+import { Settings, Plus, Trash2, Edit, Save, X, Upload, KeyRound, EyeIcon, EyeOffIcon, Bell } from 'lucide-react';
 import { schoolSettings } from '../data/mockData';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
@@ -18,11 +18,89 @@ import { PasswordHints } from './PasswordHints';
 import { HOLIDAY, TERM_OPTIONS, resolveSchoolTerm } from '@/utils/academicTerm';
 import { AdministratorsSection } from './AdministratorsSection';
 
+/**
+ * The notifications switch.
+ *
+ * Styled entirely inline, and NOT built on src/components/ui/switch.tsx. That
+ * component exists but is used by nothing in this app, which means its Tailwind
+ * utilities were never compiled into src/index.css — and index.css is a frozen
+ * pre-built artifact, so a class that is not already in it renders as nothing at
+ * all, silently. A switch that is invisible is worse than no switch. This
+ * mirrors the toggle in FeeDrive.tsx, which is inline for the same reason.
+ *
+ * A real <button role="switch"> rather than a styled div: reachable by keyboard,
+ * announces its own state through aria-checked, and responds to the space bar
+ * with no extra handler.
+ */
+function NotificationToggle({
+  checked,
+  busy,
+  onChange,
+}: {
+  checked: boolean;
+  busy: boolean;
+  onChange: (next: boolean) => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label="Push Notifications"
+      disabled={busy}
+      onClick={() => onChange(!checked)}
+      style={{
+        position: "relative",
+        flexShrink: 0,
+        width: 38,
+        height: 22,
+        borderRadius: 9999,
+        border: "1px solid transparent",
+        // The brand navy for on, a plain grey for off. Hex rather than a token
+        // because there is no compiled utility to lean on — see above.
+        backgroundColor: checked ? "#0f2345" : "#D1D5DB",
+        cursor: busy ? "default" : "pointer",
+        opacity: busy ? 0.6 : 1,
+        transition: "background-color 160ms ease",
+      }}
+    >
+      <span
+        style={{
+          position: "absolute",
+          top: 2,
+          left: 2,
+          width: 16,
+          height: 16,
+          borderRadius: 9999,
+          backgroundColor: "#FFFFFF",
+          transform: checked ? "translateX(16px)" : "translateX(0)",
+          transition: "transform 160ms ease",
+          boxShadow: "0 1px 2px rgba(0,0,0,0.2)",
+        }}
+      />
+    </button>
+  );
+}
+
 export function SchoolSettings() {
   const router = useRouter();
   const cache = useSisCache();
   const [settings, setSettings] = useState(schoolSettings);
   const [savingBasicInfo, setSavingBasicInfo] = useState(false);
+  /**
+   * The push-notification opt-out.
+   *
+   * Held apart from `formData` and its Save button on purpose. Every other
+   * field on this page is edited and then saved together; a switch is expected
+   * to take effect when you flick it, and one that silently needed a Save
+   * press further down the page would leave people believing they had turned
+   * notifications off when they had not.
+   *
+   * Which is also why it is optimistic with a rollback: the switch moves
+   * immediately, and moves back if the server refuses.
+   */
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [savingNotifications, setSavingNotifications] = useState(false);
   const [logoUploading, setLogoUploading] = useState(false);
   const [logoError, setLogoError] = useState<string | null>(null);
 
@@ -110,6 +188,11 @@ export function SchoolSettings() {
   useEffect(() => {
     if (!settingsData) return;
     setSettings(prev => ({ ...prev, ...settingsData }));
+    // Not guarded by isDirty like the fields below: this switch is saved the
+    // instant it moves, so there is never an unsaved edit here for a background
+    // revalidation to overwrite. `!== false` defaults it ON for a response from
+    // an API deployed before the column existed, matching the database default.
+    setNotificationsEnabled(settingsData.notificationsEnabled !== false);
     // A background revalidation must never overwrite unsaved edits.
     if (isDirty) return;
     const next: BasicForm = {
@@ -127,6 +210,34 @@ export function SchoolSettings() {
     setBaseline(next);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settingsData, detected.academicYear, detected.currentTerm]);
+
+  /**
+   * Saves the switch immediately, and puts it back if the save fails.
+   *
+   * Sends ONLY notificationsEnabled. PUT /settings spreads the body into the
+   * School row, so including the rest of the form would let this switch quietly
+   * commit half-typed edits from the card above it.
+   */
+  const handleNotificationsToggle = async (next: boolean) => {
+    const previous = notificationsEnabled;
+    setNotificationsEnabled(next);
+    setSavingNotifications(true);
+    try {
+      const updated = await api.put('/settings', { notificationsEnabled: next });
+      // The server is the authority on what was stored — a coercion there must
+      // not leave this switch showing something different from the row.
+      setNotificationsEnabled(updated?.notificationsEnabled !== false);
+      // The same invalidation every other save on this page performs, so the
+      // cached settings entry cannot serve the old value to the next reader.
+      cache.invalidateOn('settings:write');
+      toast.success(next ? "Push notifications on." : "Push notifications off.");
+    } catch {
+      setNotificationsEnabled(previous);
+      toast.error("Could not change the notification setting.");
+    } finally {
+      setSavingNotifications(false);
+    }
+  };
 
   const syncLocalStorageSchool = (fields: Record<string, unknown>) => {
     try {
@@ -444,6 +555,32 @@ export function SchoolSettings() {
               proprietor&apos;s initials. Left unset, letters are signed with the initials alone.
             </p>
           </div>
+        </div>
+      </Card>
+
+      {/* Push Notifications
+
+          ITS OWN TOP-LEVEL CARD, between the school details above and the
+          account security below. Deliberately not folded into Basic Information:
+          this is the switch that decides whether anyone at this school hears from
+          Lewa at all, and somebody looking for it should find it by scanning the
+          page rather than by opening a section about the school's name and logo. */}
+      <Card className="p-6 mt-6">
+        <div className="flex justify-between items-start gap-4">
+          <div className="flex gap-3 min-w-0">
+            <Bell size={20} className="text-gray-500 shrink-0 mt-0.5" aria-hidden="true" />
+            <div className="min-w-0">
+              <h2 className="text-xl">Push Notifications</h2>
+              <p className="text-sm text-gray-500 mt-1">
+                Receive reminders and alerts from Lewa on this device.
+              </p>
+            </div>
+          </div>
+          <NotificationToggle
+            checked={notificationsEnabled}
+            busy={savingNotifications}
+            onChange={handleNotificationsToggle}
+          />
         </div>
       </Card>
 

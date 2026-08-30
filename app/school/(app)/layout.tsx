@@ -9,6 +9,7 @@ import { PageFade } from "@/components/PageFade";
 import { useAuthGateWithRetry, useRegistrationWatch } from "@/lib/authGate";
 import { AuthGateError } from "@/components/AuthGateError";
 import { ContentLoader } from "@/components/ContentLoader";
+import { PushNotificationSetup } from "@/components/PushNotificationSetup";
 
 // Shared shell for every internal section (Dashboard, Students, Staff, ...).
 // Mounts fresh on every direct URL visit and every hard reload, so the auth
@@ -76,6 +77,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             scroller, which is the blank space you could swipe into to the right
             of every page. min-w-0 lets it shrink to its share instead. */}
         <main className="flex-1 min-w-0 overflow-y-auto pt-14 md:pt-0">
+          {/* The one-time "enable notifications?" offer.
+
+              INSIDE <main>, above the page, rather than in the shell chrome: it
+              scrolls away with the content instead of holding a strip of the
+              viewport, which is what it deserves — it is an offer, not an alert.
+
+              It renders null in every case but one (unsupported browser, already
+              answered, dismissed this session), so this costs a mounted component
+              and no layout on nearly every load. See PushNotificationSetup.tsx. */}
+          <PushNotificationSetup />
           {/* Every page in this section fades and rises on arrival, from here
               rather than from seventeen page files. PageFade.tsx explains why it
               is keyed on the pathname — a layout is not re-mounted as the user

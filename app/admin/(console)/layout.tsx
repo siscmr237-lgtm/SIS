@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { LayoutDashboard, LogOut, Menu, School, Settings, Users, X } from "lucide-react";
+import { Bell, LayoutDashboard, LogOut, Menu, School, Settings, Users, X } from "lucide-react";
 import { MOBILE_DRAWER_CSS } from "@/components/mobileDrawerCss";
 import {
   clearPlatformSession,
@@ -166,6 +166,12 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
     { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/admin/schools", label: "Schools", icon: School },
     ...(me.role === "FOUNDER" ? [{ href: "/admin/administrators", label: "Administrators", icon: Users }] : []),
+    // NOT Founder-gated, unlike Administrators above it. Both roles have
+    // business here: a Member reads the reminder wording to answer "what did we
+    // send this school?", and only a Founder can change it. The page disables
+    // its own Edit and toggle controls for a Member, and the API refuses the
+    // write regardless — see PUT /platform/reminders/:key.
+    { href: "/admin/reminders", label: "Reminders", icon: Bell },
     // The route stays /admin/account; this is only what the team reads.
     { href: "/admin/account", label: "Settings", icon: Settings },
   ];
