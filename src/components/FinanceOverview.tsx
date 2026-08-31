@@ -43,7 +43,16 @@ interface StudentTransactionRow {
   amount: number;
   entryDate: string;
   paymentMethod: string | null;
-  /** "CNPS042". Payments only; null on every charge. */
+  /**
+   * "CNPS042". Payments only; null on every charge.
+   *
+   * REPEATS DOWN THE COLUMN, and that is correct rather than a duplicate. A
+   * receipt number names a SUBMISSION — one hand-over of money — and Pay Fees
+   * writes a row per fee, so a family paying Tuition, Books and PTA together
+   * produces three rows all reading CNPS042. That is the one payment they made,
+   * itemised. It used to show three different numbers, which is what made a
+   * parent think the school had recorded three payments.
+   */
   receiptNumber: string | null;
   /**
    * Present only on the anchor row of a submission whose parent receipt was
