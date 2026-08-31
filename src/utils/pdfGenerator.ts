@@ -178,6 +178,109 @@ async function getLogoDataUrl(logo: string): Promise<string | null> {
 }
 
 /**
+ * splitTextToSize, but a word wider than the line gets broken instead of
+ * overflowing. jsPDF only breaks at spaces, so a run-on name with no space in
+ * it would otherwise sail straight off the band.
+ */
+function wrapToWidth(doc: jsPDF, text: string, maxWidth: number): string[] {
+  const out: string[] = [];
+  for (const line of doc.splitTextToSize(text, maxWidth) as string[]) {
+    let rest = line;
+    while (rest.length > 1 && doc.getTextWidth(rest) > maxWidth) {
+      let cut = rest.length;
+      while (cut > 1 && doc.getTextWidth(rest.slice(0, cut)) > maxWidth) cut -= 1;
+      out.push(rest.slice(0, cut));
+      rest = rest.slice(cut);
+    }
+    if (rest) out.push(rest);
+  }
+  return out.length ? out : [text];
+}
+
+/** `text` cut down until it plus an ellipsis fits `maxWidth`. */
+function withEllipsis(doc: jsPDF, text: string, maxWidth: number): string {
+  let cut = text.length;
+  while (cut > 0 && doc.getTextWidth(`${text.slice(0, cut).trimEnd()}...`) > maxWidth) cut -= 1;
+  return `${text.slice(0, cut).trimEnd()}...`;
+}
+
+/**
+ * The school name across the top of a header band — centred on the page, and
+ * kept clear of the logo.
+ *
+ * A long name used to run straight through the logo in the corner. `maxWidth`
+ * is the band minus BOTH corners — the logo's, and its mirror on the other
+ * side — so the name stays centred on the PAGE rather than on whatever space is
+ * left over beside the logo. A name too wide for that shrinks slightly, then
+ * wraps; only one too long even for `maxLines` lines is ellipsised, because at
+ * that point the band has no room left for the motto and the title under it.
+ *
+ * The block is centred vertically on `y`: one line draws exactly where the
+ * caller asked, and a second grows half a line up and half a line down rather
+ * than pushing everything below it out of the band. Returns the baseline of the
+ * LAST line, so the motto and the lines under it keep flowing from wherever the
+ * name actually ended.
+ */
+function drawSchoolName(
+  doc: jsPDF,
+  name: string | undefined | null,
+  opts: {
+    centerX: number;
+    y: number;
+    maxWidth: number;
+    fontSize: number;
+    minFontSize?: number;
+    maxLines?: number;
+  },
+): number {
+  const { centerX, y, maxWidth, fontSize } = opts;
+  const minFontSize = opts.minFontSize ?? fontSize * 0.72;
+  const maxLines = opts.maxLines ?? 2;
+  const text = (name ?? '').trim() || 'School';
+
+  doc.setFont('helvetica', 'bold');
+
+  // One line at the asked-for size is the best outcome; a slight shrink keeps a
+  // moderately long name on one line; only past that does it wrap, because two
+  // lines cost the band vertical space the motto and title also want.
+  let size = fontSize;
+  let lines: string[];
+  doc.setFontSize(size);
+  while (size > fontSize * 0.9 && doc.getTextWidth(text) > maxWidth) {
+    size -= 0.5;
+    doc.setFontSize(size);
+  }
+
+  if (doc.getTextWidth(text) > maxWidth) {
+    size = Math.max(fontSize * 0.85, minFontSize);
+    doc.setFontSize(size);
+    lines = wrapToWidth(doc, text, maxWidth);
+    while (lines.length > maxLines && size > minFontSize) {
+      size = Math.max(size - 0.5, minFontSize);
+      doc.setFontSize(size);
+      lines = wrapToWidth(doc, text, maxWidth);
+    }
+    if (lines.length > maxLines) {
+      lines = lines.slice(0, maxLines);
+      lines[maxLines - 1] = withEllipsis(doc, lines[maxLines - 1], maxWidth);
+    }
+  } else {
+    lines = [text];
+  }
+
+  // Points to millimetres, tightened: a heading's own lines sit closer together
+  // than body copy, and the band is not deep enough for a full 1.15 leading.
+  const lineGap = size * 0.42;
+  const firstY = y - ((lines.length - 1) * lineGap) / 2;
+  lines.forEach((line, i) => {
+    doc.text(line, centerX, firstY + i * lineGap, { align: 'center' });
+  });
+
+  doc.setFont('helvetica', 'normal');
+  return firstY + (lines.length - 1) * lineGap;
+}
+
+/**
  * True on phones and tablets.
  *
  * A blob: URL opened in a new tab renders in the browser's own inline PDF
@@ -434,12 +537,14 @@ export async function generateFinancialSheet(
   // School name, motto and academic year stack down the centre. The cursor
   // moves only for lines that actually render, so a school with no motto gets
   // a tight block rather than a gap where the motto would have been.
-  let headY = 16;
-
-  doc.setFontSize(18);
-  doc.setFont('helvetica', 'bold');
-  doc.text(schoolInfo?.name ?? SCHOOL_INFO.name, 105, headY, { align: 'center' });
-  doc.setFont('helvetica', 'normal');
+  // 8mm of margin + the 30mm logo + 4mm of air, mirrored on the right so the
+  // name is centred on the page and still cannot reach the logo.
+  let headY = drawSchoolName(doc, schoolInfo?.name ?? SCHOOL_INFO.name, {
+    centerX: 105,
+    y: 16,
+    maxWidth: schoolInfo?.logo ? 210 - 2 * 42 : 182,
+    fontSize: 18,
+  });
 
   const motto = schoolInfo?.motto?.trim();
   if (motto) {
@@ -584,14 +689,23 @@ export async function generateStaffFinancialSheet(
   }
 
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(18);
-  doc.text(schoolInfo?.name ?? SCHOOL_INFO.name, 105, 15, { align: 'center' });
+
+  // Same corner reservation as the student sheet, and the motto flows from
+  // where the name ended rather than from a fixed y, so a wrapped name pushes
+  // it down instead of being written over.
+  let headY = drawSchoolName(doc, schoolInfo?.name ?? SCHOOL_INFO.name, {
+    centerX: 105,
+    y: 15,
+    maxWidth: schoolInfo?.logo ? 210 - 2 * 42 : 182,
+    fontSize: 18,
+  });
 
   const motto = schoolInfo?.motto?.trim();
   if (motto) {
+    headY += 8;
     doc.setFontSize(10);
     doc.setFont('helvetica', 'italic');
-    doc.text(motto, 105, 23, { align: 'center' });
+    doc.text(motto, 105, headY, { align: 'center' });
     doc.setFont('helvetica', 'normal');
   }
 
@@ -735,21 +849,28 @@ export async function generateReportCards(
       try { doc.addImage(logo, fmt, 8, 6, 26, 26); } catch { /* a bad logo must not lose the card */ }
     }
 
+    // Centred on the page rather than butted up against the logo: 8mm of
+    // margin + the 26mm logo + 4mm of air, reserved on both sides.
     doc.setTextColor(255, 255, 255);
-    doc.setFontSize(15);
-    doc.text(schoolInfo?.name || 'School', logo ? 40 : 14, 15);
+    let headY = drawSchoolName(doc, schoolInfo?.name, {
+      centerX: 105,
+      y: 15,
+      maxWidth: logo ? 210 - 2 * 38 : 182,
+      fontSize: 15,
+    });
     if (schoolInfo?.motto) {
+      headY += 6;
       doc.setFontSize(9);
       doc.setFont('helvetica', 'italic');
-      doc.text(schoolInfo.motto, logo ? 40 : 14, 22);
+      doc.text(schoolInfo.motto, 105, headY, { align: 'center' });
       doc.setFont('helvetica', 'normal');
     }
     doc.setFontSize(12);
-    doc.text('STUDENT REPORT CARD', logo ? 40 : 14, 32);
+    doc.text('STUDENT REPORT CARD', 105, 32, { align: 'center' });
     doc.setFontSize(9);
     doc.text(
       `Academic Year ${card.academicYear}  ·  ${card.terms.map(formatTermLabel).join(', ')}`,
-      logo ? 40 : 14, 39,
+      105, 39, { align: 'center' },
     );
 
     doc.setTextColor(0, 0, 0);
@@ -1217,11 +1338,13 @@ function drawLetterhead(
 
   doc.setTextColor(255, 255, 255);
 
-  let headY = top + 10;
-  doc.setFontSize(13);
-  doc.setFont('helvetica', 'bold');
-  doc.text(ctx.school.name, 105, headY, { align: 'center' });
-  doc.setFont('helvetica', 'normal');
+  // 9mm of margin + the 21mm logo + 4mm of air, reserved on both sides.
+  let headY = drawSchoolName(doc, ctx.school.name, {
+    centerX: 105,
+    y: top + 10,
+    maxWidth: logoDataUrl ? 210 - 2 * 34 : 182,
+    fontSize: 13,
+  });
 
   const motto = ctx.school.motto?.trim();
   if (motto) {
@@ -1455,7 +1578,10 @@ export async function generateExpenseRecords(
   const doc = new jsPDF({ orientation: 'landscape' });
   const PAGE_W = 297;
   const PAGE_H = 210;
-  const HEADER_H = 40;
+  // 4mm deeper than the portrait sheets need, because this band carries the
+  // name, the motto AND the year, and a name that wraps to two lines has to
+  // clear the title pinned to the bottom of it.
+  const HEADER_H = 44;
   const MARGIN = 14;
 
   doc.setFillColor(37, 99, 235);
@@ -1476,12 +1602,14 @@ export async function generateExpenseRecords(
   // line that actually renders, so a school with no motto gets a tight block
   // rather than a gap where the motto would have been.
   doc.setTextColor(255, 255, 255);
-  let headY = 14;
 
-  doc.setFontSize(17);
-  doc.setFont('helvetica', 'bold');
-  doc.text(schoolInfo?.name ?? SCHOOL_INFO.name, PAGE_W / 2, headY, { align: 'center' });
-  doc.setFont('helvetica', 'normal');
+  // 8mm of margin + the 26mm logo + 4mm of air, reserved on both sides.
+  let headY = drawSchoolName(doc, schoolInfo?.name ?? SCHOOL_INFO.name, {
+    centerX: PAGE_W / 2,
+    y: 14,
+    maxWidth: schoolInfo?.logo ? PAGE_W - 2 * 38 : PAGE_W - 28,
+    fontSize: 17,
+  });
 
   const motto = schoolInfo?.motto?.trim();
   if (motto) {
@@ -1684,11 +1812,13 @@ export async function generateTransactionInvoice(
 
   // The cursor moves only for lines that actually render, so a school with no
   // motto gets a tight block rather than a gap where the motto would have been.
-  let headY = 15;
-  doc.setFontSize(17);
-  doc.setFont('helvetica', 'bold');
-  doc.text(schoolInfo?.name ?? SCHOOL_INFO.name, 105, headY, { align: 'center' });
-  doc.setFont('helvetica', 'normal');
+  // 9mm of margin + the 26mm logo + 4mm of air, reserved on both sides.
+  let headY = drawSchoolName(doc, schoolInfo?.name ?? SCHOOL_INFO.name, {
+    centerX: 105,
+    y: 15,
+    maxWidth: schoolInfo?.logo ? 210 - 2 * 39 : 182,
+    fontSize: 17,
+  });
 
   const motto = schoolInfo?.motto?.trim();
   if (motto) {
