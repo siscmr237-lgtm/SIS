@@ -103,11 +103,17 @@ export const metadata = {
   title: "Lewa — School management for Cameroonian schools",
   description: OG_DESCRIPTION,
   /**
-   * No `images` key, deliberately. There is no open-graph asset in this repo,
-   * and pointing og:image at something that does not exist is worse than
-   * omitting it: a card with a broken image reads as a dead link, whereas a
-   * card with no image reads as a normal one. Add the key when there is a real
-   * 1200x630 to point it at.
+   * STILL NO `images` KEY, AND STILL DELIBERATELY -- but the reason has changed.
+   * It used to be that there was no open-graph asset at all. There is one now:
+   * app/opengraph-image.tsx draws a 1200x630 card at build time, and the file
+   * convention writes og:image, og:image:width and og:image:height into this
+   * page for us, resolved against the metadataBase in app/layout.tsx.
+   *
+   * Naming it here would mean maintaining the URL and the dimensions by hand
+   * beside a file that already knows both. An `images` key would also OVERRIDE
+   * the generated one rather than adding to it, so a typo would silently cost
+   * the card. Leave it absent; add one only to point somewhere the convention
+   * cannot reach.
    */
   openGraph: {
     title: "Lewa — School management for Cameroonian schools",

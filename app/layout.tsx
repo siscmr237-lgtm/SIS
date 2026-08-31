@@ -12,6 +12,39 @@
 export const metadata = {
   title: 'School Information System',
   description: 'SIS',
+  /**
+   * WHAT TURNS app/opengraph-image.tsx INTO AN ABSOLUTE URL.
+   *
+   * og:image has to be absolute -- a scraper has no page to resolve a relative
+   * path against -- and Next builds that absolute URL by resolving the
+   * file-convention image against this base. Without it the build warns and
+   * falls back to guessing the deployment host, which is wrong in every
+   * environment that is not the one it guessed.
+   *
+   * THE www IS LOAD-BEARING. lewa.app 301s to www.lewa.app, so a base of
+   * https://lewa.app would emit an og:image that redirects. Scrapers are not
+   * browsers: several fetch the image once, without following redirects, and
+   * simply show no card. Pointing at the final host costs nothing and removes
+   * that whole class of failure.
+   *
+   * Root-level, so every route under app/ inherits it rather than each one
+   * repeating the host.
+   */
+  metadataBase: new URL('https://www.lewa.app'),
+  /**
+   * The wide card rather than the small square thumbnail. This is the only
+   * twitter key set anywhere, and the image itself is filled in by Next from
+   * app/opengraph-image.tsx -- absent a twitter-image file convention, the
+   * opengraph one is used for both.
+   *
+   * Safe to add here in a way `icons` is not: the note above concerns a guard
+   * specific to icon resolution. Metadata is otherwise merged key by key, and a
+   * child segment that defines its own `openGraph` -- app/page.tsx does -- still
+   * inherits this, because it does not define `twitter` itself.
+   */
+  twitter: {
+    card: 'summary_large_image',
+  },
 };
 
 /**
