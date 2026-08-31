@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { TableLoader } from './ContentLoader';
-import { Download, FileText, Plus, Search } from 'lucide-react';
+import { Download, FileText, Pencil, Plus, Search } from 'lucide-react';
 import { generateExpenseInvoice, generateExpenseRecords } from '../utils/pdfGenerator';
 import { api } from '@/lib/api';
 import { useCachedResource, useSisCache } from '@/lib/SisCache';
@@ -47,6 +47,34 @@ export function ExpensesManagement() {
    * would run backwards over numbers already issued. Empty until it arrives.
    */
   const [nextInvoice, setNextInvoice] = useState('');
+
+  /**
+   * The expense the pen button opened, or null while the edit dialog is shut.
+   *
+   * THE ROW, NOT JUST ITS ID. One dialog is rendered beside the table rather
+   * than one per row, so this is also what the dialog reads to fill itself in —
+   * and what a save uses to say which record it belongs to if the list refreshes
+   * underneath an open dialog.
+   */
+  const [editing, setEditing] = useState<any | null>(null);
+  const [editForm, setEditForm] = useState({
+    date: '',
+    category: '',
+    description: '',
+    amount: '',
+    payee: '',
+    paymentMethod: '',
+  });
+  const [savingEdit, setSavingEdit] = useState(false);
+  /**
+   * Why a save was refused, shown in the dialog rather than swallowed.
+   *
+   * Editing is the one write on this page that can legitimately be turned down:
+   * PUT /expenses/:id runs canEdit, and an ADMINISTRATOR may only change rows
+   * their own account created. Failing silently there looks exactly like a save
+   * that worked, right up until the table does not change.
+   */
+  const [editError, setEditError] = useState('');
 
   /**
    * Opening the dialog is what fills it in: today in the date field, and the
@@ -183,6 +211,71 @@ export function ExpensesManagement() {
       setOpenDownload(false);
     } finally {
       setDownloading(false);
+    }
+  };
+
+  /**
+   * A dropdown's options with the record's own value added when the list no
+   * longer offers it.
+   *
+   * WITHOUT THIS, OPENING A ROW AND SAVING IT REWRITES HISTORY. PAYMENT_METHODS
+   * is down to Cash and Mobile Money, but expenses genuinely settled by bank
+   * transfer or cheque are still on the books; a Select handed a value none of
+   * its items carry renders as though nothing were chosen, so a save would blank
+   * a method that was correct. Carrying the current value keeps "leave it alone"
+   * on the menu, which is the one thing an edit dialog has to allow.
+   */
+  const withCurrent = (options: readonly string[], current: string) =>
+    current && !options.includes(current) ? [...options, current] : [...options];
+
+  const openEdit = (expense: any) => {
+    setEditError('');
+    setEditing(expense);
+    setEditForm({
+      date: dateOnly(expense.date),
+      category: expense.category ?? '',
+      description: expense.description ?? '',
+      amount: String(expense.amount ?? ''),
+      payee: expense.payee ?? '',
+      // Expanded to the label the table row already shows, so the dropdown opens
+      // on the same words the record reads as — see formatPaymentMethod, which
+      // is what turns the older stored codes back into method names.
+      paymentMethod: expense.paymentMethod ? formatPaymentMethod(expense.paymentMethod) : '',
+    });
+  };
+
+  // Nothing closes mid-save: the dialog is where the outcome gets reported.
+  const closeEdit = () => {
+    if (savingEdit) return;
+    setEditing(null);
+    setEditError('');
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editing || savingEdit) return;
+    setSavingEdit(true);
+    setEditError('');
+    try {
+      // The six editable fields ONLY, never the row as it was handed over. PUT
+      // /expenses/:id spreads the body straight into Prisma's `data`, so an id
+      // or a createdAt sent back along with them is a 400 rather than a no-op.
+      // invoiceNumber is left out for the reason the Add dialog omits it too:
+      // the server owns the series, and this form only displays the number.
+      await api.put(`/expenses/${editing.id}`, {
+        date: editForm.date,
+        category: editForm.category,
+        description: editForm.description,
+        amount: Number(editForm.amount) || 0,
+        payee: editForm.payee,
+        paymentMethod: editForm.paymentMethod,
+      });
+      cache.invalidateOn('expense:write');
+      await refreshExpenses();
+      setEditing(null);
+    } catch (e: any) {
+      setEditError(e?.message || 'The expense could not be saved.');
+    } finally {
+      setSavingEdit(false);
     }
   };
 
@@ -524,15 +617,30 @@ export function ExpensesManagement() {
                 <TableCell>{expense.amount.toLocaleString()}</TableCell>
                 <TableCell>{formatPaymentMethod(expense.paymentMethod)}</TableCell>
                 <TableCell>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => generateExpenseInvoice(expense)}
-                    className="flex items-center gap-2"
-                  >
-                    <FileText size={16} />
-                    Invoice
-                  </Button>
+                  {/* Wrapping rather than stretching the column: the table
+                      already scrolls sideways on a phone, and a second button
+                      here is what makes it start doing so a screen earlier. */}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => generateExpenseInvoice(expense)}
+                      className="flex items-center gap-2"
+                    >
+                      <FileText size={16} />
+                      Invoice
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openEdit(expense)}
+                      className="flex items-center gap-2"
+                      aria-label={`Edit expense ${expense.invoiceNumber}`}
+                    >
+                      <Pencil size={16} />
+                      Edit
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
@@ -540,6 +648,107 @@ export function ExpensesManagement() {
         </Table>
         </div>
       </Card>
+
+      {/* ONE dialog beside the table, not one per row. The fields are the same
+          whichever pen was pressed, and `editing` is what says which record they
+          were filled from — a dialog per row would mount this whole form once for
+          every expense on the page.
+
+          Inline maxWidth for the reason the two dialogs above spell out at
+          length: max-w-2xl alone renders 32rem from 640px up and loses the phone
+          gutter. */}
+      <Dialog open={!!editing} onOpenChange={open => { if (!open) closeEdit(); }}>
+        <DialogContent style={{ maxWidth: 'min(42rem, calc(100vw - 2rem))' }}>
+          <DialogHeader>
+            <DialogTitle>Edit Expense</DialogTitle>
+            <DialogDescription>Correct this expense. Its invoice number stays as recorded.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Date</Label>
+                <ThreePartDateInput
+                  value={editForm.date}
+                  onChange={v => setEditForm(s => ({ ...s, date: v ?? '' }))}
+                  aria-label="Expense date"
+                />
+              </div>
+              <div>
+                {/* Shown but not editable, and not sent back either: the number is
+                    the school's own series and this row already has its place in
+                    it. It is here so the dialog says which expense is open. */}
+                <Label>Invoice Number <span className="text-xs text-gray-500">(unchanged)</span></Label>
+                <Input
+                  readOnly
+                  value={editing?.invoiceNumber ?? ''}
+                  className="bg-gray-50 text-gray-600"
+                  aria-label="Invoice number, not editable"
+                />
+              </div>
+            </div>
+            <div>
+              <Label>Category</Label>
+              <Select value={editForm.category} onValueChange={(v: string) => setEditForm(s => ({ ...s, category: v }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {withCurrent(categories, editForm.category).map(cat => (
+                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Description</Label>
+              <Input
+                placeholder="Describe the expense..."
+                value={editForm.description}
+                onChange={e => setEditForm(s => ({ ...s, description: e.target.value }))}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Amount (FCFA)</Label>
+                <Input
+                  type="number"
+                  placeholder="50000"
+                  value={editForm.amount}
+                  onChange={e => setEditForm(s => ({ ...s, amount: e.target.value }))}
+                />
+              </div>
+              <div>
+                <Label>Payment Method</Label>
+                <Select value={editForm.paymentMethod} onValueChange={(v: string) => setEditForm(s => ({ ...s, paymentMethod: v }))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select method" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {withCurrent(PAYMENT_METHODS, editForm.paymentMethod).map(m => (
+                      <SelectItem key={m} value={m}>{m}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div>
+              <Label>Payee</Label>
+              <Input
+                placeholder="Name of recipient/vendor"
+                value={editForm.payee}
+                onChange={e => setEditForm(s => ({ ...s, payee: e.target.value }))}
+              />
+            </div>
+            {editError && <p className="text-sm text-red-600">{editError}</p>}
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={closeEdit} disabled={savingEdit}>Cancel</Button>
+            <Button onClick={handleSaveEdit} disabled={savingEdit}>
+              {savingEdit ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
