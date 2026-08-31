@@ -601,12 +601,18 @@ export function ExpensesManagement() {
               <TableHead>Payee</TableHead>
               <TableHead>Amount (FCFA)</TableHead>
               <TableHead>Payment Method</TableHead>
+              {/* Edit has a column of its own rather than sharing one with
+                  Invoice. Sharing meant the two wrapped onto separate lines as
+                  soon as the column narrowed, so the pen sat at a different
+                  height in every row; a column of its own keeps it in one place
+                  all the way down the table. */}
               <TableHead>Actions</TableHead>
+              <TableHead>Edit</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {/* The headings stay; only the rows wait. */}
-            {expensesLoading && <TableLoader colSpan={8} />}
+            {expensesLoading && <TableLoader colSpan={9} />}
             {!expensesLoading && filteredExpenses.map((expense) => (
               <TableRow key={expense.id}>
                 <TableCell>{dateOnly(expense.date)}</TableCell>
@@ -617,30 +623,27 @@ export function ExpensesManagement() {
                 <TableCell>{expense.amount.toLocaleString()}</TableCell>
                 <TableCell>{formatPaymentMethod(expense.paymentMethod)}</TableCell>
                 <TableCell>
-                  {/* Wrapping rather than stretching the column: the table
-                      already scrolls sideways on a phone, and a second button
-                      here is what makes it start doing so a screen earlier. */}
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => generateExpenseInvoice(expense)}
-                      className="flex items-center gap-2"
-                    >
-                      <FileText size={16} />
-                      Invoice
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => openEdit(expense)}
-                      className="flex items-center gap-2"
-                      aria-label={`Edit expense ${expense.invoiceNumber}`}
-                    >
-                      <Pencil size={16} />
-                      Edit
-                    </Button>
-                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => generateExpenseInvoice(expense)}
+                    className="flex items-center gap-2"
+                  >
+                    <FileText size={16} />
+                    Invoice
+                  </Button>
+                </TableCell>
+                <TableCell>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => openEdit(expense)}
+                    className="flex items-center gap-2"
+                    aria-label={`Edit expense ${expense.invoiceNumber}`}
+                  >
+                    <Pencil size={16} />
+                    Edit
+                  </Button>
                 </TableCell>
               </TableRow>
             ))}
