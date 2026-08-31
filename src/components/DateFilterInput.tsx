@@ -1,6 +1,7 @@
 'use client';
 
 import { Calendar } from 'lucide-react';
+import { earliestDateIso, latestDateIso } from '../utils/dateOnly';
 
 /**
  * A date filter that looks like the selects beside it.
@@ -41,6 +42,16 @@ import { Calendar } from 'lucide-react';
  * to be entered, not "no narrowing applied". Those callers pass `placeholder`
  * and get that wording in grey instead of today's date, so the field never
  * reads as already filled in.
+ *
+ * THE SAME YEARS AS EVERY OTHER DATE. This is a native input, so its typing
+ * and its OS picker belong to the browser rather than to us — but the range
+ * does not. min and max carry the platform's bounds (utils/dateOnly, shared
+ * with ThreePartDateInput), which is what greys the rest out in the picker,
+ * and the change handler drops an out-of-range date outright on top of that:
+ * min and max on a date input only mark a value invalid, they do not stop it
+ * being typed, and an input at opacity 0 has nowhere to show that it is
+ * invalid. Dropping it leaves the filter exactly as it was, which is the same
+ * answer the three-part control gives to a year outside the range.
  */
 
 /** 'YYYY-MM-DD' → 'DD/MM/YYYY'. Empty for anything that isn't a full date. */
@@ -93,6 +104,9 @@ export function DateFilterInput({
   placeholder?: string;
   'aria-label'?: string;
 }) {
+  const min = earliestDateIso();
+  const max = latestDateIso();
+
   const shown = toDisplayDate(value);
   const isPlaceholder = shown === '';
 
@@ -156,7 +170,15 @@ export function DateFilterInput({
         type="date"
         className="sis-date-native"
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        min={min}
+        max={max}
+        onChange={(e) => {
+          const next = e.target.value;
+          // '' is the filter being cleared, which is always allowed. Both
+          // bounds are 'YYYY-MM-DD', so a string compare is a date compare.
+          if (next !== '' && (next < min || next > max)) return;
+          onChange(next);
+        }}
         disabled={disabled}
         aria-label={ariaLabel}
         style={{

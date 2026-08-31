@@ -31,3 +31,34 @@ export function todayIso(): string {
   const pad = (n: number) => String(n).padStart(2, '0');
   return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
 }
+
+/**
+ * The oldest year any date on this platform is allowed to name.
+ *
+ * There is one range, and both date controls hold it: ThreePartDateInput builds
+ * its year list from it and refuses a digit that cannot lead into it, and the
+ * finance From/To filters bound their native input with it. Two controls with
+ * two different ideas of a legal year is how the same date becomes enterable in
+ * one place and not the other.
+ */
+export const FIRST_DATE_YEAR = 1999;
+
+/**
+ * The newest year allowed: this one. A date here is something that happened or
+ * is happening, so a year that has not arrived is not offered.
+ *
+ * Read at call time rather than frozen in a module constant, because this
+ * module is imported once and the process outlives New Year's Eve.
+ */
+export function lastDateYear(): number {
+  return new Date().getFullYear();
+}
+
+/** The range as the two bounds a native date input takes. */
+export function earliestDateIso(): string {
+  return FIRST_DATE_YEAR + '-01-01';
+}
+
+export function latestDateIso(): string {
+  return lastDateYear() + '-12-31';
+}
