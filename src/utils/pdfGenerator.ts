@@ -336,7 +336,7 @@ interface LedgerPdfEntry {
   amount: number;
   entryDate: string;
   paymentMethod?: string | null;
-  /** "2026/2027-0042". Payments only; null on every charge. */
+  /** "CNPS042". Payments only; null on every charge. */
   receiptNumber?: string | null;
   category?: { name: string } | null;
   /**
@@ -623,8 +623,15 @@ export async function generateFinancialSheet(
       margin: { left: 15, right: 15 },
       columnStyles: {
         // 180mm of content width, shared out again now there are five columns:
-        // the receipt number needs 34 for "2026/2027-0042" without wrapping, and
-        // Fee and Payment Type give it up because both are short in practice.
+        // the receipt number needs 34 to stay on one line, and Fee and Payment
+        // Type give it up because both are short in practice.
+        //
+        // KEPT AT 34 THROUGH THE FORMAT CHANGE even though the typical number
+        // shrank from "2026/2027-0042" to "CNPS042". The worst case is still
+        // close: a ten-character abbreviation past its thousandth receipt gives
+        // "CIGBINAPS1000". Narrowing this to fit the common case would wrap that
+        // one, and a receipt number broken across two lines is exactly what gets
+        // misread back over the phone.
         0: { cellWidth: 34 },
         1: { cellWidth: 26 },
         2: { cellWidth: 48 },

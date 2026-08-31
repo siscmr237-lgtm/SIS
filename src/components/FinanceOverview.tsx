@@ -43,7 +43,7 @@ interface StudentTransactionRow {
   amount: number;
   entryDate: string;
   paymentMethod: string | null;
-  /** "2026/2027-0042". Payments only; null on every charge. */
+  /** "CNPS042". Payments only; null on every charge. */
   receiptNumber: string | null;
   /**
    * Present only on the anchor row of a submission whose parent receipt was

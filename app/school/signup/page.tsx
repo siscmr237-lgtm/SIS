@@ -8,6 +8,12 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { PasswordHints } from "../../../src/components/PasswordHints";
 import { api } from "../../../src/lib/api";
+import {
+  ABBREVIATION_MAX_LENGTH,
+  computeSchoolAbbreviation,
+  normalizeSchoolAbbreviation,
+  validateSchoolAbbreviation,
+} from "../../../src/utils/schoolAbbreviation";
 
 // ---------------------------------------------------------------------------
 // Shared style helpers
@@ -87,6 +93,20 @@ function Shell({ children }: { children: React.ReactNode }) {
 function SignupForm({ onSuccess }: { onSuccess: () => void }) {
   const [name, setName] = useState("");
   const [schoolName, setSchoolName] = useState("");
+  /**
+   * The abbreviation, asked for here rather than derived behind the school's
+   * back — it is the prefix on every receipt number they will ever issue
+   * ("CNPS001"), which makes it something to agree to before the first receipt
+   * goes out rather than to discover on one.
+   *
+   * PREFILLED, NOT BLANK. It tracks the school name as it is typed, so nobody
+   * has to invent anything; the moment it is edited by hand it stops tracking
+   * and keeps what was typed. `touched` is what separates those two states — a
+   * derived value that silently overwrote a deliberate one on the next
+   * keystroke in the name field would be the same bug Settings already fixed.
+   */
+  const [abbreviation, setAbbreviation] = useState("");
+  const [abbreviationTouched, setAbbreviationTouched] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -99,12 +119,42 @@ function SignupForm({ onSuccess }: { onSuccess: () => void }) {
     if (!e.currentTarget.contains(e.relatedTarget as Node)) setFocused(null);
   };
 
+  // What the abbreviation field shows: the live suggestion until somebody edits
+  // it, their own value from then on.
+  const abbreviationValue = abbreviationTouched
+    ? abbreviation
+    : computeSchoolAbbreviation(schoolName);
+  // Only once there is something to judge — an empty field on an untouched form
+  // is not an error, it is a form nobody has filled in yet.
+  const abbreviationError = abbreviationValue
+    ? validateSchoolAbbreviation(abbreviationValue)
+    : null;
+
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    // Checked here as well as on the server. The server is the authority — it
+    // refuses the signup outright — but a school created with an unusable
+    // prefix would not fail at signup, it would fail later, at the till, on the
+    // first payment, with a message about receipt numbers that means nothing to
+    // whoever is standing there. Far better to say it now, next to the field.
+    const invalidAbbreviation = validateSchoolAbbreviation(abbreviationValue);
+    if (invalidAbbreviation) {
+      setError(invalidAbbreviation);
+      return;
+    }
+
     setLoading(true);
     try {
-      const res = (await api.post("/auth/signup", { name, schoolName, phoneNumber, email, password })) as any;
+      const res = (await api.post("/auth/signup", {
+        name,
+        schoolName,
+        abbreviation: normalizeSchoolAbbreviation(abbreviationValue),
+        phoneNumber,
+        email,
+        password,
+      })) as any;
       if (res?.token) {
         window.localStorage.setItem("auth_token", res.token);
         window.localStorage.setItem("user", JSON.stringify(res.user));
@@ -167,6 +217,45 @@ function SignupForm({ onSuccess }: { onSuccess: () => void }) {
             onBlur={() => setFocused(null)}
             style={textInputStyle(focused === "school")}
           />
+        </div>
+
+        {/* Abbreviation. Prefilled from the school name above and editable — see
+            the state declaration for why it stops tracking once touched.
+
+            The helper line shows the receipt number it will produce, because
+            "abbreviation" alone reads as a cosmetic label and this is the one
+            field on the form whose value ends up printed on a parent's receipt
+            and quoted back down a phone line. */}
+        <div>
+          <label
+            className="text-sm font-medium"
+            style={{ display: "block", marginBottom: 6, color: "#374151" }}
+          >
+            School Abbreviation
+          </label>
+          <input
+            type="text"
+            placeholder="e.g. ENPS"
+            value={abbreviationValue}
+            onChange={(e) => {
+              setAbbreviationTouched(true);
+              // Uppercased as they type, so the field always shows exactly what
+              // will appear on a receipt.
+              setAbbreviation(normalizeSchoolAbbreviation(e.target.value));
+            }}
+            maxLength={ABBREVIATION_MAX_LENGTH}
+            required
+            onFocus={() => setFocused("abbreviation")}
+            onBlur={() => setFocused(null)}
+            style={textInputStyle(focused === "abbreviation")}
+          />
+          <p
+            className="text-xs"
+            style={{ marginTop: 6, color: abbreviationError ? "#DC2626" : "#6B7280" }}
+          >
+            {abbreviationError
+              ?? `Used where the full name will not fit, and as the prefix on every receipt number — ${abbreviationValue || "ENPS"}001, ${abbreviationValue || "ENPS"}002. Letters and digits only, 2–${ABBREVIATION_MAX_LENGTH} characters.`}
+          </p>
         </div>
 
         {/* Phone Number */}

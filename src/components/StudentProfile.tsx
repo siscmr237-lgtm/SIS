@@ -54,7 +54,7 @@ interface LedgerEntry {
   entryDate: string;
   paymentMethod?: string | null;
   /**
-   * The receipt number, "2026/2027-0042". Payments only — null on every charge,
+   * The receipt number, "CNPS042". Payments only — null on every charge,
    * for good, since payments are LedgerEntry rows rather than a table of their
    * own. Issued once and never reissued, so this is what a parent quotes.
    */

@@ -16,6 +16,11 @@ import { RevalidatingBadge, useResourceError } from './ResourceStatus';
 import { uploadImage } from '@/lib/uploadImage';
 import { PasswordHints } from './PasswordHints';
 import { HOLIDAY, TERM_OPTIONS, resolveSchoolTerm } from '@/utils/academicTerm';
+import {
+  ABBREVIATION_MAX_LENGTH,
+  normalizeSchoolAbbreviation,
+  validateSchoolAbbreviation,
+} from '../utils/schoolAbbreviation';
 import { AdministratorsSection } from './AdministratorsSection';
 
 /**
@@ -167,6 +172,19 @@ export function SchoolSettings() {
   // Only a real change to either of these should switch auto-detect off.
   const termFieldsDirty = dirtyFields.includes('academicYear') || dirtyFields.includes('currentTerm');
 
+  // Shown under the field as they type, and it also disables Save. The same
+  // rule runs again in handleBasicInfoSave and again on the server — this copy
+  // exists to tell somebody what is wrong while they can still see the field,
+  // not to be the thing that enforces it.
+  //
+  // ONLY ONCE THE FIELD HAS LOADED. formData starts as EMPTY_FORM before the
+  // settings request resolves, and an empty abbreviation is invalid, so without
+  // this guard the page would open with a red error under an empty box that is
+  // about to fill itself in.
+  const abbreviationError = baseline.abbreviation || formData.abbreviation
+    ? validateSchoolAbbreviation(formData.abbreviation)
+    : null;
+
   /**
    * What the two calendar fields should show before anyone touches them.
    *
@@ -253,14 +271,37 @@ export function SchoolSettings() {
 
   const handleBasicInfoSave = async () => {
     if (savingBasicInfo || !isDirty) return;
+
+    // CHECKED BEFORE THE REQUEST, not only after it. The server validates this
+    // too and is the authority — but the abbreviation is now the prefix on every
+    // receipt this school issues, and it sits on a form that saves the school
+    // name, the logo and the motto in the same click. Letting the whole save
+    // bounce off the API because of one stray space means the person at the
+    // screen loses the other three edits and is told so by a toast.
+    const abbreviation = normalizeSchoolAbbreviation(formData.abbreviation);
+    const invalidAbbreviation = validateSchoolAbbreviation(abbreviation);
+    if (invalidAbbreviation) {
+      toast.error(invalidAbbreviation);
+      return;
+    }
+
     setSavingBasicInfo(true);
-    // The abbreviation is now an ordinary manual field: sent whenever it has
+    // The abbreviation is an ordinary manual field: sent whenever it has
     // changed, and never re-derived from the name by the server.
+    //
+    // NORMALISED, so what gets saved is what the rest of this function then
+    // writes into local state and localStorage. Sending the raw field and
+    // storing the raw field would leave the header showing "cnps" until the
+    // next reload told it otherwise.
+    //
+    // Changing this does NOT renumber a single existing receipt — old ones keep
+    // the prefix they were issued under and only the next one uses the new. See
+    // the note on School.abbreviation in the backend schema.
     const payload: Record<string, unknown> = {
       name: formData.name,
       logo: formData.logo,
       motto: formData.motto,
-      abbreviation: formData.abbreviation,
+      abbreviation,
       // '' when nobody has chosen, which PUT /settings normalises back to NULL:
       // the Postgres enum has no member for '' and would refuse the write.
       proprietorGender: formData.proprietorGender,
@@ -283,7 +324,14 @@ export function SchoolSettings() {
       });
       syncLocalStorageSchool(payload);
       // Saved state IS the new baseline, so Save goes quiet again.
-      setBaseline(formData);
+      //
+      // With the NORMALISED abbreviation folded back in. Somebody who typed
+      // "cnps" has CNPS saved; leaving the raw text in the form and in the
+      // baseline would show them the wrong value in the field, and would leave
+      // Save lit up over a difference that only exists on their screen.
+      const saved = { ...formData, abbreviation };
+      setFormData(saved);
+      setBaseline(saved);
       // The year lives in the rollover's state as well; re-read it so the
       // dropdown and every other screen agree immediately.
       if (dirtyFields.includes('academicYear')) refreshYear();
@@ -394,7 +442,7 @@ export function SchoolSettings() {
           <Button
             onClick={handleBasicInfoSave}
             variant={isDirty ? 'default' : 'outline'}
-            disabled={!isDirty || savingBasicInfo}
+            disabled={!isDirty || savingBasicInfo || !!abbreviationError}
           >
             <Save className="mr-2" size={16} />
             {savingBasicInfo ? 'Saving...' : isDirty ? 'Save Changes' : 'Saved'}
@@ -422,20 +470,42 @@ export function SchoolSettings() {
             />
           </div>
 
-          {/* Derived from the school name once, at signup, and manual from then
-              on — renaming the school no longer rewrites it. The auto-generate
-              toggle that used to sit above this went with that behaviour. */}
+          {/* Suggested from the school name once, at signup, and manual from
+              then on — renaming the school no longer rewrites it. The
+              auto-generate toggle that used to sit above this went with that
+              behaviour.
+
+              THIS IS ALSO THE RECEIPT PREFIX now, which is why the field has a
+              maxLength and an inline error where it used to take anything. The
+              copy says so plainly, including the part that surprises people:
+              changing it here leaves every receipt already issued exactly as it
+              is. A school that goes from CNPS to ENPS gets CNPS001..015 and then
+              ENPS016 — one sequence, two prefixes — because CNPS014 is printed
+              on a receipt in somebody's hands and in their WhatsApp history. */}
           <div className="md:col-span-2">
             <Label>Abbreviation</Label>
             <Input
               className="mt-2"
               value={formData.abbreviation}
-              onChange={(e) => setFormData(prev => ({ ...prev, abbreviation: e.target.value }))}
+              /* Uppercased AS THEY TYPE rather than silently on save, so the
+                 field shows the value that will actually go on a receipt. */
+              onChange={(e) => setFormData(prev => ({
+                ...prev,
+                abbreviation: normalizeSchoolAbbreviation(e.target.value),
+              }))}
+              maxLength={ABBREVIATION_MAX_LENGTH}
               placeholder="e.g., ENPS"
             />
-            <p className="text-xs text-gray-500 mt-1">
-              Used where the full school name will not fit. Set from your school name at signup; yours to change from here.
-            </p>
+            {abbreviationError ? (
+              <p className="text-xs text-red-600 mt-1">{abbreviationError}</p>
+            ) : (
+              <p className="text-xs text-gray-500 mt-1">
+                Used where the full school name will not fit, and as the prefix on every
+                receipt number — {formData.abbreviation || 'ENPS'}001, {formData.abbreviation || 'ENPS'}002.
+                Letters and digits only, 2–{ABBREVIATION_MAX_LENGTH} characters. Changing it
+                does not renumber receipts already issued.
+              </p>
+            )}
           </div>
 
           {/* A dropdown, never free text: every year-tagged row is matched by
