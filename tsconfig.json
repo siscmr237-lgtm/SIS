@@ -14,6 +14,12 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "esModuleInterop": true,
+    // For the *.test.ts files, which `node --test` runs directly rather than
+    // through a bundler: Node strips the types and executes the file, and its
+    // resolver needs the real filename on disk, so those imports carry the .ts
+    // extension. Safe because noEmit is true — nothing is compiled out, so no
+    // emitted import can ever carry a .ts extension into a build.
+    "allowImportingTsExtensions": true,
     "skipLibCheck": true,
     "types": [
       "vite/client"

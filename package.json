@@ -61,6 +61,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "dev:vite": "vite"
+    "dev:vite": "vite",
+    "test": "node --test --disable-warning=MODULE_TYPELESS_PACKAGE_JSON src/lib/*.test.ts",
+    "typecheck": "tsc --noEmit"
   }
 }
