@@ -74,7 +74,7 @@ export default function AdministratorsPage() {
   };
 
   return (
-    <div style={{ maxWidth: 820 }}>
+    <div>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 18 }}>
         <div>
           <h1 style={{ fontSize: "1.25rem", fontWeight: 600, color: "#0F172A", margin: "0 0 4px" }}>

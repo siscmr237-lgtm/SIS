@@ -97,7 +97,7 @@ export default function AdministratorDetailPage() {
   // shown yet; the way back always can.
   if (!admin) {
     return (
-      <div style={{ maxWidth: 560 }}>
+      <div style={{ maxWidth: 560, margin: "0 auto" }}>
         <button
           onClick={() => router.push("/admin/administrators")}
           style={{ background: "none", border: "none", color: "#64748B", fontSize: "0.8125rem", cursor: "pointer", padding: 0, marginBottom: 12 }}
@@ -110,7 +110,7 @@ export default function AdministratorDetailPage() {
   }
 
   return (
-    <div style={{ maxWidth: 560 }}>
+    <div style={{ maxWidth: 560, margin: "0 auto" }}>
       <button
         onClick={() => router.push("/admin/administrators")}
         style={{ background: "none", border: "none", color: "#64748B", fontSize: "0.8125rem", cursor: "pointer", padding: 0, marginBottom: 12 }}

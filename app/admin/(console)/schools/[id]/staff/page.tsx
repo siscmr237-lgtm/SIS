@@ -55,7 +55,7 @@ export default function SchoolStaffPage() {
   // the back link waits with the rest of the data.
   if (!data) {
     return (
-      <div style={{ maxWidth: 1000 }}>
+      <div>
         <h1 style={{ fontSize: "1.25rem", fontWeight: 600, color: "#0F172A", margin: "10px 0 4px" }}>Staff</h1>
         <ContentLoader minHeight={220} />
       </div>
@@ -63,7 +63,7 @@ export default function SchoolStaffPage() {
   }
 
   return (
-    <div style={{ maxWidth: 1000 }}>
+    <div>
       <Link href={`/admin/schools/${id}`} style={{ color: "#64748B", fontSize: "0.8125rem", textDecoration: "none" }}>
         ← {data.school.name}
       </Link>

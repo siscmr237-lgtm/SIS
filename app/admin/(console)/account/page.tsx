@@ -50,7 +50,7 @@ export default function AccountPage() {
   };
 
   return (
-    <div style={{ maxWidth: 480 }}>
+    <div style={{ maxWidth: 480, margin: "0 auto" }}>
       <h1 style={{ fontSize: "1.25rem", fontWeight: 600, color: "#0F172A", margin: "0 0 18px" }}>Settings</h1>
 
       {me && (

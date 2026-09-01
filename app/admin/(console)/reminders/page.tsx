@@ -205,7 +205,7 @@ export default function RemindersPage() {
   };
 
   return (
-    <div style={{ maxWidth: 820 }}>
+    <div>
       <div style={{ marginBottom: 18 }}>
         <h1 style={{ fontSize: "1.25rem", fontWeight: 600, color: "#0F172A", margin: "0 0 4px" }}>
           Reminders

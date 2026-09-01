@@ -151,7 +151,7 @@ export default function SchoolDetailPage() {
   // back can be drawn before the record arrives.
   if (!school) {
     return (
-      <div style={{ maxWidth: 760 }}>
+      <div>
         <Link href="/admin/schools" style={{ color: "#64748B", fontSize: "0.8125rem", textDecoration: "none" }}>
           ← Schools
         </Link>
@@ -164,7 +164,7 @@ export default function SchoolDetailPage() {
   const anyUniform = uniform.shirt || uniform.trouser || uniform.gown;
 
   return (
-    <div style={{ maxWidth: 760 }}>
+    <div>
       <Link href="/admin/schools" style={{ color: "#64748B", fontSize: "0.8125rem", textDecoration: "none" }}>
         ← Schools
       </Link>

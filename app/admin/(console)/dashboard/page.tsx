@@ -307,7 +307,7 @@ export default function DashboardPage() {
 
   if (error) {
     return (
-      <div style={{ maxWidth: 1100 }}>
+      <div>
         <p style={{ fontSize: "0.875rem", color: "#DC2626", margin: "0 0 10px" }}>{error}</p>
         {/* A retry, which the other console pages do not offer, because this
             one is the landing page: a reader who arrives on a 503 here has not
@@ -327,7 +327,7 @@ export default function DashboardPage() {
 
   if (!data) {
     return (
-      <div style={{ maxWidth: 1100 }}>
+      <div>
         <h1 style={{ fontWeight: 600, color: "#0F172A", margin: "0 0 4px" }}>Dashboard</h1>
         <p style={{ fontSize: "0.8125rem", color: "#64748B", margin: "0 0 18px" }}>
           Every school on the platform, added together.
@@ -343,7 +343,7 @@ export default function DashboardPage() {
   const studentsPerSchool = t.schools > 0 ? Math.round(t.students / t.schools) : 0;
 
   return (
-    <div style={{ maxWidth: 1100 }}>
+    <div>
       <style>{DASHBOARD_CSS}</style>
 
       <h1

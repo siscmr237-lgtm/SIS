@@ -56,7 +56,7 @@ export default function SchoolsPage() {
   const link: React.CSSProperties = { color: "#1D4ED8", textDecoration: "none" };
 
   return (
-    <div style={{ maxWidth: 900 }}>
+    <div>
       <h1 style={{ fontSize: "1.25rem", fontWeight: 600, color: "#0F172A", margin: "0 0 4px" }}>Schools</h1>
       <p style={{ fontSize: "0.8125rem", color: "#64748B", margin: "0 0 18px" }}>
         Every school on the platform. Read-only.

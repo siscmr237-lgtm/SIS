@@ -190,7 +190,7 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
 
       <header
         style={{
-          background: "#0F172A", color: "white", padding: "0 16px",
+          background: "#0F172A", color: "white", padding: "0 24px",
           display: "flex", alignItems: "center", justifyContent: "space-between",
           height: 56, gap: 16, flexWrap: "nowrap",
           // Stays put while the page scrolls.
@@ -205,32 +205,57 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
           position: "sticky", top: 0, zIndex: 30,
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 14, minWidth: 0 }}>
+        {/* Three groups: brand, nav, account. The nav is meant to sit on the
+            header's centre line rather than beside the wordmark, so the two
+            outer groups carry flex: 1 1 0 — equal basis, equal share of what
+            the nav leaves over — which lands the nav's own centre on the
+            header's without measuring anything. An absolutely-positioned nav
+            would centre too, but it would stop reserving width and could end
+            up underneath the account group at a narrow desktop size. */}
+        <div style={{ display: "flex", alignItems: "center", gap: 14, minWidth: 0, flex: "1 1 0" }}>
           <span role="img" aria-label="Lewa" style={{ ...LEWA_MARK, width: 36, height: 36 }} />
-          <span style={{ fontWeight: 600, fontSize: "0.9rem", whiteSpace: "nowrap" }}>Team Console</span>
-          <nav data-console-desktop="" style={{ gap: 4, overflowX: "auto" }}>
-            {nav.map((item) => {
-              const active = isActive(item.href);
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  style={{
-                    padding: "6px 10px", borderRadius: 7, fontSize: "0.8125rem",
-                    whiteSpace: "nowrap",
-                    color: active ? "white" : "#94A3B8",
-                    background: active ? "#1E293B" : "transparent",
-                  }}
-                >
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
+          <span
+            style={{
+              fontWeight: 600, fontSize: "0.9rem", whiteSpace: "nowrap",
+              overflow: "hidden", textOverflow: "ellipsis",
+            }}
+          >
+            Team Console
+          </span>
         </div>
 
-        <div data-console-desktop="" style={{ alignItems: "center", gap: 12, flexShrink: 0 }}>
-          <span style={{ fontSize: "0.75rem", color: "#94A3B8", whiteSpace: "nowrap" }}>
+        {/* flexShrink 0 so the links never squash into each other: at an
+            in-between width the two outer groups are what give way. */}
+        <nav data-console-desktop="" style={{ gap: 4, flexShrink: 0 }}>
+          {nav.map((item) => {
+            const active = isActive(item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                style={{
+                  padding: "6px 10px", borderRadius: 7, fontSize: "0.8125rem",
+                  whiteSpace: "nowrap",
+                  color: active ? "white" : "#94A3B8",
+                  background: active ? "#1E293B" : "transparent",
+                }}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
+        </nav>
+
+        <div
+          data-console-desktop=""
+          style={{ alignItems: "center", justifyContent: "flex-end", gap: 12, minWidth: 0, flex: "1 1 0" }}
+        >
+          <span
+            style={{
+              fontSize: "0.75rem", color: "#94A3B8", whiteSpace: "nowrap",
+              overflow: "hidden", textOverflow: "ellipsis",
+            }}
+          >
             {me.name} · {me.role === "FOUNDER" ? "Founder" : "Member"}
           </span>
           <button
@@ -368,7 +393,12 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
         </div>
       </aside>
 
-      <main style={{ flex: 1, minWidth: 0, padding: 20, overflowX: "auto" }}>{children}</main>
+      {/* Full-bleed. The console's pages set no width cap of their own — the
+          forms under /admin/account and /admin/administrators/:id centre a
+          narrow column instead — so a page fills the window and this gutter is
+          the only inset. It matches the header's, so a page's first column
+          lines up under the wordmark. */}
+      <main style={{ flex: 1, minWidth: 0, width: "100%", padding: "20px 24px", overflowX: "auto" }}>{children}</main>
     </div>
   );
 }
