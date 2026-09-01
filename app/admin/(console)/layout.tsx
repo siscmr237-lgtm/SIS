@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Bell, LayoutDashboard, LogOut, Menu, School, Settings, Users, X } from "lucide-react";
+import { Bell, LayoutDashboard, LogOut, Menu, MessageSquare, School, Settings, Users, X } from "lucide-react";
 import { MOBILE_DRAWER_CSS } from "@/components/mobileDrawerCss";
 import {
   clearPlatformSession,
@@ -172,6 +172,11 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
     // its own Edit and toggle controls for a Member, and the API refuses the
     // write regardless — see PUT /platform/reminders/:key.
     { href: "/admin/reminders", label: "Reminders", icon: Bell },
+    // NOT Founder-gated either, and for the same shape of reason: a Member
+    // reads a parent's reply to answer a support question, and only a Founder
+    // can send one back. The page hides its composer from a Member, and
+    // POST /platform/messages/:phone/reply refuses the send regardless.
+    { href: "/admin/messages", label: "Messages", icon: MessageSquare },
     // The route stays /admin/account; this is only what the team reads.
     { href: "/admin/account", label: "Settings", icon: Settings },
   ];
