@@ -597,7 +597,6 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
                       }
                     }
                     cache.invalidateOn('student:write');
-                    await refreshStudents();
                     setOpenAdd(false);
                     setForm({
                       fullName: "",
@@ -617,6 +616,23 @@ export function StudentsManagement({ onNavigate, onViewStudent }: StudentsManage
                     setParentBaseline({ id: null, name: '', phone: '' });
                     setShowMedicalHistory(false);
                     setNewContacts([]);
+                    // Straight to the new student's profile, because admission
+                    // is never the last step: a photo, the fee position, pickup
+                    // contacts and the guardian's details all live there, and
+                    // dropping the admin back on the roster made them hunt for
+                    // the row they had just created before they could carry on.
+                    //
+                    // The roster is NOT refreshed first. invalidateOn above
+                    // drops it from the cache, so it refetches when the list is
+                    // next mounted; awaiting a fetch whose result this view is
+                    // about to unmount away from only delayed the navigation.
+                    // Without a handler there is nowhere to go, so the list
+                    // this admin is still looking at is refreshed instead.
+                    if (onViewStudent) {
+                      onViewStudent(created);
+                    } else {
+                      await refreshStudents();
+                    }
                   } catch (e: any) {
                     setSubmitError(e.message || 'Failed to save student');
                   } finally {
