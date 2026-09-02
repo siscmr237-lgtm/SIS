@@ -476,12 +476,13 @@ export function SchoolSettings() {
               behaviour.
 
               THIS IS ALSO THE RECEIPT PREFIX now, which is why the field has a
-              maxLength and an inline error where it used to take anything. The
-              copy says so plainly, including the part that surprises people:
-              changing it here leaves every receipt already issued exactly as it
-              is. A school that goes from CNPS to ENPS gets CNPS001..015 and then
+              maxLength and an inline error where it used to take anything.
+              Changing it leaves every receipt already issued exactly as it is:
+              a school that goes from CNPS to ENPS gets CNPS001..015 and then
               ENPS016 — one sequence, two prefixes — because CNPS014 is printed
-              on a receipt in somebody's hands and in their WhatsApp history. */}
+              on a receipt in somebody's hands and in their WhatsApp history.
+              Nothing on screen says so any more, the hint under the field
+              having been removed, so it is written down here instead. */}
           <div className="md:col-span-2">
             <Label>Abbreviation</Label>
             <Input
@@ -496,15 +497,8 @@ export function SchoolSettings() {
               maxLength={ABBREVIATION_MAX_LENGTH}
               placeholder="e.g., ENPS"
             />
-            {abbreviationError ? (
+            {abbreviationError && (
               <p className="text-xs text-red-600 mt-1">{abbreviationError}</p>
-            ) : (
-              <p className="text-xs text-gray-500 mt-1">
-                Used where the full school name will not fit, and as the prefix on every
-                receipt number — {formData.abbreviation || 'ENPS'}001, {formData.abbreviation || 'ENPS'}002.
-                Letters and digits only, 2–{ABBREVIATION_MAX_LENGTH} characters. Changing it
-                does not renumber receipts already issued.
-              </p>
             )}
           </div>
 
@@ -523,9 +517,6 @@ export function SchoolSettings() {
                 onChange={(year) => setFormData(prev => ({ ...prev, academicYear: year }))}
               />
             </div>
-            <p className="text-xs text-gray-500 mt-1">
-              Runs September to August. Detected automatically; change it here to work in another year.
-            </p>
           </div>
 
           <div>
@@ -545,9 +536,6 @@ export function SchoolSettings() {
                 </SelectContent>
               </Select>
             </div>
-            <p className="text-xs text-gray-500 mt-1">
-              Detected from today's date. Choosing one yourself stops it changing on its own.
-            </p>
           </div>
 
           <div>
@@ -591,7 +579,12 @@ export function SchoolSettings() {
             </div>
           </div>
 
-          {/* LAST in the grid on purpose, so it pairs with the logo on the
+          {/* What this actually decides, now that the hint under the field is
+              gone: how a letter is signed. FEMALE signs "Mme", MALE signs
+              "Sir", each ahead of the proprietor's initials; unset signs with
+              the initials alone. See src/utils/pdfGenerator.ts.
+
+              LAST in the grid on purpose, so it pairs with the logo on the
               closing row. Dropping it in higher up would have split Academic
               Year from Current Term, and those two belong side by side — they
               are read together and a manual edit to either switches auto-detect
@@ -620,10 +613,6 @@ export function SchoolSettings() {
                 </SelectContent>
               </Select>
             </div>
-            <p className="text-xs text-gray-500 mt-1">
-              Sets how letters are signed: Female signs &ldquo;Mme&rdquo;, Male signs &ldquo;Sir&rdquo;, each followed by the
-              proprietor&apos;s initials. Left unset, letters are signed with the initials alone.
-            </p>
           </div>
         </div>
       </Card>
@@ -659,7 +648,6 @@ export function SchoolSettings() {
         <div className="flex justify-between items-center">
           <div>
             <h2 className="text-xl">Change Password</h2>
-            <p className="text-sm text-gray-500 mt-1">Update the password used to sign in to this account.</p>
           </div>
           <Button variant="outline" onClick={() => setShowPasswordDialog(true)}>
             <KeyRound className="mr-2" size={16} />

@@ -136,10 +136,6 @@ export function AdministratorsSection() {
       >
         <div>
           <h2 className="text-xl">Administrators</h2>
-          <p className="text-sm text-gray-500 mt-1">
-            Who can sign in and work in this school. An administrator can edit only the records
-            they created themselves, and cannot delete anything.
-          </p>
         </div>
         <Button
           onClick={() => { setShowInvite(true); setInviteError(null); }}
