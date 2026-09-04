@@ -6,6 +6,18 @@ import { fetchRegistrationSnapshot, routeForSnapshot } from './registrationStatu
 
 export type AuthGateStatus = 'checking' | 'ready' | 'error';
 
+/**
+ * Where a visitor with no session is sent. Every gated route wants the login
+ * door, so that is the default and no caller has to say so. The site root is
+ * the one exception -- it hands a stranger /school/signup instead, because
+ * somebody arriving at lewa.app having typed nothing after the domain is more
+ * likely never to have had an account than to have forgotten they were signed
+ * out. The rest of the gate is unchanged for them: only the no-token branch
+ * reads this, so a teacher session, an unverified email, an unfinished setup
+ * and a school still awaiting approval all still land where they always did.
+ */
+const SIGNED_OUT_DEFAULT = '/school/login';
+
 export interface AuthGate {
   status: AuthGateStatus;
   /** Re-runs the whole check. Bound to the retry control on the error state. */
@@ -23,7 +35,7 @@ export interface AuthGate {
 // be the authority on it: a cached answer would keep a school that was just
 // approved stuck on the waiting page, and let a school that has not been
 // approved into the dashboard for the rest of its idle window.
-function useAuthGateInternal(): AuthGate {
+function useAuthGateInternal(signedOutDestination: string): AuthGate {
   const router = useRouter();
   const [status, setStatus] = useState<AuthGateStatus>('checking');
   const [attempt, setAttempt] = useState(0);
@@ -46,7 +58,7 @@ function useAuthGateInternal(): AuthGate {
         const userStr = window.localStorage.getItem('user');
         user = userStr ? JSON.parse(userStr) : null;
       } catch {
-        if (alive) router.replace('/school/login');
+        if (alive) router.replace(signedOutDestination);
         return;
       }
 
@@ -116,7 +128,7 @@ function useAuthGateInternal(): AuthGate {
     return () => {
       alive = false;
     };
-  }, [router, attempt]);
+  }, [router, attempt, signedOutDestination]);
 
   return { status, retry };
 }
@@ -126,12 +138,12 @@ function useAuthGateInternal(): AuthGate {
  * `useAuthGateWithRetry` is the same check with the retry handle exposed, for
  * the one caller (the app shell) that renders the error state.
  */
-export function useAuthGate(): AuthGateStatus {
-  return useAuthGateInternal().status;
+export function useAuthGate(signedOutDestination = SIGNED_OUT_DEFAULT): AuthGateStatus {
+  return useAuthGateInternal(signedOutDestination).status;
 }
 
-export function useAuthGateWithRetry(): AuthGate {
-  return useAuthGateInternal();
+export function useAuthGateWithRetry(signedOutDestination = SIGNED_OUT_DEFAULT): AuthGate {
+  return useAuthGateInternal(signedOutDestination);
 }
 
 /**

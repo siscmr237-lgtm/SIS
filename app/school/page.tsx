@@ -23,7 +23,11 @@ import { AuthGateError } from "@/components/AuthGateError";
  * something narrower than it used to: a signed-in admin whose school the server
  * has confirmed is APPROVED. That is the only case the dashboard opens for.
  *
- * Identical in shape to app/page.tsx, which does this same job for '/'.
+ * Identical in shape to app/page.tsx, which does this same job for '/' — with
+ * the one difference that the root sends a visitor with no session to
+ * /school/signup, while this page keeps the gate's default and sends them to
+ * /school/login. Somebody who typed /school knows the section exists; somebody
+ * who typed the bare domain may not.
  */
 export default function SchoolIndexPage() {
   const router = useRouter();

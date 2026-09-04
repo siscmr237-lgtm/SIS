@@ -222,10 +222,13 @@ function SignupForm({ onSuccess }: { onSuccess: () => void }) {
         {/* Abbreviation. Prefilled from the school name above and editable — see
             the state declaration for why it stops tracking once touched.
 
-            The helper line shows the receipt number it will produce, because
-            "abbreviation" alone reads as a cosmetic label and this is the one
-            field on the form whose value ends up printed on a parent's receipt
-            and quoted back down a phone line. */}
+            What it is FOR is not on screen any more, the hint under the field
+            having been removed, so it is written down here: this is the prefix
+            on every receipt number this school issues — ENPS001, ENPS002 — and
+            the short form used wherever the full name will not fit. Hence the
+            maxLength and the inline error, where a cosmetic label would need
+            neither. The red error on an invalid value is unchanged; only the
+            grey explanatory line is gone. */}
         <div>
           <label
             className="text-sm font-medium"
@@ -249,13 +252,11 @@ function SignupForm({ onSuccess }: { onSuccess: () => void }) {
             onBlur={() => setFocused(null)}
             style={textInputStyle(focused === "abbreviation")}
           />
-          <p
-            className="text-xs"
-            style={{ marginTop: 6, color: abbreviationError ? "#DC2626" : "#6B7280" }}
-          >
-            {abbreviationError
-              ?? `Used where the full name will not fit, and as the prefix on every receipt number — ${abbreviationValue || "ENPS"}001, ${abbreviationValue || "ENPS"}002. Letters and digits only, 2–${ABBREVIATION_MAX_LENGTH} characters.`}
-          </p>
+          {abbreviationError && (
+            <p className="text-xs" style={{ marginTop: 6, color: "#DC2626" }}>
+              {abbreviationError}
+            </p>
+          )}
         </div>
 
         {/* Phone Number */}
