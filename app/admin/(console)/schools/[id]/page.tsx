@@ -9,6 +9,7 @@ import { hexForLabel } from "@/lib/uniformColors";
 import { RegistrationStatusBadge } from "@/components/platform/RegistrationStatusBadge";
 import { ApproveSchoolControl } from "@/components/platform/ApproveSchoolControl";
 import { RevertToPendingControl } from "@/components/platform/RevertToPendingControl";
+import { SkipEmailVerificationControl } from "@/components/platform/SkipEmailVerificationControl";
 import { PhoneChangeControl } from "@/components/platform/PhoneChangeControl";
 import { DeleteSchoolControl } from "@/components/platform/DeleteSchoolControl";
 import { ContentLoader } from "@/components/ContentLoader";
@@ -20,11 +21,18 @@ import { ContentLoader } from "@/components/ContentLoader";
  * gown. There is no uniform description field on School, so none is invented
  * here; the section shows the garments it actually has.
  *
- * THE ACTIONS SIT AT THE FOOT, not the head. Approving a PENDING school still
- * leads, because that is a decision the page is asking for. Nothing else here
- * is: marking an approved school as waiting again, and deleting it outright,
- * are both reached for rarely and belong out of the way of the details
- * somebody came to read. They share one row down there — see the note above
+ * THE ACTIONS SIT AT THE FOOT, not the head — with two exceptions, both of
+ * them cards at the top, and both there because they are the page asking for a
+ * decision rather than offering one. Skipping email verification comes first
+ * and approving second, which is the order a school meets them: the OTP is the
+ * step before the details form, and the details form is the step before
+ * approval. A school can only ever be at one of the two, so only one is ever on
+ * the page.
+ *
+ * Nothing else here is a decision the page is asking for: marking an approved
+ * school as waiting again, and deleting it outright, are both reached for
+ * rarely and belong out of the way of the details somebody came to read.
+ * They share one row down there — see the note above
  * it — and each is gated on its own thing, so it is normal for only one of
  * them to be present.
  *
@@ -160,6 +168,16 @@ export default function SchoolDetailPage() {
     );
   }
 
+  /**
+   * THE OWNING ACCOUNT, which is the one the OTP step belongs to. A school has
+   * exactly one — School.adminUserId is a single required relation, and this
+   * list is built from it server-side — so admins[0] is not a guess about
+   * ordering. The invited administrators a school adds later never go through
+   * signup and have no verification step to skip.
+   */
+  const owner = school.admins[0] ?? null;
+  const awaitingEmailVerification = owner?.emailVerified === false;
+
   const uniform = school.uniformColors || { shirt: null, trouser: null, gown: null };
   const anyUniform = uniform.shirt || uniform.trouser || uniform.gown;
 
@@ -197,6 +215,63 @@ export default function SchoolDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* THE STUCK SIGNUP, above the approval card and for the same reason it
+          is there: the one status on this page that is waiting on the team
+          rather than on the school, put where it is read first and absent
+          entirely otherwise.
+
+          Gated on the OWNER'S EMAIL, not on the status. An unproven email is
+          what actually holds a school still — the client gate sends that admin
+          to the code screen whatever the status column says — so the email is
+          the condition that decides whether there is anything here to do. In
+          practice it travels with Failed Registration, since that is where
+          every signup starts and the OTP is the only thing that moves it, but
+          reading the email means the card is right even if the two ever
+          disagree.
+
+          IT SAYS WHAT WILL NOT HAVE HAPPENED, not only what will. "Skip email
+          verification" read quickly sounds like paperwork; what it does is
+          vouch for an address on somebody else's behalf, and that belongs on
+          the page rather than only in the dialog. */}
+      {awaitingEmailVerification && (
+        <div style={{ ...card, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, flexWrap: "wrap" }}>
+          <div style={{ minWidth: 0 }}>
+            <h2 style={{ fontSize: "0.9375rem", fontWeight: 600, margin: "0 0 3px", color: "#0F172A" }}>
+              Stuck at email verification
+            </h2>
+            <p style={{ fontSize: "0.8125rem", color: "#64748B", margin: 0, lineHeight: 1.45 }}>
+              This school filled in the signup form but never entered the code sent to{" "}
+              <span style={{ color: "#0F172A", overflowWrap: "anywhere" }}>{owner?.email || "its email address"}</span>,
+              so it cannot reach the school details form. Skipping the step marks that address verified
+              without anyone having proved it.
+            </p>
+          </div>
+          <SkipEmailVerificationControl
+            schoolId={school.id}
+            schoolName={school.name}
+            email={owner?.email ?? null}
+            // BOTH fields, from the one response. The status drives the badge
+            // under the school name; the email is what makes this card go away
+            // and the Administrator block below stop saying "not verified". A
+            // reload would do it, but leaving either stale means a page that
+            // still offers an action it has just carried out.
+            onAdvanced={(status) =>
+              setSchool((prev) =>
+                prev
+                  ? {
+                      ...prev,
+                      registrationStatus: status,
+                      admins: prev.admins.map((x) =>
+                        x.id === owner?.id ? { ...x, emailVerified: true } : x,
+                      ),
+                    }
+                  : prev,
+              )
+            }
+          />
+        </div>
+      )}
 
       {/* The approval, on its own card directly under the identity block — the
           first thing on the page for the one status that needs a decision, and
@@ -282,7 +357,20 @@ export default function SchoolDetailPage() {
                   <div style={{ gridColumn: "span 2" }}>
                     <span style={label}>Email</span>
                     {/* Nullable, as Staff.email now also is. */}
-                    <div style={{ ...value, overflowWrap: "anywhere" }}>{a.email || "—"}</div>
+                    <div style={{ ...value, overflowWrap: "anywhere" }}>
+                      {a.email || "—"}
+                      {/* SAID ONLY WHEN IT IS NOT TRUE. A verified email is the
+                          ordinary case and every school that is working has
+                          one, so a tick beside all of them would be noise that
+                          trains the eye to skip the line — which is the one
+                          line that matters on the rare page where it reads
+                          differently. The amber matches the "disabled" note on
+                          the name above it: both are states of an account that
+                          is on file but cannot be used as it stands. */}
+                      {a.emailVerified === false && (
+                        <span style={{ color: "#B45309", fontSize: "0.72rem" }}> · not verified</span>
+                      )}
+                    </div>
                   </div>
                 </div>
                 {/* The two credential controls, side by side. Both are bordered
