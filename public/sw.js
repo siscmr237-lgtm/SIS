@@ -1,6 +1,9 @@
 /**
  * The service worker. Its ONLY job is to have something to show when a
- * navigation fails because the device is offline.
+ * navigation could not reach the network at all -- whether because the device
+ * is offline or because the origin itself is unreachable. It cannot tell those
+ * two apart, and does not try: app/offline/page.tsx makes that distinction, in
+ * the one place that can read navigator.onLine.
  *
  * WHAT IT DELIBERATELY DOES NOT DO. It does not cache pages, API responses,
  * scripts or styles. This is a school's live record of students, fees and
@@ -18,7 +21,7 @@
  * Bump this when the offline page's contents change, so the new copy replaces
  * the old one instead of sitting behind it. Nothing else is keyed on it.
  */
-const CACHE = 'lewa-offline-v1';
+const CACHE = 'lewa-offline-v2';
 
 const OFFLINE_URL = '/offline';
 
@@ -114,7 +117,9 @@ self.addEventListener('fetch', (event) => {
         });
         return (
           cached ??
-          new Response('You are offline.', {
+          // Not 'You are offline': this is reached only when the cache is
+          // empty too, and the cause is unknown here -- see the page above.
+          new Response('Lewa could not be reached.', {
             status: 503,
             headers: { 'Content-Type': 'text/plain; charset=utf-8' },
           })

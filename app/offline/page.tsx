@@ -3,23 +3,91 @@ export const metadata = {
 };
 
 /**
- * What the service worker shows when a navigation fails with no connection.
+ * What the service worker shows when a navigation fails and the network could
+ * not be used at all.
  *
  * A server component with no data of its own, so it is rendered once at build
  * time into plain HTML. That matters more here than anywhere else in the app:
- * this page is served out of the cache to a device with no network, where none
- * of the application JavaScript can load. Anything that needed to hydrate to
- * become visible would be a blank screen. Everything below is in the HTML.
+ * this page is served out of the cache to a device that may have no network, so
+ * none of the application JavaScript can load. Anything that needed to hydrate
+ * to become visible would be a blank screen. Everything below is in the HTML.
  *
- * No retry button for the same reason -- a button that needs JavaScript to do
- * anything would be a button that does nothing, on the one page guaranteed to
- * be opened without it. Reload is the browser's own control and it always
- * works.
+ * No retry button for the same reason -- a button wired up by application code
+ * would be a button that does nothing, on the one page guaranteed to be opened
+ * without it. Reload is the browser's own control and it always works.
  *
  * Styles are inline throughout: src/index.css is a frozen build, and a page
  * that has to render correctly from cache with no stylesheet request is not a
  * page to hang on class names.
  */
+
+/**
+ * WHY THIS PAGE NO LONGER JUST SAYS "YOU'RE OFFLINE".
+ *
+ * The service worker shows this page when a navigation's fetch() REJECTS. A
+ * device with no connection rejects -- and so does a perfectly connected device
+ * whose ORIGIN is dead: DNS moved somewhere that answers nothing, a TLS
+ * handshake reset, a host that stopped replying. From inside the worker those
+ * are one indistinguishable event, so a page that asserts the first of them is
+ * guessing, and it guesses wrong every single time the fault is ours.
+ *
+ * It guessed wrong for real. lewa.app was registered on 2026-08-20; ICANN gives
+ * 15 days to verify the registrant's contact email, and on 2026-09-04 the
+ * registrar answered the silence by repointing the domain's nameservers at
+ * failed-whois-verification.namecheap.com. Every hostname under it -- the
+ * landing page, /school, /teacher, /admin, and api.lewa.app -- then resolved to
+ * a parking IP serving no HTTPS at all. All four apps went dark at once, and
+ * every one of them sat there telling its users to go and check their own
+ * connection. The domain was suspended; nothing on any screen said so.
+ *
+ * navigator.onLine settles it, in the single direction it can be trusted:
+ * false means the device has no network interface, which no fault of ours can
+ * fake. true means a connection exists and the failure happened at the far end,
+ * so the message can stop blaming the reader and point at where the problem
+ * actually is.
+ */
+
+/**
+ * The three things this page can honestly say, and when.
+ *
+ * MESSAGE_UNKNOWN is the one written into the HTML, so it is what a reader sees
+ * if the script below never runs. It therefore has to hold in BOTH worlds at
+ * once -- which is exactly why it commits to neither cause. The other two are
+ * only ever reached once navigator.onLine has actually been read.
+ */
+const MESSAGE_UNKNOWN =
+  'Lewa can’t be reached. That may be your connection, or it may be us — please reload to try again.';
+const MESSAGE_OFFLINE = 'You’re offline. Please check your connection and try again.';
+const MESSAGE_UNREACHABLE =
+  'Your connection is working — Lewa itself can’t be reached right now. Please reload in a moment.';
+
+/**
+ * Sharpens the message above from what is safe to what is true.
+ *
+ * AN INLINE SCRIPT IS NOT A CONTRADICTION of the note about application
+ * JavaScript being unavailable here. That note is about Next's chunks, which
+ * are network requests and genuinely cannot arrive. This is source text inside
+ * the cached HTML: it is already on the device the moment the page is, and it
+ * runs with the network as dead as it likes. That distinction is the whole
+ * reason it is written out here rather than imported from anywhere.
+ *
+ * It replaces text that is ALREADY VISIBLE rather than filling something empty,
+ * so the page still reads correctly with scripts blocked outright -- and it
+ * sits directly after the paragraph, executing during parse, so the wording is
+ * settled before the first paint instead of visibly changing after it.
+ */
+const DIAGNOSE_CONNECTION = `
+  (function () {
+    var el = document.getElementById('offline-message');
+    // "'onLine' in navigator" is the feature check, not navigator.onLine
+    // itself: a browser without the property yields undefined, which is falsy,
+    // and would have every reader told they were offline on no evidence.
+    if (!el || !('onLine' in navigator)) return;
+    el.textContent = navigator.onLine
+      ? ${JSON.stringify(MESSAGE_UNREACHABLE)}
+      : ${JSON.stringify(MESSAGE_OFFLINE)};
+  })();
+`;
 
 /**
  * Hides the root layout's support button on this page.
@@ -77,7 +145,15 @@ export default function OfflinePage() {
         style={{ width: '100%', maxWidth: 200, height: 'auto' }}
       />
 
+      {/* suppressHydrationWarning because the script below deliberately
+          rewrites this text before React ever sees the DOM. The root layout
+          mounts client components, so the document DOES hydrate on any visit
+          where the app's JavaScript can load -- and without this, React finds
+          text disagreeing with what it rendered and patches the corrected
+          message back to the vague one. */}
       <p
+        id="offline-message"
+        suppressHydrationWarning
         style={{
           marginTop: '1.75rem',
           maxWidth: 340,
@@ -86,8 +162,9 @@ export default function OfflinePage() {
           color: '#0F172A',
         }}
       >
-        You&rsquo;re offline. Please check your connection and try again.
+        {MESSAGE_UNKNOWN}
       </p>
+      <script dangerouslySetInnerHTML={{ __html: DIAGNOSE_CONNECTION }} />
     </div>
   );
 }
