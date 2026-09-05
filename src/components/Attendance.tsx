@@ -1,88 +1,33 @@
-import { useEffect, useState } from 'react';
-import { Card } from './ui/card';
-import { Button } from './ui/button';
-import { ThreePartDateInput } from './ThreePartDateInput';
-import { Label } from './ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
+'use client';
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { Badge } from './ui/badge';
-import { Save } from 'lucide-react';
-import { api } from '@/lib/api';
-import { useCachedResource } from '@/lib/SisCache';
-import { AttendanceSheet } from './AttendanceSheet';
-import { DoneBy } from './DoneBy';
-import { StaffAttendanceReview } from './StaffAttendanceReview';
+import { StaffAttendanceTab } from './StaffAttendanceTab';
+import { StudentAttendanceCalendar } from './StudentAttendanceCalendar';
 
+/**
+ * THE SCHOOL'S ATTENDANCE SCREEN — two registers that are not the same register.
+ *
+ * STUDENTS are a class-shaped, month-shaped question: which days did this class
+ * go unrecorded, and who was missing on the ones that did not? So that tab is a
+ * calendar, filtered by class, with a day view behind each cell.
+ *
+ * STAFF is a person-shaped, day-shaped question: who is in today, and does the
+ * school accept what they said? So that tab is a list of everybody for one date,
+ * with the decisions attached.
+ *
+ * They were once folded into one date-picker-and-table screen and it served
+ * neither: a calendar is useless for approving today's submissions, and a
+ * single-day table cannot show a month of gaps. Keeping them apart is what lets
+ * each one be shaped like its own question.
+ *
+ * ONE REGISTER PER THING, which is the other change worth noting. The staff tab
+ * used to carry a second, parallel table writing AttendanceRecord rows with
+ * type = 'staff' alongside the StaffAttendance submissions — two tables
+ * answering "was this person at work", disagreeing freely. There is now one,
+ * with markedByAdmin distinguishing what the office recorded from what the
+ * person submitted.
+ */
 export function Attendance() {
-  // Still here because STAFF attendance is a single-day register and this is the
-  // only control that picks its date. It used to live in a panel above the tabs,
-  // alongside a class picker and a Generate Sheet button that the student
-  // register replaced; those are gone, so the date moved down into the tab that
-  // still needs it rather than floating above a tab it no longer applies to.
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-
-  // The staff roster is reference data and is cached. The attendance records are
-  // not: they are what this screen is actively writing, and a stale copy would
-  // mean marking someone against a register that has already moved on.
-  const { data: staffData } = useCachedResource<any[]>('staff', () => api.get('/staff'));
-  const { data: attendanceData, refresh: refreshAttendance } = useCachedResource<any[]>(
-    null,
-    () => api.get(`/attendance?date=${encodeURIComponent(selectedDate)}`),
-    { policy: 'fresh', deps: [selectedDate] },
-  );
-  const staff = staffData ?? [];
-  const attendance = attendanceData ?? [];
-  const [staffStatus, setStaffStatus] = useState<Record<string, string>>({});
-  const [savingStaffAttendance, setSavingStaffAttendance] = useState(false);
-
-  const staffAttendance = attendance.filter(record => record.type === 'staff' && record.date?.startsWith(selectedDate));
-
-  // Seed the per-person dropdowns from whatever is on record for this date.
-  useEffect(() => {
-    if (!attendanceData) return;
-    const stfMap: Record<string, string> = {};
-    attendanceData.forEach((a: any) => {
-      if (a.type === 'staff') stfMap[a.personId] = a.status;
-    });
-    setStaffStatus(stfMap);
-  }, [attendanceData]);
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'present':
-        return <Badge className="bg-green-500">Present</Badge>;
-      case 'absent':
-        return <Badge className="bg-red-500">Absent</Badge>;
-      case 'late':
-        return <Badge className="bg-orange-500">Late</Badge>;
-      case 'excused':
-        return <Badge className="bg-blue-500">Excused</Badge>;
-      default:
-        return <Badge>Unknown</Badge>;
-    }
-  };
-
-  const saveStaffAttendance = async () => {
-    if (savingStaffAttendance) return;
-    setSavingStaffAttendance(true);
-    try {
-      const records = staff.map((t: any) => {
-        const existing = attendance.find(
-          a => a.type === 'staff' && a.personId === String(t.id) && a.date?.startsWith(selectedDate)
-        );
-        return existing
-          ? { existingCode: existing.id, status: staffStatus[t.id] || 'present' }
-          : { date: selectedDate, type: 'staff', personId: String(t.id), personName: `${t.firstName} ${t.lastName}`, status: staffStatus[t.id] || 'present' };
-      });
-      await api.post('/attendance/bulk', { records });
-      await refreshAttendance();
-    } catch {
-    } finally {
-      setSavingStaffAttendance(false);
-    }
-  };
-
   return (
     <div className="p-4 md:p-8">
       <div className="mb-8">
@@ -96,110 +41,12 @@ export function Attendance() {
           <TabsTrigger value="staff">Staff Attendance</TabsTrigger>
         </TabsList>
 
-        {/* The student register is the shared AttendanceSheet, which the teacher
-            portal renders too — one implementation, so the two cannot drift. It
-            carries its own class, section, term and date-range filters and its
-            own Download, which is what made the panel that used to sit above
-            these tabs redundant for students.
-
-            Staff attendance below is deliberately untouched: it is a different
-            register with its own statuses and no class or section, and folding
-            it into the student sheet would have meant inventing both. */}
         <TabsContent value="students">
-          <AttendanceSheet audience="admin" />
+          <StudentAttendanceCalendar />
         </TabsContent>
 
         <TabsContent value="staff">
-          {/* WHAT THE TEACHERS SUBMITTED, and what the school does with it —
-              first, because it is the part that needs answering. An unapproved
-              submission is a claim waiting on a decision; the daily register
-              below is a thing the office fills in at its own pace.
-
-              The two are separate on purpose and must stay separate. This table
-              reads StaffAttendance, which is what a person SUBMITTED about
-              themselves and carries an approval lifecycle. The register below
-              writes AttendanceRecord rows with type = 'staff', which is what the
-              OFFICE recorded ABOUT somebody and has no approval concept at all.
-              A day can legitimately carry both, saying different things. */}
-          <StaffAttendanceReview />
-
-          <div style={{ marginTop: '1.5rem', marginBottom: '0.75rem' }}>
-            <h2 className="text-xl">Daily staff register</h2>
-            <p className="text-sm text-gray-500 mt-1">
-              What the office records about who was in, for one day. Independent of the
-              submissions above.
-            </p>
-          </div>
-
-          <Card className="mb-4 p-4">
-            <div className="flex flex-col sm:flex-row sm:items-end gap-3">
-              <div className="flex-1">
-                <Label>Select Date</Label>
-                {/* The overlaid calendar icon went with the native input: the
-                    three cells fill the box, so an icon at left-3 would sit on
-                    top of the month. */}
-                <ThreePartDateInput
-                  value={selectedDate}
-                  onChange={(v) => setSelectedDate(v ?? '')}
-                  aria-label="Attendance date"
-                />
-              </div>
-              <Button size="sm" variant="outline" className="flex items-center gap-2" onClick={saveStaffAttendance} disabled={savingStaffAttendance}>
-                <Save size={16} />
-                {savingStaffAttendance ? 'Saving...' : 'Save Attendance'}
-              </Button>
-            </div>
-          </Card>
-
-          <Card>
-            <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Remarks</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {staff.map((staff: any) => {
-                  const record = staffAttendance.find(a => a.personId === String(staff.id));
-                  const status = record?.status || 'present';
-
-                  return (
-                    <TableRow key={staff.id}>
-                      <TableCell>
-                        {staff.firstName} {staff.lastName}
-                        {/* Who took this person's register on the selected date.
-                            Nothing at all on a day with no record, and on every
-                            day recorded before attribution existed. */}
-                        <DoneBy name={record?.createdByName} variant="inline" />
-                      </TableCell>
-                      <TableCell>{staff.role}</TableCell>
-                      <TableCell>{getStatusBadge(status)}</TableCell>
-                      <TableCell>{record?.remarks || '-'}</TableCell>
-                      <TableCell>
-                        <Select defaultValue={status}>
-                          <SelectTrigger className="w-32">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="present">Present</SelectItem>
-                            <SelectItem value="absent">Absent</SelectItem>
-                            <SelectItem value="late">Late</SelectItem>
-                            <SelectItem value="excused">Excused</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-            </div>
-          </Card>
+          <StaffAttendanceTab />
         </TabsContent>
       </Tabs>
     </div>

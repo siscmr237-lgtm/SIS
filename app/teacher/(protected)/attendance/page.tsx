@@ -1,40 +1,26 @@
 "use client";
 
-import { AttendanceSheet } from "@/components/AttendanceSheet";
-import { TeacherAttendanceSubmit } from "@/components/TeacherAttendanceSubmit";
+import { TeacherAttendance } from "@/components/TeacherAttendance";
 
 /**
  * The teacher's register.
  *
- * Renders the same AttendanceSheet the admin screen does, so the two cannot
- * drift: one set of filters, one marking path, one definition of what a dash in
- * a cell means.
+ * ONE COMPONENT, TWO SECTIONS — the teacher's own day, then their class. What
+ * used to sit here as well was the shared AttendanceSheet, a class-and-range
+ * grid for looking BACK over past days; it has gone from this page on purpose.
  *
- * Scoping is the server's, not this page's. GET /attendance/sheet narrows the
- * candidate classes to the teacher's own before anything else runs, and
- * /attendance/mark refuses a student outside them — so the class picker here is
- * simply showing what the server already agreed to.
+ * A teacher's attendance is now a today-only act: they indicate their presence,
+ * the register unlocks, and at midnight the day closes. A backward-looking grid
+ * beside that invites the one thing the model no longer permits — editing a day
+ * that is already settled — and a teacher who tried would only meet a refusal
+ * from the server. Past days are the school's to correct, from
+ * /school/attendance, where the calendar and the admin-override path live.
  *
- * TWO CONTROLS, TWO QUESTIONS. TeacherAttendanceSubmit above is how a teacher
- * declares ONE day — themselves and their class, in one submission that the
- * school then approves or rejects and that cannot be edited afterwards. The
- * sheet below is how they look BACK over a range. Folding the two together
- * would mean either giving the submission a date picker that implies it can be
- * revised, or giving the sheet an approval state it has no concept of.
+ * Scoping remains the server's. GET /staff-attendance/today resolves the roster
+ * from the teacher's own class-teacher assignments and POST
+ * /staff-attendance/students refuses anybody outside them, so this page never
+ * decides who a teacher may mark.
  */
 export default function TeacherAttendancePage() {
-  return (
-    <div className="p-4 md:p-8">
-      <div className="mb-8">
-        <h1 className="text-3xl mb-2">Attendance</h1>
-        <p className="text-gray-600">
-          Record your own day and your class register, or look back over a date range
-        </p>
-      </div>
-
-      <TeacherAttendanceSubmit />
-
-      <AttendanceSheet audience="teacher" />
-    </div>
-  );
+  return <TeacherAttendance />;
 }
