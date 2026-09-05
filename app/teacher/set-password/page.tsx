@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { PasswordHints } from "@/components/PasswordHints";
 import { api } from "@/lib/api";
 import { ContentLoader } from "@/components/ContentLoader";
+import { setSession } from "@/lib/session";
 
 // Deliberately OUTSIDE app/teacher/(protected): this page is opened from an
 // email invite, so there is no session yet and the teacher auth gate would
@@ -216,8 +217,7 @@ function SetPasswordForm() {
         // The endpoint hands back a real session, so there is no reason to make
         // someone who just proved ownership of the invite log in again.
         const user = { ...(res.user ?? {}), actorType: res.actorType ?? "teacher" };
-        window.localStorage.setItem("auth_token", res.token);
-        window.localStorage.setItem("user", JSON.stringify(user));
+        setSession(res.token, user, "teacher");
         router.replace("/teacher");
       } else {
         router.replace("/teacher/login?message=password_updated");

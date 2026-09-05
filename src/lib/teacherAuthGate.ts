@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { getToken, getUser, hasSession } from './session';
 
 export type TeacherAuthGateStatus = 'checking' | 'ready';
 
@@ -20,27 +21,33 @@ export function useTeacherAuthGate(): TeacherAuthGateStatus {
 
   useEffect(() => {
     let alive = true;
-    try {
-      const token = typeof window !== 'undefined' ? window.localStorage.getItem('auth_token') : null;
-      if (!token) throw new Error('no token');
 
-      const userStr = window.localStorage.getItem('user');
-      const user = userStr ? JSON.parse(userStr) : null;
-
-      // Anything that isn't explicitly a teacher goes to '/', which is the
-      // admin entry point and runs useAuthGate itself. A session with no stored
-      // user, or one predating actorType, lands here too — that is correct:
-      // those are admin sessions, and the admin gate is the right place to
-      // decide what happens to them.
-      if (user?.actorType !== 'teacher') {
-        if (alive) router.replace('/');
-        return;
-      }
-
-      if (alive) setStatus('ready');
-    } catch {
-      if (alive) router.replace('/teacher/login');
+    // The TEACHER session specifically. A school admin signed in in another tab
+    // of the same browser has their own, under its own keys, and it is neither
+    // read nor disturbed here — see src/lib/session.ts.
+    const token = getToken('teacher');
+    if (!token) {
+      // No teacher session. A school session in this browser means the person
+      // belongs on the admin side, which is where they were sent back when the
+      // two shared a key; anything else is a stranger, and gets the door.
+      if (alive) router.replace(hasSession('school') ? '/' : '/teacher/login');
+      return;
     }
+
+    const user: any = getUser('teacher');
+
+    // Anything that isn't explicitly a teacher goes to '/', the admin entry
+    // point, which runs useAuthGate itself. Namespacing means the teacher keys
+    // can no longer hold an admin, so this now only fires for a session
+    // migrated off the old shared keys — and for those the admin gate is still
+    // the right place to decide what happens.
+    if (user?.actorType !== 'teacher') {
+      if (alive) router.replace('/');
+      return;
+    }
+
+    if (alive) setStatus('ready');
+
     return () => {
       alive = false;
     };

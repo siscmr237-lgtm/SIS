@@ -14,6 +14,7 @@ import { api } from '@/lib/api';
 import { useCachedResource, useSisCache } from '@/lib/SisCache';
 import { dateOnly, todayIso } from '../utils/dateOnly';
 import { PAYMENT_METHODS, formatPaymentMethod } from '../utils/paymentMethods';
+import { getUser } from '../lib/session';
 
 export function ExpensesManagement() {
   const cache = useSisCache();
@@ -190,11 +191,8 @@ export function ExpensesManagement() {
       // Same source the financial sheets read the letterhead from.
       let schoolInfo: { name: string; logo?: string; motto?: string; academicYear?: string } | undefined;
       try {
-        const userStr = window.localStorage.getItem('user');
-        if (userStr) {
-          const user = JSON.parse(userStr);
-          if (user?.School?.[0]) schoolInfo = user.School[0];
-        }
+        const user = getUser();
+        if (user?.School?.[0]) schoolInfo = user.School[0];
       } catch {}
       await generateExpenseRecords(
         downloadRows,

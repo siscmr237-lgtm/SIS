@@ -1,4 +1,5 @@
 "use client";
+import { getUser } from "./session";
 
 /**
  * WHICH KIND OF ADMIN IS SIGNED IN — for presentation only.
@@ -35,9 +36,8 @@ export type AdminRole = "OWNER" | "ADMINISTRATOR";
 export function getAdminRole(): AdminRole {
   if (typeof window === "undefined") return "OWNER";
   try {
-    const raw = window.localStorage.getItem("user");
-    if (!raw) return "OWNER";
-    const user = JSON.parse(raw);
+    const user = getUser();
+    if (!user) return "OWNER";
     // actorType is checked too, for the same reason the backend guards check it:
     // a TEACHER session carries `role` as well, and there it is a free-text job
     // title. A staff member whose title is typed "Owner" must not read as one.

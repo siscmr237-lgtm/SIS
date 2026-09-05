@@ -10,6 +10,7 @@ import { clampSectionCount, expandClassSections, MAX_SECTIONS } from "../../../s
 import { postImage, prepareImage } from "../../../src/lib/uploadImage";
 import { EMPTY_UNIFORM_COLORS, UniformColors } from "../../../src/lib/uniformColors";
 import { UniformColorPicker } from "../../../src/components/onboarding/UniformColorPicker";
+import { clearSession, getUser, setUser } from "../../../src/lib/session";
 
 type SchoolType = "DAYCARE_NURSERY" | "DAYCARE_NURSERY_PRIMARY";
 
@@ -46,13 +47,8 @@ interface OnboardingDraft {
 // in-progress draft into another admin's onboarding form.
 function getDraftKey(): string {
   if (typeof window === "undefined") return DRAFT_KEY_BASE;
-  try {
-    const userStr = window.localStorage.getItem("user");
-    const user = userStr ? JSON.parse(userStr) : null;
-    return `${DRAFT_KEY_BASE}:${user?.id ?? "anon"}`;
-  } catch {
-    return DRAFT_KEY_BASE;
-  }
+  const user = getUser("school");
+  return `${DRAFT_KEY_BASE}:${user?.id ?? "anon"}`;
 }
 
 function loadDraft(): OnboardingDraft | null {
@@ -154,15 +150,10 @@ export default function OnboardingPage() {
   // product.
   useEffect(() => {
     let alive = true;
-    const userStr =
-      typeof window !== "undefined" ? window.localStorage.getItem("user") : null;
-    if (!userStr) {
-      router.replace("/school/login");
-      return;
-    }
-    try {
-      JSON.parse(userStr);
-    } catch {
+    // The school session, not whatever a teacher tab may have signed into in
+    // this same browser. getUser returns null for absent and unparseable alike,
+    // which are the same answer here: nobody is signed in on this side.
+    if (!getUser("school")) {
       router.replace("/school/login");
       return;
     }
@@ -315,20 +306,17 @@ export default function OnboardingPage() {
       // convenience for anything that reads the school's own particulars off
       // it — it decides nothing about access, which is always a live question.
       try {
-        const userStr = window.localStorage.getItem("user");
-        if (userStr) {
-          const user = JSON.parse(userStr);
-          if (user?.School?.[0]) {
-            user.School[0].onboardingCompleted = true;
-            user.School[0].schoolType = schoolType;
-            if (submitted?.school?.registrationStatus) {
-              user.School[0].registrationStatus = submitted.school.registrationStatus;
-            }
-            if (motto) user.School[0].motto = motto;
-            if (address) user.School[0].address = address;
-            if (logoPath) user.School[0].logo = logoPath;
-            window.localStorage.setItem("user", JSON.stringify(user));
+        const user = getUser("school");
+        if (user?.School?.[0]) {
+          user.School[0].onboardingCompleted = true;
+          user.School[0].schoolType = schoolType;
+          if (submitted?.school?.registrationStatus) {
+            user.School[0].registrationStatus = submitted.school.registrationStatus;
           }
+          if (motto) user.School[0].motto = motto;
+          if (address) user.School[0].address = address;
+          if (logoPath) user.School[0].logo = logoPath;
+          setUser(user, "school");
         }
       } catch {}
 
@@ -351,10 +339,9 @@ export default function OnboardingPage() {
   };
 
   const handleBackToLogin = () => {
-    try {
-      window.localStorage.removeItem("auth_token");
-      window.localStorage.removeItem("user");
-    } catch {}
+    // The school session only. A teacher signed in in another tab of this
+    // browser is not part of this decision and keeps their session.
+    clearSession("school");
     router.replace("/school/login");
   };
 

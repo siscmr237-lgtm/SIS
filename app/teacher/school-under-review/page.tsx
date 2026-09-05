@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ContentLoader } from "@/components/ContentLoader";
+import { clearSession, getToken, getUser } from "@/lib/session";
 
 /**
  * /teacher/school-under-review — where a teacher lands when their SCHOOL, not
@@ -40,24 +41,24 @@ export default function TeacherSchoolUnderReviewPage() {
   // the answer comes out of localStorage because there is no call to make.
   useEffect(() => {
     let alive = true;
-    try {
-      const token = window.localStorage.getItem("auth_token");
-      if (!token) throw new Error("no token");
-
-      const raw = window.localStorage.getItem("user");
-      const user = raw ? JSON.parse(raw) : null;
-
-      // An admin whose school is under review has a page of its own, with the
-      // controls that actually belong to them on it.
-      if (user?.actorType !== "teacher") {
-        if (alive) router.replace("/school/pending-verification");
-        return;
-      }
-
-      if (alive) setReady(true);
-    } catch {
+    // The teacher session, under its own key. A school admin signed in in
+    // another tab of this browser is a separate session and not consulted.
+    const token = getToken("teacher");
+    if (!token) {
       if (alive) router.replace("/teacher/login");
+      return;
     }
+
+    const user: any = getUser("teacher");
+
+    // An admin whose school is under review has a page of its own, with the
+    // controls that actually belong to them on it.
+    if (user?.actorType !== "teacher") {
+      if (alive) router.replace("/school/pending-verification");
+      return;
+    }
+
+    if (alive) setReady(true);
     return () => {
       alive = false;
     };
@@ -65,7 +66,10 @@ export default function TeacherSchoolUnderReviewPage() {
 
   const signOut = () => {
     if (typeof window === "undefined") return;
-    window.localStorage.clear();
+    // The teacher session ONLY. This used to be localStorage.clear(), which
+    // took the school session in the next tab down with it — the same shared-
+    // storage bug that made the two portals unusable side by side.
+    clearSession("teacher");
     // replace(), not push() — matching TeacherSidebar: signing out must not
     // leave the portal one Back press away.
     window.location.replace("/teacher/login");

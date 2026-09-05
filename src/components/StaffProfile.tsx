@@ -31,6 +31,7 @@ import { StaffForm, StaffFormPayload } from './StaffForm';
 import { RecordPayrollDialog } from './RecordPayrollDialog';
 import { StaffChargeDot } from './StaffChargeStatus';
 import { ContentLoader } from './ContentLoader';
+import { getUser } from '../lib/session';
 
 interface LedgerEntry {
   id: string;
@@ -413,11 +414,8 @@ export function StaffProfile({ staff, onNavigate }: StaffProfileProps) {
     if (!ledgerData) return;
     let schoolInfo: { name: string; logo?: string; motto?: string; academicYear?: string } | undefined;
     try {
-      const userStr = window.localStorage.getItem('user');
-      if (userStr) {
-        const user = JSON.parse(userStr);
-        if (user?.School?.[0]) schoolInfo = user.School[0];
-      }
+      const user = getUser();
+      if (user?.School?.[0]) schoolInfo = user.School[0];
     } catch {}
     await generateStaffFinancialSheet(staff, ledgerData, schoolInfo);
   };

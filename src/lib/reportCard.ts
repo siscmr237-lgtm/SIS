@@ -1,3 +1,4 @@
+import { getUser } from './session';
 import { api } from './api';
 import {
   generateReportCards,
@@ -33,9 +34,7 @@ export interface ReportCardStudent {
 export function readSchoolInfo(): { name?: string; logo?: string; motto?: string; academicYear?: string } | undefined {
   if (typeof window === 'undefined') return undefined;
   try {
-    const raw = window.localStorage.getItem('user');
-    if (!raw) return undefined;
-    const user = JSON.parse(raw);
+    const user = getUser();
     const school = user?.School?.[0];
     if (!school) return undefined;
     return { name: school.name, logo: school.logo, motto: school.motto, academicYear: school.academicYear };

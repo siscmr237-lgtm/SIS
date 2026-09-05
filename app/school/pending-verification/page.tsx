@@ -10,6 +10,7 @@ import {
   type RegistrationSnapshot,
 } from "@/lib/registrationStatus";
 import { AuthGateError } from "@/components/AuthGateError";
+import { getToken, getUser } from "@/lib/session";
 
 /**
  * /school/pending-verification — where a school waits after submitting its
@@ -49,16 +50,13 @@ export default function PendingVerificationPage() {
     let alive = true;
 
     (async () => {
-      let user: any = null;
-      try {
-        const token = typeof window !== "undefined" ? window.localStorage.getItem("auth_token") : null;
-        if (!token) throw new Error("no token");
-        const raw = window.localStorage.getItem("user");
-        user = raw ? JSON.parse(raw) : null;
-      } catch {
+      // The school session, not whatever a teacher tab in this same browser
+      // may hold — the two live under separate keys now (src/lib/session.ts).
+      if (!getToken("school")) {
         if (alive) router.replace("/school/login");
         return;
       }
+      const user: any = getUser("school");
 
       // A teacher has no registration of their own to wait on, and the endpoint
       // below is admin-only — asking it on their behalf would only produce a

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { PasswordHints } from "@/components/PasswordHints";
 import { api } from "@/lib/api";
 import { ContentLoader } from "@/components/ContentLoader";
+import { setSession } from "@/lib/session";
 
 // Where an invited ADMINISTRATOR chooses their password and becomes able to
 // sign in. Reached from the link in POST /admins/invite.
@@ -224,8 +225,7 @@ function SetPasswordForm() {
         // stored user carries role: "ADMINISTRATOR", which is what
         // src/lib/adminRole.ts reads to decide what this account is offered.
         const user = { ...(res.user ?? {}), actorType: res.actorType ?? "admin" };
-        window.localStorage.setItem("auth_token", res.token);
-        window.localStorage.setItem("user", JSON.stringify(user));
+        setSession(res.token, user, "school");
         router.replace("/school/dashboard");
       } else {
         router.replace("/school/login?message=password_updated");

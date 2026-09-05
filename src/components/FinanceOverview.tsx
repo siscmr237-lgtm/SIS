@@ -21,6 +21,7 @@ import { statValueFontSize } from '../utils/statFigure';
 import { PAYMENT_METHODS } from '../utils/paymentMethods';
 import { PaymentConfirmationDialog } from './PaymentConfirmationDialog';
 import { generateTransactionInvoice } from '../utils/pdfGenerator';
+import { getUser } from '../lib/session';
 
 interface FinanceOverviewProps {
   onNavigate: (page: NavigationPage) => void;
@@ -450,11 +451,8 @@ export function FinanceOverview({ onNavigate, onViewStudent }: FinanceOverviewPr
     try {
       let schoolInfo: { name: string; logo?: string; motto?: string; academicYear?: string } | undefined;
       try {
-        const userStr = window.localStorage.getItem('user');
-        if (userStr) {
-          const user = JSON.parse(userStr);
-          if (user?.School?.[0]) schoolInfo = user.School[0];
-        }
+        const user = getUser();
+        if (user?.School?.[0]) schoolInfo = user.School[0];
       } catch {}
       await generateTransactionInvoice(t, schoolInfo);
     } catch (e: any) {

@@ -22,6 +22,7 @@ import {
   validateSchoolAbbreviation,
 } from '../utils/schoolAbbreviation';
 import { AdministratorsSection } from './AdministratorsSection';
+import { clearSession, getUser, setUser } from '@/lib/session';
 
 /**
  * The notifications switch.
@@ -259,12 +260,11 @@ export function SchoolSettings() {
 
   const syncLocalStorageSchool = (fields: Record<string, unknown>) => {
     try {
-      const userStr = window.localStorage.getItem('user');
-      if (!userStr) return;
-      const user = JSON.parse(userStr);
+      const user = getUser('school');
+      if (!user) return;
       if (user?.School?.[0]) {
         Object.assign(user.School[0], fields);
-        window.localStorage.setItem('user', JSON.stringify(user));
+        setUser(user, 'school');
       }
     } catch {}
   };
@@ -363,13 +363,10 @@ export function SchoolSettings() {
 
       // Sync localStorage so Sidebar/Dashboard/PDF pick up the new path
       try {
-        const userStr = window.localStorage.getItem('user');
-        if (userStr) {
-          const user = JSON.parse(userStr);
-          if (user?.School?.[0]) {
-            user.School[0].logo = path;
-            window.localStorage.setItem('user', JSON.stringify(user));
-          }
+        const user = getUser('school');
+        if (user?.School?.[0]) {
+          user.School[0].logo = path;
+          setUser(user, 'school');
         }
       } catch {}
 
@@ -669,8 +666,9 @@ export function SchoolSettings() {
           onClick={() => {
             try {
               if (typeof window !== "undefined") {
-                window.localStorage.removeItem("auth_token");
-                window.localStorage.removeItem("user");
+                // The school session ONLY — a teacher signed in in another tab
+                // of this browser is a separate session and keeps it.
+                clearSession("school");
                 router.replace("/school/login");
               }
             } catch {}

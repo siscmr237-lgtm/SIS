@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api } from './api';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { getUser, setUser } from './session';
 
 /**
  * The school's academic-year state, and the one dropdown every screen uses.
@@ -43,13 +44,12 @@ export interface AcademicYearStatus {
 function syncCachedSchoolYear(activeYear: string | undefined) {
   if (!activeYear || typeof window === 'undefined') return;
   try {
-    const raw = window.localStorage.getItem('user');
-    if (!raw) return;
-    const user = JSON.parse(raw);
+    const user = getUser();
+    if (!user) return;
     const school = user?.School?.[0];
     if (!school || school.academicYear === activeYear) return;
     school.academicYear = activeYear;
-    window.localStorage.setItem('user', JSON.stringify(user));
+    setUser(user);
   } catch {
     // A cache that cannot be updated is not worth failing a page load over.
   }

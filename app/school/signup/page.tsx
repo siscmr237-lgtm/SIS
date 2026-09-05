@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { PasswordHints } from "../../../src/components/PasswordHints";
 import { api } from "../../../src/lib/api";
+import { setSession } from "../../../src/lib/session";
 import {
   ABBREVIATION_MAX_LENGTH,
   computeSchoolAbbreviation,
@@ -156,8 +157,7 @@ function SignupForm({ onSuccess }: { onSuccess: () => void }) {
         password,
       })) as any;
       if (res?.token) {
-        window.localStorage.setItem("auth_token", res.token);
-        window.localStorage.setItem("user", JSON.stringify(res.user));
+        setSession(res.token, res.user, "school");
       }
       onSuccess();
     } catch (err: any) {

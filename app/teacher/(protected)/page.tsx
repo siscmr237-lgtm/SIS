@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { useTeacherAssignments, useTeacherTeaching } from "@/lib/teacherAssignments";
 import { ContentLoader } from "@/components/ContentLoader";
+import { getUser } from "@/lib/session";
 
 export default function TeacherDashboardPage() {
   const { data: assignments, loading, error } = useTeacherAssignments();
@@ -13,9 +14,8 @@ export default function TeacherDashboardPage() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
-      const userStr = window.localStorage.getItem("user");
-      if (!userStr) return;
-      const user = JSON.parse(userStr);
+      const user = getUser("teacher");
+      if (!user) return;
       setFirstName(user?.firstName || String(user?.name || "").split(" ")[0] || "");
     } catch {}
   }, []);

@@ -5,6 +5,7 @@ import { BASE_URL } from '../lib/api';
 import { formatTermLabel } from './academicTerm';
 import { dateOnly, todayIso } from './dateOnly';
 import { formatPaymentMethod } from './paymentMethods';
+import { getToken } from '../lib/session';
 
 const SCHOOL_INFO = {
   name: 'École Primaire et Maternelle',
@@ -160,9 +161,7 @@ async function loadImageAsDataUrl(url: string): Promise<string | null> {
 async function getLogoDataUrl(logo: string): Promise<string | null> {
   if (logo.startsWith('schools/')) {
     try {
-      const token = typeof window !== 'undefined'
-        ? window.localStorage.getItem('auth_token')
-        : null;
+      const token = getToken();
       const res = await fetch(
         `${BASE_URL}/upload/image-data?path=${encodeURIComponent(logo)}`,
         { headers: token ? { Authorization: `Bearer ${token}` } : {} }

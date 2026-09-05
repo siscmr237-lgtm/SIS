@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { api } from "../../../src/lib/api";
 import { mapLoginError } from "../../../src/lib/loginErrors";
 import { routeForFreshUser } from "../../../src/lib/registrationStatus";
+import { setSession } from "../../../src/lib/session";
 
 // THE SCHOOL ADMIN DOOR. Teachers have their own at /teacher/login, and every
 // teacher-side redirect now points there instead of here.
@@ -67,10 +68,13 @@ export default function LoginPage() {
         // a second key would be one more thing a partial write could desync.
         const actorType = (res as any).actorType;
         const user = { ...(res as any).user, actorType };
-        if (typeof window !== "undefined") {
-          window.localStorage.setItem("auth_token", (res as any).token);
-          window.localStorage.setItem("user", JSON.stringify(user));
-        }
+
+        // STORED UNDER THE ACTOR'S OWN PORTAL, not under this page's. A teacher
+        // who signs in at the school door is forwarded to /teacher below, and
+        // the teacher gate there reads the teacher namespace — writing this
+        // session into the school one would leave that gate finding nothing,
+        // bouncing back to '/', and the two forwarding each other forever.
+        setSession((res as any).token, user, actorType === "teacher" ? "teacher" : "school");
         if (actorType === "teacher") {
           // Graceful forward, not an error. Teachers have no school-onboarding
           // or email-verification flow of their own — those are admin-account

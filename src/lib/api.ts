@@ -3,6 +3,7 @@ import {
   PENDING_VERIFICATION_PATH,
   TEACHER_SCHOOL_REVIEW_PATH,
 } from './registrationRoutes';
+import { clearSession, currentPortal, getToken, PORTAL_LOGIN_PATH, setToken } from './session';
 
 const runtimeApiUrl =
   (typeof process !== 'undefined' && (process as any).env?.NEXT_PUBLIC_API_URL) ||
@@ -16,22 +17,16 @@ let notApprovedRedirectStarted = false;
 function clearSessionAndRedirect(genuineExpiry: boolean) {
   if (typeof window === 'undefined') return;
 
-  // Which door to send them back to. Read BEFORE the clear below, because the
-  // 'user' entry being removed is the only thing here that knows whose session
-  // just died — this function is shared by both actor types and its arguments
-  // say nothing about who the caller is.
-  //
-  // The admin door is the fallback for anything unreadable or unrecognised: a
-  // session predating actorType is an admin session, and /login forwards a
-  // teacher to /teacher anyway, so guessing wrong that way self-corrects.
-  let door = '/school/login';
-  try {
-    const raw = window.localStorage.getItem('user');
-    if (raw && JSON.parse(raw)?.actorType === 'teacher') door = '/teacher/login';
-  } catch { /* unparseable: keep the admin door */ }
+  // Which door to send them back to, and — just as importantly — WHOSE session
+  // to throw away. Both come from the portal this tab is in, not from the
+  // stored user: the tab that made the failing call is the tab whose session
+  // died, and it is the only one that may be signed out. A teacher signed in
+  // in another tab keeps their session, which is the whole point of the split
+  // in ./session.
+  const portal = currentPortal();
+  const door = PORTAL_LOGIN_PATH[portal];
 
-  window.localStorage.removeItem('auth_token');
-  window.localStorage.removeItem('user');
+  clearSession(portal);
   window.location.replace(genuineExpiry ? `${door}?reason=expired` : door);
 }
 
@@ -70,13 +65,9 @@ export function redirectForNotApproved(registrationStatus?: string) {
 
   // A teacher cannot be sent to the admin waiting page — that page forwards
   // teachers to /teacher, whose next call would be refused again, and the two
-  // would bounce forever. Read from the stored user, the same way
+  // would bounce forever. Read from the portal this tab is in, the same way
   // clearSessionAndRedirect picks its door.
-  let isTeacher = false;
-  try {
-    const raw = window.localStorage.getItem('user');
-    isTeacher = Boolean(raw) && JSON.parse(raw as string)?.actorType === 'teacher';
-  } catch { /* unparseable: treat as the admin case, which self-corrects */ }
+  const isTeacher = currentPortal() === 'teacher';
 
   // Whatever the payload does not name — including the 'APPROVED' that cannot
   // logically accompany this refusal — lands on the waiting page, which reads
@@ -118,7 +109,12 @@ const PUBLIC_AUTH_PATHS = [
 ];
 
 async function request(path: string, init?: RequestInit) {
-  const token = typeof window !== 'undefined' ? window.localStorage.getItem('auth_token') : null;
+  // This tab's portal decides which of the two stored tokens is sent. A school
+  // tab and a teacher tab running side by side each pick their own, so neither
+  // can send the other's credentials — which is what used to happen when both
+  // read one shared key.
+  const portal = currentPortal();
+  const token = getToken(portal);
 
   // Caller-supplied headers are merged in FIRST so that Authorization, set
   // below, always wins. Spreading `init` over the header object (or letting a
@@ -151,9 +147,14 @@ async function request(path: string, init?: RequestInit) {
   // and gets handled comes back with a freshly-extended token. Pick it up
   // regardless of whether this particular call succeeded or failed on its
   // own merits (e.g. a validation 400 still means the session is alive).
+  //
+  // Written back into the SAME portal namespace the request read from, never
+  // the shared key: a teacher call refreshing the school tab's token would be
+  // a silent actor swap, and the server honours whatever claim the token
+  // carries.
   const refreshedToken = res.headers.get('x-refreshed-token');
-  if (refreshedToken && typeof window !== 'undefined') {
-    window.localStorage.setItem('auth_token', refreshedToken);
+  if (refreshedToken) {
+    setToken(refreshedToken, portal);
   }
 
   if (!res.ok) {

@@ -17,6 +17,7 @@ import { useEffect, useState } from "react";
 import { BASE_URL } from '../lib/api';
 import { useSisCache } from '../lib/SisCache';
 import { formatTermLabel, resolveSchoolTerm } from '../utils/academicTerm';
+import { getToken, getUser } from '../lib/session';
 
 interface SidebarProps {
   open?: boolean;
@@ -57,10 +58,9 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const userStr = window.localStorage.getItem("user");
-    if (!userStr) return;
+    const user = getUser("school");
+    if (!user) return;
     try {
-      const user = JSON.parse(userStr);
       if (!user?.School) return;
       const school = user.School[0];
       setSchoolSettings(school);
@@ -69,7 +69,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
       const cached = cache.get<string>('logo-url');
       if (cached) { setLogoSrc(cached); return; }
       if (logo.startsWith('schools/')) {
-        const token = window.localStorage.getItem('auth_token');
+        const token = getToken('school');
         fetch(`${BASE_URL}/upload/signed-url?path=${encodeURIComponent(logo)}`, {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         })

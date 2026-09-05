@@ -45,6 +45,7 @@ import { buildParentPayload, ParentBaseline } from '../utils/parentPayload';
 import { isCompleteFullName, joinFullName, splitFullName } from '../utils/fullName';
 import { PAYMENT_METHODS } from '../utils/paymentMethods';
 import { ContentLoader } from './ContentLoader';
+import { getUser } from '../lib/session';
 
 interface LedgerEntry {
   id: string;
@@ -1156,11 +1157,8 @@ export function StudentProfile({ student, onNavigate }: StudentProfileProps) {
     if (!ledgerData) return;
     let schoolInfo: { name: string; logo?: string; motto?: string; academicYear?: string } | undefined;
     try {
-      const userStr = window.localStorage.getItem('user');
-      if (userStr) {
-        const user = JSON.parse(userStr);
-        if (user?.School?.[0]) schoolInfo = user.School[0];
-      }
+      const user = getUser();
+      if (user?.School?.[0]) schoolInfo = user.School[0];
     } catch {}
     await generateFinancialSheet(student, ledgerData, schoolInfo);
   };

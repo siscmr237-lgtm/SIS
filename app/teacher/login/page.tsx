@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { api } from "../../../src/lib/api";
 import { mapLoginError } from "../../../src/lib/loginErrors";
+import { setSession } from "../../../src/lib/session";
 
 /**
  * The teachers' door.
@@ -90,10 +91,11 @@ export default function TeacherLoginPage() {
         }
 
         const user = { ...(res as any).user, actorType };
-        if (typeof window !== "undefined") {
-          window.localStorage.setItem("auth_token", (res as any).token);
-          window.localStorage.setItem("user", JSON.stringify(user));
-        }
+
+        // The teacher namespace, explicitly. A school session already open in
+        // another tab of this browser lives under its own keys and survives
+        // this untouched — see src/lib/session.ts.
+        setSession((res as any).token, user, "teacher");
         // Teachers have no onboarding or email-verification step of their own —
         // those are admin-account concerns — so this is the whole journey.
         router.replace("/teacher");

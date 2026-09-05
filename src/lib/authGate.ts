@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { fetchRegistrationSnapshot, routeForSnapshot } from './registrationStatus';
+import { getToken, getUser, hasSession } from './session';
 
 export type AuthGateStatus = 'checking' | 'ready' | 'error';
 
@@ -49,24 +50,28 @@ function useAuthGateInternal(signedOutDestination: string): AuthGate {
     let alive = true;
 
     (async () => {
-      let token: string | null = null;
-      let user: any = null;
-      try {
-        token = typeof window !== 'undefined' ? window.localStorage.getItem('auth_token') : null;
-        if (!token) throw new Error('no token');
-
-        const userStr = window.localStorage.getItem('user');
-        user = userStr ? JSON.parse(userStr) : null;
-      } catch {
-        if (alive) router.replace(signedOutDestination);
+      // The SCHOOL session specifically. A teacher signed in in another tab of
+      // the same browser has their own, under its own keys, and it is neither
+      // read nor disturbed here — see src/lib/session.ts.
+      const token = getToken('school');
+      if (!token) {
+        // No school session. If this browser holds a teacher one, that is where
+        // the person belongs and where they used to be sent when the two shared
+        // a key — keep doing that rather than showing them a school door they
+        // have no account for. Nothing is let in by this: /teacher runs the
+        // teacher gate, which checks the teacher session itself.
+        if (alive) router.replace(hasSession('teacher') ? '/teacher' : signedOutDestination);
         return;
       }
 
+      const user: any = getUser('school');
+
       // A teacher session is a valid session — it just doesn't belong here.
-      // Checked before anything else, and before any request goes out, because
-      // the registration status is an admin-account question that a Staff actor
-      // does not have: the endpoint below is admin-only and would refuse them,
-      // bouncing a perfectly good teacher out of a session that is fine.
+      // Namespacing means the school keys can no longer hold a teacher, so this
+      // now only fires for a session migrated from the old shared keys. Kept
+      // because it costs nothing and the alternative is an admin-only request
+      // made on a Staff actor's behalf, which would be refused and would bounce
+      // a perfectly good teacher out of a session that is fine.
       if (user?.actorType === 'teacher') {
         if (alive) router.replace('/teacher');
         return;

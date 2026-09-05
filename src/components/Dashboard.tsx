@@ -16,6 +16,7 @@ import { formatTermLabel, resolveSchoolTerm } from "../../src/utils/academicTerm
 import { computeSchoolAbbreviation } from "../../src/utils/schoolAbbreviation";
 import { Card } from "./ui/card";
 import { statValueFontSize } from "../utils/statFigure";
+import { getToken, getUser } from "../lib/session";
 
 // onNavigate is optional so the existing `<Dashboard />` call sites keep
 // working; without it the setup card still lists what is outstanding, it just
@@ -88,10 +89,9 @@ export function Dashboard({ onNavigate }: { onNavigate?: (page: NavigationPage) 
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const userStr = window.localStorage.getItem("user");
-    if (!userStr) return;
+    const user = getUser("school");
+    if (!user) return;
     try {
-      const user = JSON.parse(userStr);
       if (!user?.School?.length) return;
       const school = user.School[0];
       if (!school) return;
@@ -103,7 +103,7 @@ export function Dashboard({ onNavigate }: { onNavigate?: (page: NavigationPage) 
       if (cached) { setLogoSrc(cached); return; }
       // Fallback: fetch and cache (handles rare case where Dashboard mounts before Sidebar)
       if (logo.startsWith('schools/')) {
-        const token = window.localStorage.getItem('auth_token');
+        const token = getToken('school');
         fetch(`${BASE_URL}/upload/signed-url?path=${encodeURIComponent(logo)}`, {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         })

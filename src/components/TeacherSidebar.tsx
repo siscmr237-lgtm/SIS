@@ -15,6 +15,7 @@ import { useEffect, useState } from "react";
 import { BASE_URL } from "../lib/api";
 import { useSisCache } from "../lib/SisCache";
 import { computeSchoolAbbreviation } from "../utils/schoolAbbreviation";
+import { clearSession, getToken, getUser } from "../lib/session";
 
 interface TeacherSidebarProps {
   open?: boolean;
@@ -53,10 +54,9 @@ export function TeacherSidebar({ open = false, onClose }: TeacherSidebarProps) {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const userStr = window.localStorage.getItem("user");
-    if (!userStr) return;
+    const user = getUser("teacher");
+    if (!user) return;
     try {
-      const user = JSON.parse(userStr);
       const school = user?.School?.[0];
       if (school?.name) setSchoolName(school.name);
       if (school?.abbreviation) setSchoolAbbreviation(school.abbreviation);
@@ -73,7 +73,7 @@ export function TeacherSidebar({ open = false, onClose }: TeacherSidebarProps) {
       const cached = cache.get<string>('logo-url');
       if (cached) { setLogoSrc(cached); return; }
       if (String(logo).startsWith('schools/')) {
-        const token = window.localStorage.getItem('auth_token');
+        const token = getToken('teacher');
         fetch(`${BASE_URL}/upload/signed-url?path=${encodeURIComponent(logo)}`, {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         })
@@ -91,7 +91,10 @@ export function TeacherSidebar({ open = false, onClose }: TeacherSidebarProps) {
 
   const signOut = () => {
     if (typeof window === "undefined") return;
-    window.localStorage.clear();
+    // The teacher session ONLY. This was localStorage.clear(), which also wiped
+    // a school session open in another tab of the same browser — the shared-
+    // storage bug that made the two portals unusable side by side.
+    clearSession("teacher");
     // replace(), not push(): signing out must not leave the teacher section one
     // Back press away.
     window.location.replace("/teacher/login");

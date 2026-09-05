@@ -23,6 +23,8 @@
  * the new year with no active term until 1 September.
  */
 
+import { getUser } from '../lib/session';
+
 export type Term = 'Term 1' | 'Term 2' | 'Term 3';
 
 /**
@@ -165,8 +167,7 @@ export function resolveEffectiveSchoolTerm(
  */
 export function getDefaultTermFields(): { academicYear: string; term: string } {
   try {
-    const userStr = typeof window !== 'undefined' ? window.localStorage.getItem('user') : null;
-    const school = userStr ? JSON.parse(userStr)?.School?.[0] : null;
+    const school = getUser()?.School?.[0] ?? null;
     return resolveEffectiveSchoolTerm(school);
   } catch {
     return { academicYear: '', term: '' };

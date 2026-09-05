@@ -8,6 +8,7 @@ import { api } from "../../../src/lib/api";
 import { routeForFreshUser } from "../../../src/lib/registrationStatus";
 import { SCHOOL_HOME_PATH } from "../../../src/lib/registrationRoutes";
 import { ContentLoader } from "@/components/ContentLoader";
+import { clearSession, getToken, getUser, setUser } from "../../../src/lib/session";
 
 // ---------------------------------------------------------------------------
 // Shared style helpers (same look as signup/login/password-reset)
@@ -271,14 +272,13 @@ export default function VerifyEmailPage() {
   const [editEmailOnReturn, setEditEmailOnReturn] = useState(false);
 
   useEffect(() => {
-    const token = typeof window !== "undefined" ? window.localStorage.getItem("auth_token") : null;
+    const token = getToken("school");
     if (!token) {
       router.replace("/school/login");
       return;
     }
     try {
-      const userStr = window.localStorage.getItem("user");
-      const user = userStr ? JSON.parse(userStr) : null;
+      const user = getUser("school");
       if (!user?.email) {
         router.replace("/school/login");
         return;
@@ -306,11 +306,10 @@ export default function VerifyEmailPage() {
   const persistEmail = (newEmail: string) => {
     setEmail(newEmail);
     try {
-      const userStr = window.localStorage.getItem("user");
-      if (userStr) {
-        const user = JSON.parse(userStr);
+      const user = getUser("school");
+      if (user) {
         user.email = newEmail;
-        window.localStorage.setItem("user", JSON.stringify(user));
+        setUser(user, "school");
       }
     } catch {}
   };
@@ -318,7 +317,7 @@ export default function VerifyEmailPage() {
   const handleVerify = async (code: string) => {
     const res = (await api.post("/auth/otp/verify-signup", { code })) as any;
     if (res?.user) {
-      window.localStorage.setItem("user", JSON.stringify(res.user));
+      setUser(res.user, "school");
       // res.user is re-read by the server AFTER it moves the school out of
       // FAILED, so the status on it is the post-verification one — a school
       // that has just proved its email lands on the KYC form, not back here.
@@ -331,10 +330,9 @@ export default function VerifyEmailPage() {
   };
 
   const handleBackToLogin = () => {
-    try {
-      window.localStorage.removeItem("auth_token");
-      window.localStorage.removeItem("user");
-    } catch {}
+    // The school session only — a teacher signed in in another tab of this
+    // browser keeps theirs.
+    clearSession("school");
     router.replace("/school/login");
   };
 

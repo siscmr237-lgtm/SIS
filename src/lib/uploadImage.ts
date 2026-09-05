@@ -6,6 +6,7 @@
 // this rather than write a third.
 
 import { BASE_URL, redirectForNotApproved } from './api';
+import { getToken } from './session';
 import {
   formatBytes,
   ImageDecodeError,
@@ -55,7 +56,7 @@ export async function postImage(file: File, type: string, entityId?: string): Pr
     );
   }
 
-  const token = typeof window !== 'undefined' ? window.localStorage.getItem('auth_token') : null;
+  const token = getToken();
   const body = new FormData();
   body.append('file', file);
   body.append('type', type);
